@@ -1,0 +1,73 @@
+{
+  "plan": "activity_0721_v1",
+  "signals": 183,
+  "invalid_features": 0,
+  "errors": [],
+  "rows": [
+    {
+      "variant": "ALL",
+      "label": "Все",
+      "signals": 183,
+      "filled": 127,
+      "expired": 56,
+      "closed": 126,
+      "open": 1,
+      "exit_signals": 127,
+      "wait_gt5": 23,
+      "wait_gt30": 11,
+      "pending_exits": 1,
+      "closed_net_scenario": -16.307562939398753,
+      "first_half_net": -3.4418436533554138,
+      "second_half_net": -12.865719286043339
+    },
+    {
+      "variant": "ACT4",
+      "label": "4 события за 2 секунды",
+      "signals": 96,
+      "filled": 84,
+      "expired": 12,
+      "closed": 84,
+      "open": 0,
+      "exit_signals": 84,
+      "wait_gt5": 11,
+      "wait_gt30": 4,
+      "pending_exits": 0,
+      "closed_net_scenario": -8.382218989727983,
+      "first_half_net": -5.29659431852543,
+      "second_half_net": -3.0856246712025532
+    },
+    {
+      "variant": "CONT5",
+      "label": "Последние 5: интервал 0.5–4с, паузы ≤1с",
+      "signals": 23,
+      "filled": 20,
+      "expired": 3,
+      "closed": 20,
+      "open": 0,
+      "exit_signals": 20,
+      "wait_gt5": 3,
+      "wait_gt30": 1,
+      "pending_exits": 0,
+      "closed_net_scenario": 3.2637182216745884,
+      "first_half_net": 2.5571223920614683,
+      "second_half_net": 0.7065958296131198
+    },
+    {
+      "variant": "SELL10",
+      "label": "Есть продажа среди последних 10",
+      "signals": 126,
+      "filled": 85,
+      "expired": 41,
+      "closed": 85,
+      "open": 0,
+      "exit_signals": 85,
+      "wait_gt5": 16,
+      "wait_gt30": 7,
+      "pending_exits": 0,
+      "closed_net_scenario": -3.197753966693427,
+      "first_half_net": 0.04126666559446776,
+      "second_half_net": -3.239020632287895
+    }
+  ],
+  "note": "Frozen shadow rules, not actual entry filters. Recent events are capped at 20. Closed subset PnL excludes unresolved positions and is NOT freed-capital replay. Fixed comparison costs 1.5% each side + .005 per fill, assumptions only. Future waits are outcome labels, never input features."
+}

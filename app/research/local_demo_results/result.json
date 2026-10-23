@@ -1,0 +1,44 @@
+{
+  "status": "LOCAL_SWAP_FAILED",
+  "snapshot_slot": 455987046,
+  "mint": "3Jvh8qPdyLwH67zfhrMXfiWsjRDxVTk4oA85GUGRpump",
+  "raw_amount": "483663525478",
+  "minimum_lamports": "21634647",
+  "synthetic_token_balance": "483663525478",
+  "synthetic_sol_lamports": 1000000000,
+  "synthetic_token_rent_lamports": 1488440,
+  "program_sha256": {
+    "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P": "a4b32d322295a15666b1293e0028b9b75d688bfce10b574e1094f249f2ce9f16",
+    "pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ": "73c679c8dae8d24153fdd0455b557b73662e93ab2ec88831a9e4be2b08a897a4",
+    "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb": "0999dbf708971e723b08d1caafc988826a59c6001ed6dc02260da07defbe1469",
+    "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA": "8190d3f7ceb6cb7a7a8d8924bff89f9f611e15ce1f806f2b6237f3311a98f697"
+  },
+  "logs": [
+    "Program 6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P invoke [1]",
+    "Program log: Instruction: SellV3",
+    "Program 11111111111111111111111111111111 invoke [2]",
+    "Program 11111111111111111111111111111111 success",
+    "Program log: AnchorError thrown in programs/pump/src/trade_v3.rs:976. Error Code: TooLittleSolReceived. Error Number: 6003. Error Message: slippage: Too little SOL received to sell the given amount of tokens..",
+    "Program log: Left: 13497106",
+    "Program log: Right: 21634647",
+    "Program 6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P consumed 33274 of 200000 compute units",
+    "Program 6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P failed: custom program error: 0x1773"
+  ],
+  "compute_units": 33274,
+  "err": "TransactionErrorInstructionError((0, Tagged(InstructionErrorCustom(6003))))",
+  "network_fee_lamports": null,
+  "paper_mutated": false,
+  "broadcast": false,
+  "mainnet_execution_proven": false,
+  "limitations": [
+    "Direct Pump route, not Jupiter route.",
+    "Synthetic tokens injected; mint supply not adjusted.",
+    "LiteSVM runtime features may differ from mainnet.",
+    "No priority fee, landing latency or failed-network-transaction estimate.",
+    "Cloned accounts are from current snapshot; not the past PAPER exit."
+  ],
+  "zero_token_control_status": "LOCAL_SWAP_FAILED",
+  "zero_token_control_error": "TransactionErrorInstructionError((0, Tagged(InstructionErrorCustom(6023))))",
+  "capacity_diagnostic_status": "LOCAL_SWAP_EXECUTED",
+  "capacity_diagnostic_net_sol_delta_lamports": 12145906
+}

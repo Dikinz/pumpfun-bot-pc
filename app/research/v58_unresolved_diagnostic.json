@@ -1,0 +1,31 @@
+{
+  "schema": "V58_DIAGNOSTIC_SUBSET",
+  "source_sha256": "a1101f50e3b261e45fca2c47f868324e62aedba3bfb5e42e1d20aae98b2d4af0",
+  "mint": "3fmrChcVjvW6Gf3yE8gi3Jzr9sQiEZu5wtacWGzWqYv8",
+  "principal": 3.0,
+  "tick_state": "STALE",
+  "last_result": {
+    "id": "34bb20cb7f624a4d960bd00ab75f2481",
+    "trade_id": "ef86a42d188340c0a857b45dea1f95c4",
+    "mint": "3fmrChcVjvW6Gf3yE8gi3Jzr9sQiEZu5wtacWGzWqYv8",
+    "started_ts": 1792694867.6390316,
+    "finished_ts": 1792694869.7409728,
+    "status": "INSUFFICIENT_RESERVES",
+    "timing": "AFTER_SIGNAL_OPEN",
+    "reserve_status": "INSUFFICIENT_REAL_RESERVES",
+    "real_sol_lamports": 10,
+    "sell_gross_upper_lamports": 25471827,
+    "simulation_status": "LOCAL_SWAP_FAILED",
+    "net_status": "NET_BELOW_FLOOR",
+    "snapshot_received_ts": 1792694869.0321019,
+    "age_s": 8.836073875427246,
+    "zero_token_control_ok": true,
+    "accounting": null
+  },
+  "post_signal_counts": {
+    "INSUFFICIENT_RESERVES": 244,
+    "REQUEST_ERROR": 2,
+    "INTERRUPTED_STOP": 1
+  },
+  "note": "Diagnostic subset only. Original pool/account bytes and SQLite databases were not attached; this is not a transaction or historical VM replay fixture."
+}

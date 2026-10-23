@@ -1,0 +1,44 @@
+<!doctype html><meta charset="utf-8"><title>Локальная симуляция</title><style>body{font:16px system-ui;max-width:1000px;margin:40px auto;padding:20px}pre{white-space:pre-wrap;overflow-wrap:anywhere}summary{cursor:pointer}</style><h1>LOCAL_SWAP_FAILED</h1><p>Локальная симуляция прямой продажи. Основной результат сохраняет исходный ценовой порог. capacity_result — отдельная диагностика с минимумом 1 lamport. Это не подтверждение исполнения в сети и не результат торговой стратегии.</p><p>Слот: 455987046</p><p>Диагностика возможности продажи: LOCAL_SWAP_EXECUTED</p><details><summary>Результат и логи</summary><pre>{
+  &quot;status&quot;: &quot;LOCAL_SWAP_FAILED&quot;,
+  &quot;snapshot_slot&quot;: 455987046,
+  &quot;mint&quot;: &quot;3Jvh8qPdyLwH67zfhrMXfiWsjRDxVTk4oA85GUGRpump&quot;,
+  &quot;raw_amount&quot;: &quot;483663525478&quot;,
+  &quot;minimum_lamports&quot;: &quot;21634647&quot;,
+  &quot;synthetic_token_balance&quot;: &quot;483663525478&quot;,
+  &quot;synthetic_sol_lamports&quot;: 1000000000,
+  &quot;synthetic_token_rent_lamports&quot;: 1488440,
+  &quot;program_sha256&quot;: {
+    &quot;6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P&quot;: &quot;a4b32d322295a15666b1293e0028b9b75d688bfce10b574e1094f249f2ce9f16&quot;,
+    &quot;pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ&quot;: &quot;73c679c8dae8d24153fdd0455b557b73662e93ab2ec88831a9e4be2b08a897a4&quot;,
+    &quot;TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb&quot;: &quot;0999dbf708971e723b08d1caafc988826a59c6001ed6dc02260da07defbe1469&quot;,
+    &quot;TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA&quot;: &quot;8190d3f7ceb6cb7a7a8d8924bff89f9f611e15ce1f806f2b6237f3311a98f697&quot;
+  },
+  &quot;logs&quot;: [
+    &quot;Program 6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P invoke [1]&quot;,
+    &quot;Program log: Instruction: SellV3&quot;,
+    &quot;Program 11111111111111111111111111111111 invoke [2]&quot;,
+    &quot;Program 11111111111111111111111111111111 success&quot;,
+    &quot;Program log: AnchorError thrown in programs/pump/src/trade_v3.rs:976. Error Code: TooLittleSolReceived. Error Number: 6003. Error Message: slippage: Too little SOL received to sell the given amount of tokens..&quot;,
+    &quot;Program log: Left: 13497106&quot;,
+    &quot;Program log: Right: 21634647&quot;,
+    &quot;Program 6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P consumed 33274 of 200000 compute units&quot;,
+    &quot;Program 6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P failed: custom program error: 0x1773&quot;
+  ],
+  &quot;compute_units&quot;: 33274,
+  &quot;err&quot;: &quot;TransactionErrorInstructionError((0, Tagged(InstructionErrorCustom(6003))))&quot;,
+  &quot;network_fee_lamports&quot;: null,
+  &quot;paper_mutated&quot;: false,
+  &quot;broadcast&quot;: false,
+  &quot;mainnet_execution_proven&quot;: false,
+  &quot;limitations&quot;: [
+    &quot;Direct Pump route, not Jupiter route.&quot;,
+    &quot;Synthetic tokens injected; mint supply not adjusted.&quot;,
+    &quot;LiteSVM runtime features may differ from mainnet.&quot;,
+    &quot;No priority fee, landing latency or failed-network-transaction estimate.&quot;,
+    &quot;Cloned accounts are from current snapshot; not the past PAPER exit.&quot;
+  ],
+  &quot;zero_token_control_status&quot;: &quot;LOCAL_SWAP_FAILED&quot;,
+  &quot;zero_token_control_error&quot;: &quot;TransactionErrorInstructionError((0, Tagged(InstructionErrorCustom(6023))))&quot;,
+  &quot;capacity_diagnostic_status&quot;: &quot;LOCAL_SWAP_EXECUTED&quot;,
+  &quot;capacity_diagnostic_net_sol_delta_lamports&quot;: 12145906
+}</pre></details>

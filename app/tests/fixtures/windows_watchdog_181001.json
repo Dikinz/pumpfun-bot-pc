@@ -1,0 +1,117 @@
+{
+  "source": "20261023_181001.zip",
+  "launcher_pid": 12100,
+  "session": "2207e7a68d4a4fdf8f044c2eea4d0055",
+  "trigger": {
+    "observed_ts": 1792756057.5408719,
+    "snapshot_age_s": 0.20053577423095703,
+    "expected_session": "2207e7a68d4a4fdf8f044c2eea4d0055",
+    "expected_pid": 12100,
+    "reason": "SESSION_MISMATCH",
+    "snapshot": {
+      "schema": "RUNTIME_V60",
+      "pid": 13212,
+      "started_ts": 1792756027.4833276,
+      "session": "2207e7a68d4a4fdf8f044c2eea4d0055",
+      "ts": 1792756057.340336,
+      "state": "RUNNING",
+      "loop_pulse_age_s": 0.0805292000004556,
+      "active_stage": "IDLE",
+      "stalls": 0,
+      "first_stall": null,
+      "samples": {
+        "SQL_SELECT": {
+          "calls": 4862,
+          "total_ms": 196.5842999816232,
+          "max_ms": 0.6979999998293351
+        },
+        "SQL_INSERT": {
+          "calls": 658,
+          "total_ms": 33.30109990929486,
+          "max_ms": 0.535300001502037
+        },
+        "SQL_UPDATE": {
+          "calls": 332,
+          "total_ms": 18.369300039921654,
+          "max_ms": 0.39059999835444614
+        },
+        "SQL_BEGIN": {
+          "calls": 223,
+          "total_ms": 10.979399969073711,
+          "max_ms": 0.5497999991348479
+        },
+        "PROCESS_TRADE": {
+          "calls": 36,
+          "total_ms": 41.6981999987911,
+          "max_ms": 3.0886999993526842
+        }
+      },
+      "input": {
+        "received_seq": 36,
+        "applied_seq": 36,
+        "first_gap": null,
+        "stale_inputs": 0,
+        "max_input_age_ms": 17.000436782836914,
+        "queue_depth_max": 2
+      },
+      "queue_depth": 0,
+      "queue_payload_bytes": 0
+    }
+  },
+  "repeat": {
+    "observed_ts": 1792756072.8092763,
+    "snapshot_age_s": 0.2740321159362793,
+    "expected_session": "2207e7a68d4a4fdf8f044c2eea4d0055",
+    "expected_pid": 12100,
+    "reason": "SESSION_MISMATCH",
+    "snapshot": {
+      "schema": "RUNTIME_V60",
+      "pid": 13212,
+      "started_ts": 1792756027.4833276,
+      "session": "2207e7a68d4a4fdf8f044c2eea4d0055",
+      "ts": 1792756072.5352442,
+      "state": "RUNNING",
+      "loop_pulse_age_s": 0.0005388999998103827,
+      "active_stage": "SQL_SELECT",
+      "stalls": 0,
+      "first_stall": null,
+      "samples": {
+        "SQL_SELECT": {
+          "calls": 8309,
+          "total_ms": 306.4141999348067,
+          "max_ms": 0.6979999998293351
+        },
+        "SQL_INSERT": {
+          "calls": 1896,
+          "total_ms": 116.34269986097934,
+          "max_ms": 19.823599999654107
+        },
+        "SQL_UPDATE": {
+          "calls": 576,
+          "total_ms": 29.628300027980004,
+          "max_ms": 0.39489999835495837
+        },
+        "SQL_BEGIN": {
+          "calls": 516,
+          "total_ms": 20.486399982473813,
+          "max_ms": 0.5497999991348479
+        },
+        "PROCESS_TRADE": {
+          "calls": 141,
+          "total_ms": 183.34769998546108,
+          "max_ms": 20.80980000027921
+        }
+      },
+      "input": {
+        "received_seq": 141,
+        "applied_seq": 141,
+        "first_gap": null,
+        "stale_inputs": 0,
+        "max_input_age_ms": 22.24588394165039,
+        "queue_depth_max": 4
+      },
+      "queue_depth": 0,
+      "queue_payload_bytes": 0
+    }
+  }
+}

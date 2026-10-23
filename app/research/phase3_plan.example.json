@@ -1,0 +1,30 @@
+{
+  "rpc_url": "https://YOUR_PRIVATE_RPC_ENDPOINT",
+  "expected_genesis": "FULL_EXPECTED_GENESIS_HASH",
+  "wallet": "PUBLIC_WALLET_ADDRESS",
+  "mint": "TOKEN_MINT",
+  "side": "BUY",
+  "amount": 1000000,
+  "limit": 1000000,
+  "fee_budget": 10000000,
+  "skip_preflight": false,
+  "vault_path": "PATH_TO_EXTERNAL_ENCRYPTED_VAULT",
+  "signer_policy_path": "PATH_TO_EXTERNAL_SIGNER_POLICY",
+  "daily_start_equity_lamports": 0,
+  "risk_limits": {
+    "day": "YYYY-MM-DD",
+    "max_order_lamports": 1000000,
+    "max_fee_lamports": 10000000,
+    "max_failures": 3,
+    "daily_loss_bps": 1000,
+    "max_positions": 2
+  },
+  "jito_url": "https://mainnet.block-engine.jito.wtf/api/v1/bundles",
+  "jito": {
+    "max_tip_lamports": 100000,
+    "tip_percentile": 75,
+    "priority_micro_lamports": 5000,
+    "max_attempts": 2,
+    "tip_bump_bps": 2500
+  }
+}

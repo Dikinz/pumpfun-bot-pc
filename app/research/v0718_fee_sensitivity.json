@@ -1,0 +1,131 @@
+{
+  "schema": "cost_evidence_v0719",
+  "status": "NO_EVIDENCE",
+  "errors": [],
+  "error_count": 0,
+  "closed": 797,
+  "gross": 56.625914230432784,
+  "turnover": 4838.6259142304325,
+  "break_even_oneway_rate": 0.011702891530402377,
+  "routes": [
+    {
+      "route": "Direct protocol scenario",
+      "pool_fee_rate": 0.0125,
+      "route_fee_rate": 0,
+      "closed": 797,
+      "fee_only": 60.48282392788041,
+      "gross": 56.625914230432784,
+      "after_fee_only": -3.8569096974476267,
+      "remaining_per_trade": -0.004839284438453735
+    },
+    {
+      "route": "PumpApi scenario",
+      "pool_fee_rate": 0.0125,
+      "route_fee_rate": 0.0025,
+      "closed": 797,
+      "fee_only": 72.5793887134565,
+      "gross": 56.625914230432784,
+      "after_fee_only": -15.953474483023712,
+      "remaining_per_trade": -0.020016906503166513
+    },
+    {
+      "route": "PumpPortal Local scenario",
+      "pool_fee_rate": 0.0125,
+      "route_fee_rate": 0.005,
+      "closed": 797,
+      "fee_only": 84.67595349903257,
+      "gross": 56.625914230432784,
+      "after_fee_only": -28.05003926859979,
+      "remaining_per_trade": -0.03519452856787928
+    },
+    {
+      "route": "PumpPortal Lightning scenario",
+      "pool_fee_rate": 0.0125,
+      "route_fee_rate": 0.01,
+      "closed": 797,
+      "fee_only": 108.86908307018473,
+      "gross": 56.625914230432784,
+      "after_fee_only": -52.243168839751945,
+      "remaining_per_trade": -0.06554977269730483
+    }
+  ],
+  "decisions": 0,
+  "metadata_present": 0,
+  "stale_decisions": 0,
+  "fee_field_present": 0,
+  "source_time_missing": 0,
+  "future_timestamps": 0,
+  "provider_lag_p50_ms": null,
+  "provider_lag_p95_ms": null,
+  "local_price_age_p95_ms": null,
+  "provider_priority_raw_p50": null,
+  "observed_fee_subset": {
+    "closed": 0,
+    "gross": null,
+    "pool_fee_only": null,
+    "after_pool_fee_only": null
+  },
+  "probes": [
+    {
+      "side": "BUY",
+      "horizon_ms": 250,
+      "total": 0,
+      "observed": 0,
+      "coverage_pct": null,
+      "adverse_mean_pct": null,
+      "adverse_p90_pct": null,
+      "states": {}
+    },
+    {
+      "side": "BUY",
+      "horizon_ms": 500,
+      "total": 0,
+      "observed": 0,
+      "coverage_pct": null,
+      "adverse_mean_pct": null,
+      "adverse_p90_pct": null,
+      "states": {}
+    },
+    {
+      "side": "BUY",
+      "horizon_ms": 1000,
+      "total": 0,
+      "observed": 0,
+      "coverage_pct": null,
+      "adverse_mean_pct": null,
+      "adverse_p90_pct": null,
+      "states": {}
+    },
+    {
+      "side": "SELL",
+      "horizon_ms": 250,
+      "total": 0,
+      "observed": 0,
+      "coverage_pct": null,
+      "adverse_mean_pct": null,
+      "adverse_p90_pct": null,
+      "states": {}
+    },
+    {
+      "side": "SELL",
+      "horizon_ms": 500,
+      "total": 0,
+      "observed": 0,
+      "coverage_pct": null,
+      "adverse_mean_pct": null,
+      "adverse_p90_pct": null,
+      "states": {}
+    },
+    {
+      "side": "SELL",
+      "horizon_ms": 1000,
+      "total": 0,
+      "observed": 0,
+      "coverage_pct": null,
+      "adverse_mean_pct": null,
+      "adverse_p90_pct": null,
+      "states": {}
+    }
+  ],
+  "limitations": "Fee scenarios assume ordinary pump bonding curve 1.25% each side; approximate PAPER turnover, no network/tip/rent/price impact. Provider-reported fees and timestamps are unverified. Probes measure subsequent feed price movement, NOT executable quotes or fill slippage. Legacy LOW/BASE/STRESS remain unchanged for comparison."
+}
