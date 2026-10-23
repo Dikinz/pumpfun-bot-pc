@@ -1,0 +1,202 @@
+"""Bounded local fanout with explicit, acknowledged child shutdown."""
+import json,queue,threading,subprocess,sys,time,uuid,os
+from pathlib import Path
+import runtime_control
+ACTIVE=None
+LAST=None
+
+def bind_worker(child,ready,session):
+    """Windows venv launchers can be a parent of the actual Python worker."""
+    if not isinstance(ready,dict) or ready.get('session')!=session:
+        raise RuntimeError('BRANCH_READY_SESSION_MISMATCH')
+    pid=ready.get('pid')
+    if type(pid)!=int or pid<=0:raise RuntimeError('BRANCH_READY_INVALID_PID')
+    if pid!=child.pid:
+        import psutil
+        try:related=child.pid in [p.pid for p in psutil.Process(pid).parents()]
+        except psutil.Error:related=False
+        if not related:raise RuntimeError('BRANCH_READY_PID_NOT_DESCENDANT')
+    return pid
+
+def process_options(platform=None):
+    return {'creationflags':subprocess.CREATE_NEW_PROCESS_GROUP} if (platform or os.name)=='nt' else {'start_new_session':True}
+
+def terminate_tree(child):
+    import psutil
+    try:descendants=psutil.Process(child.pid).children(recursive=True)
+    except psutil.Error:descendants=[]
+    for p in reversed(descendants):
+        try:p.terminate()
+        except psutil.Error:pass
+    if child.poll() is None:child.terminate()
+    _,alive=psutil.wait_procs(descendants,timeout=2)
+    for p in alive:
+        try:p.kill()
+        except psutil.Error:pass
+    try:child.wait(timeout=3)
+    except subprocess.TimeoutExpired:child.kill();child.wait(timeout=3)
+
+class Publisher:
+    def __init__(self,primary,module="paper_branch"):
+        self.created_mono=time.monotonic();self.engine=__import__(module);self.module=module;self.first_gap=None;self.pending_bytes=0;self.peak_bytes=0;self.byte_lock=threading.Lock();self.last_status=0.;self.max_send_ms=0.
+        global LAST
+        self.queue=queue.Queue(maxsize=2000);self.seq=0;self.dropped=0;self.error=False;self.primary=primary;self.protected={}
+        self.session=uuid.uuid4().hex;self.stopping=threading.Event();self.close_lock=threading.Lock();self.closed=None;self.thread=None
+        ready=Path(primary).resolve().with_name('branch_ready_'+self.session+'.tmp')
+        self.child=subprocess.Popen([sys.executable,module+'.py','--worker',str(Path(primary).resolve()),str(ready),self.session],stdin=subprocess.PIPE,text=True,bufsize=1,cwd=Path(__file__).parent,**process_options())
+        LAST=self
+        deadline=time.monotonic()+20
+        while not ready.exists():
+            if self.child.poll() is not None:raise RuntimeError('BRANCH_START_FAILED')
+            if time.monotonic()>deadline:
+                terminate_tree(self.child);raise RuntimeError('BRANCH_START_TIMEOUT')
+            time.sleep(.05)
+        try:
+            self.worker_pid=bind_worker(self.child,json.loads(ready.read_text(encoding='utf-8')),self.session)
+        finally:ready.unlink(missing_ok=True)
+        self.thread=threading.Thread(target=self.send,daemon=True);self.thread.start()
+        self.watchdog=runtime_control.ChildWatchdog(self.session,self.worker_pid)
+    def refresh_positions(self):
+        import sqlite3,paper_branch
+        from contextlib import closing
+        try:
+            with closing(sqlite3.connect(getattr(self,'engine',paper_branch).path(self.primary).as_uri()+'?mode=ro',uri=True,timeout=.1)) as c:
+                self.protected=dict(c.execute('SELECT mint,opened_ts FROM positions'))
+        except sqlite3.Error:pass
+    def snapshot(self):
+        return dict(module=getattr(self,'module','paper_branch'),session=self.session,launcher_pid=getattr(getattr(self,'child',None),'pid',None),worker_pid=getattr(self,'worker_pid',None),queue_depth=self.queue.qsize(),pending_bytes=getattr(self,'pending_bytes',0),peak_bytes=getattr(self,'peak_bytes',0),dropped=self.dropped,first_gap=getattr(self,'first_gap',None),max_send_ms=getattr(self,'max_send_ms',0.),send_blocked_age_s=max(0,time.monotonic()-self.send_started) if getattr(self,'send_started',0) else 0,unsent_on_stop=self.queue.qsize() if self.stopping.is_set() else 0,error=self.error)
+    def record_gap(self,reason,**details):
+        if getattr(self,'first_gap',None) is None:self.first_gap=dict(reason=reason,ts=time.time(),seq=self.seq,depth=self.queue.qsize(),**details)
+    def persist_status(self,force=False):
+        if not hasattr(self,'engine') or not hasattr(self,'primary'):return
+        mono=time.monotonic()
+        if force or mono-getattr(self,'last_status',0)>=.5:
+            p=self.engine.path(self.primary);target=p.with_name(p.stem+'_transport_status_v60.json')
+            try:runtime_control.atomic_json(target,self.snapshot())
+            except OSError:pass
+            self.last_status=mono
+    def emit(self,m,side,p,trader,source,evidence,born,_payload=None):
+        if getattr(self,'stopping',None) is not None and self.stopping.is_set():return
+        self.seq+=1
+        item=dict(_payload) if _payload is not None else dict(mint=m,side=side,price=p,trader=trader,source=source,evidence=evidence,born=born,ts=time.time())
+        item['seq']=self.seq
+        wire=json.dumps(item,allow_nan=False)+'\n';size=len(wire.encode())
+        if size>65536:
+            self.record_gap('FRAME_TOO_LARGE',frame_bytes=size);self.error=True;return
+        lock=getattr(self,'byte_lock',None)
+        if lock is not None:
+            with lock:
+                if self.pending_bytes+size>4*1024*1024:
+                    self.dropped+=1;self.record_gap('QUEUE_BYTE_LIMIT');return
+                self.pending_bytes+=size;self.peak_bytes=max(self.peak_bytes,self.pending_bytes)
+        item['_wire']=wire
+        try:self.queue.put_nowait(item)
+        except queue.Full:
+            self.dropped+=1;self.record_gap('QUEUE_COUNT_LIMIT')
+            if lock is not None:
+                with lock:self.pending_bytes-=size
+    def send(self):
+        try:
+            while not self.stopping.is_set():
+                try:x=self.queue.get(timeout=.05)
+                except queue.Empty:
+                    self.persist_status();continue
+                batch=[x]
+                for _ in range(31):
+                    try:batch.append(self.queue.get_nowait())
+                    except queue.Empty:break
+                wires=[x.get('_wire') or json.dumps(x,allow_nan=False)+'\n' for x in batch]
+                with self.byte_lock:self.pending_bytes-=sum(len(w.encode()) for w in wires)
+                t=time.monotonic();self.send_started=t;self.child.stdin.write(''.join(wires));self.child.stdin.flush();self.send_started=0
+                self.max_send_ms=max(self.max_send_ms,(time.monotonic()-t)*1000)
+                self.persist_status()
+            self.child.stdin.write(json.dumps(dict(control='STOP',session=self.session))+'\n');self.child.stdin.flush()
+        except (OSError,ValueError):self.error=True;self.record_gap('PIPE_WRITE_ERROR')
+        finally:
+            self.persist_status(force=True)
+            try:self.child.stdin.close()
+            except (OSError,ValueError):pass
+    def close(self,timeout=18):
+        import paper_branch,system_health
+        with self.close_lock:
+            if self.closed is not None:return self.closed
+            # Control file is independent of a blocked/full stdin pipe.
+            engine=getattr(self,'engine',paper_branch)
+            runtime_control.request_stop(engine.path(self.primary),self.session)
+            self.stopping.set()
+            if self.thread is None:
+                try:self.child.stdin.close()
+                except (OSError,ValueError,AttributeError):pass
+            forced=False
+            try:self.child.wait(timeout=timeout)
+            except subprocess.TimeoutExpired:
+                forced=True;terminate_tree(self.child)
+            if self.thread is not None:self.thread.join(timeout=1)
+            engine=getattr(self,'engine',paper_branch)
+            ack=engine.read_lifecycle(self.primary)
+            valid=ack.get('session')==self.session and ack.get('status') in ('STOPPED','FAILED')
+            status='STOPPED' if valid and ack['status']=='STOPPED' and self.child.returncode==0 and not forced else 'FAILED' if valid and ack['status']=='FAILED' else 'FORCED_STOP' if forced else 'UNCONFIRMED_EXIT'
+            self.closed=dict(session=self.session,status=status,exit_code=self.child.returncode,forced=forced,ts=time.time())
+            engine.write_transport(self.primary,self.closed)
+            system_health.event(self.primary,'BRANCH_STOP_ACK' if status=='STOPPED' else 'BRANCH_STOP_UNCONFIRMED',session=self.session,status=status,exit_code=self.child.returncode)
+            return self.closed
+
+def close_last():
+    if LAST:return LAST.close()
+
+def emit(*args):
+    if ACTIVE:ACTIVE.emit(*args)
+
+def watches(m):return ACTIVE is not None and m in ACTIVE.protected
+
+def born(m):return ACTIVE.protected.get(m,time.time()) if ACTIVE else time.time()
+
+class Fanout:
+    """Two durable scenarios share one normalized market feed, separate monitors."""
+    def __init__(self,primary):
+        global LAST
+        self.publishers=[];self.protected={};LAST=self
+        try:
+            for module in ('paper_branch','route_branch'):
+                p=Publisher.__new__(Publisher)
+                try:Publisher.__init__(p,primary,module)
+                except BaseException:
+                    if hasattr(p,'child'):self.publishers.append(p)
+                    raise
+                self.publishers.append(p);LAST=self
+        except BaseException:
+            self.close();LAST=self;raise
+    def emit(self,*args):
+        payload=dict(zip(('mint','side','price','trader','source','evidence','born'),args));payload['ts']=time.time()
+        for p in self.publishers:p.emit(*args,_payload=payload)
+    def snapshot(self):return dict(branches=[p.snapshot() for p in self.publishers])
+    def refresh_positions(self):
+        self.protected={}
+        for p in self.publishers:
+            p.refresh_positions()
+            for mint,opened in p.protected.items():self.protected[mint]=min(opened,self.protected.get(mint,opened))
+    @property
+    def pending(self):return sum(p.queue.qsize() for p in self.publishers)
+    @property
+    def dropped(self):return sum(p.dropped for p in self.publishers)
+    @property
+    def failed(self):
+        for p in self.publishers:
+            if p.error or p.child.poll() is not None:
+                self.failure_reason=p.module+':'+('PIPE_WRITE_ERROR' if p.error else 'CHILD_EXITED')
+                return True
+            r=runtime_control.watchdog_read(p.engine.path(p.primary))
+            if time.monotonic()-p.created_mono>30:
+                if not hasattr(p,'watchdog'):p.watchdog=runtime_control.ChildWatchdog(p.session,getattr(p,'worker_pid',p.child.pid))
+                failed=p.watchdog.observe(r,time.time(),time.monotonic())
+                target=p.engine.path(p.primary);target=target.with_name(target.stem+'_watchdog_v61.json')
+                try:runtime_control.atomic_json(target,p.watchdog.snapshot())
+                except OSError:pass
+                if failed:
+                    self.failure_reason=p.module+':'+p.watchdog.confirmed['repeat']['reason']
+                    p.record_gap('CHILD_WATCHDOG_CONFIRMED',watchdog=p.watchdog.confirmed);return True
+        return False
+    def close(self):
+        from concurrent.futures import ThreadPoolExecutor
+        if not self.publishers:return []
+        with ThreadPoolExecutor(max_workers=len(self.publishers)) as pool:return list(pool.map(lambda p:p.close(),self.publishers))
