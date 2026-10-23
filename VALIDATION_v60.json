@@ -1,0 +1,50 @@
+{
+  "version": "v0.7.60",
+  "platform": "Linux",
+  "native_windows_verified": false,
+  "live_rpc_verified": false,
+  "mainnet_execution_verified": false,
+  "jito_verified": false,
+  "telemetry_component": {
+    "scope": "UNTRACKED_MARKET_TELEMETRY_COMPONENT_ONLY",
+    "messages": 10000,
+    "simulated_messages_per_s": 500,
+    "platform": "Linux",
+    "python": "3.12.14",
+    "network": false,
+    "v59": {
+      "cpu_s": 0.356617093,
+      "elapsed_s": 0.4545409520001158,
+      "sql_write_statements": 60000,
+      "meta": {
+        "pumpapi_messages": "10000.0",
+        "pumpapi_last_message_ts": "1019.998",
+        "trade_last_raw_ts": "1019.998",
+        "trade_last_market_ts": "1019.998",
+        "trade_stream_state": "RECEIVING",
+        "trade_watchdog_state": "RECEIVING"
+      }
+    },
+    "v60": {
+      "cpu_s": 0.004141024999999965,
+      "elapsed_s": 0.004143297999689821,
+      "sql_write_statements": 480,
+      "meta": {
+        "pumpapi_messages": "10000.0",
+        "pumpapi_last_message_ts": "1019.998",
+        "trade_last_raw_ts": "1019.998",
+        "trade_last_market_ts": "1019.998",
+        "trade_stream_state": "RECEIVING",
+        "trade_watchdog_state": "RECEIVING"
+      }
+    },
+    "same_final_counters": true,
+    "write_reduction_pct": 99.2,
+    "cpu_reduction_pct": 98.8388035567325,
+    "limitations": "Only untracked telemetry at simulated arrival times, local Linux SQLite. Does not measure total bot CPU/RSS, Windows, RPC performance or hours-long stability."
+  },
+  "tests_passed": 610,
+  "tests_command": "python3 -m pytest -q",
+  "test_elapsed_s": 28.44,
+  "historical_curve_amm_litesvm_passed": true
+}
