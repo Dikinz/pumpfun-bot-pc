@@ -1,9 +1,11 @@
 @echo off
 setlocal
+set "PYTHONPATH="
+set "PYTHONHOME="
 cd /d "%~dp0"
 if not exist ".venv\Scripts\python.exe" python -m venv .venv
 if errorlevel 1 goto failed
-".venv\Scripts\python.exe" "app\launcher.py" install
+"%~dp0.venv\Scripts\python.exe" -I "%~dp0app\bootstrap.py" install
 if errorlevel 1 goto failed
 pause
 exit /b 0

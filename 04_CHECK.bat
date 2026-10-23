@@ -1,5 +1,7 @@
 @echo off
 setlocal
+set "PYTHONPATH="
+set "PYTHONHOME="
 chcp 65001 >nul
 set PYTHONUTF8=1
 cd /d "%~dp0"
@@ -8,7 +10,7 @@ if not exist ".venv\Scripts\python.exe" (
   pause
   exit /b 1
 )
-".venv\Scripts\python.exe" "app\launcher.py" check
+"%~dp0.venv\Scripts\python.exe" -I "%~dp0app\bootstrap.py" check
 set "CHECK_CODE=%errorlevel%"
 if "%CHECK_CODE%"=="2" goto time_warning
 if not "%CHECK_CODE%"=="0" goto failed

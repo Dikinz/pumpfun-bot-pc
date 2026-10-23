@@ -1,0 +1,14 @@
+{
+  "version": "v0.7.62",
+  "release_type": "complete_clean_distribution",
+  "tests_passed": 638,
+  "tests_failed": 0,
+  "elapsed_s": 24.95,
+  "default_dashboard_port": 8188,
+  "default_database": "data/clean_0762.db",
+  "strategy_and_clock_policy_unchanged": true,
+  "native_windows_test": false,
+  "boot_validation": "manifest checks before imports; own venv; own .env; fixed clean DB profile; occupied ports rejected",
+  "no_user_databases": true,
+  "no_credentials": true
+}
