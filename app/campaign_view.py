@@ -16,11 +16,12 @@ def branch(c,primary,role,now):
     orders=[dict(r) for r in c.execute("SELECT * FROM paper_orders_v0720 WHERE side='SELL' AND status='PENDING'")]
     at=diag['as_of'];by_mint={r['mint']:r for r in orders}
     positions=[]
+    wait_details={x['trade_id']:x for x in __import__('exit_wait_v65').rows(c,at)}
     for r in c.execute('SELECT trade_id,mint,size,opened_ts FROM positions'):
         order=by_mint.get(r['mint']);wait=max(0,at-order['signal_ts']) if order else None
         decision=c.execute('SELECT decision FROM route_exit_decisions_v59 WHERE trade_id=? ORDER BY available_ts DESC LIMIT 1',(r['trade_id'],)).fetchone() if role=='route' else None
         state=decision[0] if decision else ('WAITING_VERIFIED_ROUTE_RESULT' if role=='route' else 'WAITING_VERIFIED_AMM_OR_TICK' if role=='amm' else 'WAITING_FRESH_TICK') if order else 'NO_EXIT_SIGNAL'
-        positions.append(dict(r,exit_decision=state,exit_executor='VERIFIED_ROUTE' if role=='route' else 'AMM_OR_TICK' if role=='amm' else 'TICK_BASELINE',age_s=max(0,at-r['opened_ts']),exit_reason=order['reason'] if order else None,exit_wait_s=wait,
+        positions.append(dict(r,wait_diagnostic=wait_details.get(r['trade_id']),exit_decision=state,exit_executor='VERIFIED_ROUTE' if role=='route' else 'AMM_OR_TICK' if role=='amm' else 'TICK_BASELINE',age_s=max(0,at-r['opened_ts']),exit_reason=order['reason'] if order else None,exit_wait_s=wait,
             exit_overdue=wait is not None and wait>config.MAX_HOLD))
     new_closed=0;carried_closed=0
     trades=[];all_net=[];missing=0;closed=0;gross=0.;fees=0.
@@ -51,10 +52,11 @@ def branch(c,primary,role,now):
         if stop.get('session')!=meta.get('branch_session'):stop={}
         if transport.get('session')!=meta.get('branch_session'):transport={}
     blocks=diag['entry_blocks'];last=meta.get('last_entry_result_v0722','NO_SIGNAL')
+    matched=dict(c.execute('SELECT status,COUNT(*) FROM comparison_receipts_v64 GROUP BY status')) if c.execute("SELECT 1 FROM sqlite_master WHERE name='comparison_receipts_v64'").fetchone() else {}
     return dict(runtime_perf=__import__('runtime_control').read(primary if role=='primary' else engine.path(primary)),first_gap=json.loads(meta.get('branch_first_gap_v60','null')),resources=dict(cpu=meta.get('process_cpu_pct'),ram_mb=meta.get('process_ram_mb')),role=role,campaign=campaign,runtime=runtime,blocks=blocks,last_entry_result=last,capital=dict(available=cap['available'],cash=cap['net_cash'],principal=cap['open_principal'],status=cap['status']),
         new_closed=new_closed,carried_closed=carried_closed,entries=entries,closed=closed,wins=sum(x>0 for x in all_net),net=None if missing else sum(all_net),gross=gross,costs=None if missing else fees,
         accounting_missing=missing,closed_drawdown=None if missing else drawdown,positions=positions,trades=trades[-12:][::-1],preentry=pending,timing=timing,
-        amm_exits=settlements,stop=stop,transport=transport,input_gap=meta.get('branch_input_gap')=='1',
+        matched_entry_counts=matched,amm_exits=settlements,stop=stop,transport=transport,input_gap=meta.get('branch_input_gap')=='1',
         stream=dict(state=meta.get('trade_stream_state'),age_s=max(0,at-float(meta.get('trade_last_market_ts',0))) if meta.get('trade_last_market_ts') else None))
 
 def roadmap(primary,amm,route=None):

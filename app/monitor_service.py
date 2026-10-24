@@ -15,7 +15,8 @@ def paths(primary=None):
 
 def connect(primary=None,readonly=False):
     primary=Path(primary or config.DB).resolve();path=paths(primary)['db'];path.parent.mkdir(parents=True,exist_ok=True)
-    c=sqlite3.connect(path.as_uri()+('?mode=ro' if readonly else '?mode=rwc'),uri=True,timeout=1,isolation_level=None)
+    c=sqlite3.connect(path.as_uri()+('?mode=ro' if readonly else '?mode=rwc'),uri=True,timeout=1,isolation_level=None,factory=__import__('sqlite_diagnostics').ObservedConnection)
+    c.diagnostic_path=path
     c.row_factory=sqlite3.Row;c.execute('PRAGMA busy_timeout=1000')
     if not readonly:
         c.execute('PRAGMA journal_mode=WAL');c.executescript(pm.SCHEMA+trial.SCHEMA+EVENT_SCHEMA)
@@ -79,7 +80,7 @@ async def run(primary,parent_pid,parent_created=None,stop_event=None):
     pths=paths(primary)
     with singleton(pths['lock']):
         with closing(connect(primary)) as c:
-            pm.recover(c);start=time.time();last_mono=time.monotonic();last_wall=start;last_log=0;last_publish=0;warned=set();active={};last_alert_row=0
+            pm.recover(c);__import__('priority_exit').recover(c);start=time.time();last_mono=time.monotonic();last_wall=start;last_log=0;last_publish=0;warned=set();active={};last_alert_row=0;cleanup_failed=False
             def parent_alive():
                 if stop_event is not None:return not stop_event.is_set()
                 if not parent_pid:return True
@@ -96,10 +97,16 @@ async def run(primary,parent_pid,parent_created=None,stop_event=None):
                     for lane,(task,job) in list(active.items()):
                         if not task.done():continue
                         try:task.result()
+                        except asyncio.CancelledError:pass
                         except Exception as e:
+                            if str(e).startswith('SIMULATION_CHILD_CLEANUP_'):
+                                cleanup_failed=True;raise
                             __import__('system_health').failure(primary,'monitor_worker',e)
                             journal('WORKER_EXCEPTION',dict(error_type=type(e).__name__),primary,c)
                         row=c.execute('SELECT status,finished_ts FROM position_checks_v0730 WHERE id=?',(job['id'],)).fetchone()
+                        if row and row['status']=='RUNNING' and task.cancelled():
+                            pm.finish(c,job,dict(status=job.get('cancel_status','INTERRUPTED_STOP')))
+                            row=c.execute('SELECT status,finished_ts FROM position_checks_v0730 WHERE id=?',(job['id'],)).fetchone()
                         journal('CHECK_FINISHED',dict(check_id=job['id'],trade_id=job['trade_id'],lane=lane,status=row['status'] if row else 'MISSING',finished_ts=row['finished_ts'] if row else None),primary,c)
                         del active[lane]
                     try:
@@ -107,6 +114,9 @@ async def run(primary,parent_pid,parent_created=None,stop_event=None):
                             last_alert_row=alert['rowid']
                             journal('TECHNICAL_ERROR_WARNING',dict(trade_id=alert['trade_id'],streak=alert['streak'],check_id=alert['check_id']),primary,c)
                             print('WARNING: 3 consecutive technical errors. Check dashboard. Retry backoff active. Position '+alert['trade_id'],flush=True)
+                        import priority_exit
+                        priority_exit.observe(c,now)
+                        priority_exit.preempt(c,active)
                         late=overdue(c,now)
                         warned.intersection_update((item['trade_id'],item['previous_started_ts']) for item in late)
                         for item in late:
@@ -120,10 +130,12 @@ async def run(primary,parent_pid,parent_created=None,stop_event=None):
                         if now-last_publish>=1 or now<last_publish:
                             publish(state,primary);last_publish=now
                         if now-last_log>=5:journal('HEARTBEAT',state,primary);last_log=now
-                        for lane in ('initial','regular'):
-                            if lane in active:continue
+                        for lane in ('exit0','exit1','initial','regular'):
+                            if lane in active or len(active)>=2:continue
                             c.execute('BEGIN')
-                            try:job=pm.next_job(c,now,lane=lane);c.commit()
+                            try:
+                                job=priority_exit.dispatch(c,now) if lane.startswith('exit') else pm.next_job(c,now,lane=lane)
+                                c.commit()
                             except BaseException:c.rollback();raise
                             if job:
                                 journal('CHECK_STARTED',dict(check_id=job['id'],trade_id=job['trade_id'],mint=job['mint'],lane=lane,entry_to_start_s=now-job['opened_ts']),primary,c)
@@ -140,9 +152,10 @@ async def run(primary,parent_pid,parent_created=None,stop_event=None):
                     except Exception as e:journal('WORKER_EXCEPTION',dict(error_type=type(e).__name__),primary,c)
                     row=c.execute('SELECT status,finished_ts FROM position_checks_v0730 WHERE id=?',(job['id'],)).fetchone()
                     journal('CHECK_FINISHED',dict(check_id=job['id'],trade_id=job['trade_id'],lane=lane,status=row['status'] if row else 'MISSING',finished_ts=row['finished_ts'] if row else None),primary,c)
-                pm.recover(c)
-                publish(dict(status='STOPPED',pid=os.getpid(),heartbeat_ts=time.time(),started_ts=start),primary)
-                journal('STOP',dict(pid=os.getpid()),primary,c)
+                pm.recover(c,status='CLEANUP_FAILED' if cleanup_failed else 'INTERRUPTED_STOP')
+                __import__('priority_exit').stop(c,time.time(),status='CLEANUP_FAILED' if cleanup_failed else 'INTERRUPTED_STOP')
+                publish(dict(status='FAILED' if cleanup_failed else 'STOPPED',pid=os.getpid(),heartbeat_ts=time.time(),started_ts=start),primary)
+                journal('CLEANUP_FAILED' if cleanup_failed else 'STOP',dict(pid=os.getpid()),primary,c)
 
 def report(primary=None,now=None):
     primary=primary or config.DB
@@ -152,7 +165,7 @@ def report(primary=None,now=None):
         c.execute('BEGIN')
         state=service_status(primary,now)
         report_time=state.get('heartbeat_ts') if state.get('status')=='STOPPED' else now
-        r=pm.summary(c,report_time);r['trial']=trial.summary(c)
+        r=pm.summary(c,report_time);r['priority_exit_v65']=__import__('priority_exit').summary(c);r['trial']=trial.summary(c)
         import cohort_report
         r['cohort']=cohort_report.summary(c)
         r['health']=cohort_report.health(c,report_time)
@@ -189,7 +202,7 @@ def export(primary,folder):
             with closing(connect(primary,readonly=True)) as c:
                 c.execute('BEGIN')
                 checks=[dict(r) for r in c.execute('SELECT * FROM position_checks_v0730 ORDER BY started_ts')]
-                for table in ('position_checks_v0730','monitor_events_v0731','monitor_timing_v0731','price_trial_decisions_v0731','price_trial_exits_v0731','rules_config_v0733','rules_decisions_v0733','rules_exits_v0733','delta_baselines_v0734','monitor_alerts_v0737'):
+                for table in ('position_checks_v0730','monitor_events_v0731','monitor_timing_v0731','price_trial_decisions_v0731','price_trial_exits_v0731','rules_config_v0733','rules_decisions_v0733','rules_exits_v0733','delta_baselines_v0734','monitor_alerts_v0737','priority_exit_requests_v65'):
                     z.writestr(table+'.json',json.dumps([dict(r) for r in c.execute('SELECT * FROM '+table)],ensure_ascii=False))
                 missing=[]
                 for r in checks:

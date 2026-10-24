@@ -35,6 +35,7 @@ def evaluate(s,now):
     return 'FEATURE_PASS',detail
 
 def count(c,v,r):
+    if __import__('counter_writer').buffered(c,v,r):return
     c.execute('INSERT INTO candidate_counts_v0742 VALUES(?,?,1) ON CONFLICT(variant,reason) DO UPDATE SET n=n+1',(v,r))
 
 def first(c,v,m,stage,now,e,d):

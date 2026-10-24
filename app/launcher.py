@@ -13,6 +13,25 @@ def setup_env():
     if not p.exists():p.write_bytes((APP/'.env.example').read_bytes())
 
 def results():
+    import config,monitor_service,sqlite_preserve,sqlite_diagnostics
+    database=Path(config.DB).resolve()
+    # Same launcher lock as start: refuse capture while that installation runs.
+    lock=database.with_name(database.stem+'_launcher.lock')
+    with monitor_service.singleton(lock):
+        folder=ROOT/'results'/('preservation_'+time.strftime('%Y%m%d_%H%M%S')+'_'+__import__('uuid').uuid4().hex[:6])
+        target,manifest=sqlite_preserve.preserve(database.parent,folder,primary_name=database.name)
+        print('PRESERVED EVIDENCE:',target,flush=True)
+        damaged=any(x.get('integrity')!=['ok'] for x in manifest['databases']) or manifest['errors'] or any(not x['stable'] for x in manifest['files'])
+        if damaged:
+            print('PARTIAL DATA: inspect MANIFEST.json. No database repaired; trading results are not certified.');return 1
+        try:return legacy_results()
+        except Exception as exc:
+            sqlite_diagnostics.record(database,'RESULTS_REPORT_FAILED',exc)
+            (folder/'REPORT_ERROR.json').write_text(json.dumps(sqlite_diagnostics.error(exc),indent=2),encoding='utf-8')
+            with zipfile.ZipFile(target,'a',zipfile.ZIP_DEFLATED) as z:z.write(folder/'REPORT_ERROR.json','REPORT_ERROR.json')
+            print('REPORT FAILED; preserved databases remain available:',target);return 1
+
+def legacy_results():
     import shadow_preflight
     import config,export_data,auto_simulation,preentry,position_monitor,monitor_service
     if not Path(config.DB).exists():raise RuntimeError('No test database. Start the bot first.')
@@ -71,6 +90,11 @@ def results():
     __import__('route_branch').export(config.DB,folder)
     __import__('runtime_control').export(config.DB,folder)
     __import__('aggregate_export').export(config.DB,folder)
+    review=__import__('exit_cost_review').current(config.DB,folder)
+    __import__('exit_wait_v65').export(config.DB,folder,review)
+    __import__('shared_lots').export(config.DB,folder)
+    for diagnostic in Path(config.DB).resolve().parent.glob('*_counter_writer_v67.json'):
+        shutil.copy2(diagnostic,folder/diagnostic.name)
     benchmark=APP/'data/runtime_benchmark_v60.json'
     if benchmark.exists():shutil.copy2(benchmark,folder/benchmark.name)
     target_check=APP/'data/target_amm_check_v59.json'
@@ -236,7 +260,7 @@ def main():
         time_code=call('time_check.py')
         if time_code not in (0,2):return 1
         if call('monitor_selftest.py'):return 1
-        test_code=call('-m','pytest','-q','tests/test_clean_release_v62.py','tests/test_worker_identity_v611.py','tests/test_watchdog_lifecycle_v61.py','tests/test_runtime_delivery_v60.py','tests/test_route_exit_v59.py','tests/test_clean_campaign_v58.py','tests/test_program_cache_v57.py','tests/test_stop_consistency_v57.py','tests/test_rpc_timing_v56.py','tests/test_branch_shutdown_v541.py','tests/test_parallel_paper_v54.py','tests/test_phase2_v54.py','tests/test_dashboard_launch_hotfix.py','tests/test_execution_safety_v52.py','tests/test_wallet_rpc_phase1.py','tests/test_system_strategy_v51.py','tests/test_primary_integrity.py','tests/test_execution_model.py','tests/test_cost_price_v50.py','tests/test_signal_exit_v49.py','tests/test_monitor_evidence_v48.py','tests/test_entry_monitor_v47.py','tests/test_exit_timeline_v46.py','tests/test_dashboard_start_v46.py','tests/test_run_exit_v45.py','tests/test_time_check_v44.py','tests/test_shadow_preflight_v43.py','tests/test_candidates_v42.py','tests/test_runtime_v41.py','tests/test_clock_reference_v40.py','tests/test_time_order_v39.py','tests/test_entry_diagnostics_v38.py','tests/test_connection_v37.py','tests/test_migration_v36.py','tests/test_monitor_v35.py','tests/test_delta_v34.py','tests/test_rules_v33.py','tests/test_monitor_v32.py','tests/test_monitor_v31.py','tests/test_monitor_v30.py','tests/test_preentry.py','tests/test_local_simulation.py','tests/test_exit_comparison.py')
+        test_code=call('-m','pytest','-q','tests/test_counter_writer_v67.py','tests/test_sqlite_preserve_v66.py','tests/test_priority_exit_v65.py','tests/test_shared_lots_v64.py','tests/test_exit_cost_review_v63.py','tests/test_clean_release_v62.py','tests/test_worker_identity_v611.py','tests/test_watchdog_lifecycle_v61.py','tests/test_runtime_delivery_v60.py','tests/test_route_exit_v59.py','tests/test_clean_campaign_v58.py','tests/test_program_cache_v57.py','tests/test_stop_consistency_v57.py','tests/test_rpc_timing_v56.py','tests/test_branch_shutdown_v541.py','tests/test_parallel_paper_v54.py','tests/test_phase2_v54.py','tests/test_dashboard_launch_hotfix.py','tests/test_execution_safety_v52.py','tests/test_wallet_rpc_phase1.py','tests/test_system_strategy_v51.py','tests/test_primary_integrity.py','tests/test_execution_model.py','tests/test_cost_price_v50.py','tests/test_signal_exit_v49.py','tests/test_monitor_evidence_v48.py','tests/test_entry_monitor_v47.py','tests/test_exit_timeline_v46.py','tests/test_dashboard_start_v46.py','tests/test_run_exit_v45.py','tests/test_time_check_v44.py','tests/test_shadow_preflight_v43.py','tests/test_candidates_v42.py','tests/test_runtime_v41.py','tests/test_clock_reference_v40.py','tests/test_time_order_v39.py','tests/test_entry_diagnostics_v38.py','tests/test_connection_v37.py','tests/test_migration_v36.py','tests/test_monitor_v35.py','tests/test_delta_v34.py','tests/test_rules_v33.py','tests/test_monitor_v32.py','tests/test_monitor_v31.py','tests/test_monitor_v30.py','tests/test_preentry.py','tests/test_local_simulation.py','tests/test_exit_comparison.py')
         if test_code:return 1
         print('Technical tests PASSED. '+('Time check PASSED.' if time_code==0 else 'TIME WARNING: review app/data/time_check.txt.'))
         return time_code

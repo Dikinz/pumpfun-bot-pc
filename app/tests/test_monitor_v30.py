@@ -126,6 +126,7 @@ def test_monitor_child_cleanup(fresh,tmp_path,monkeypatch,mode,expected):
     import asyncio
     main.buy('mintA',1);job=pm.next_job(fresh,time.time());monkeypatch.setattr(pm,'ROOT',tmp_path)
     class Process:
+        pid=999999999
         returncode=None
         killed=False
         async def wait(self):
@@ -135,6 +136,9 @@ def test_monitor_child_cleanup(fresh,tmp_path,monkeypatch,mode,expected):
             self.returncode=1;return 1
         def kill(self):self.killed=True;self.returncode=-9
     proc=Process()
+    import psutil
+    def no_os_process(pid):raise psutil.NoSuchProcess(pid)
+    monkeypatch.setattr(psutil,'Process',no_os_process)
     async def create(*a,**kw):return proc
     monkeypatch.setattr(asyncio,'create_subprocess_exec',create)
     if mode=='cancel':
@@ -147,7 +151,7 @@ def test_result_package_has_dashboard_database_and_all_evidence(fresh,tmp_path,m
     import launcher,zipfile
     monkeypatch.setattr(launcher,'ROOT',tmp_path)
     assert launcher.results()==0
-    target=next((tmp_path/'results').glob('*.zip'))
+    target=next(p for p in (tmp_path/'results').glob('*.zip') if not p.name.startswith('preservation_'))
     with zipfile.ZipFile(target) as z:
         names=z.namelist()
         assert 'dashboard.html' in names and 'summary.json' in names

@@ -608,6 +608,7 @@ def _buy(m,p,score=0,s=None,_fill=False,_order_id=None):
         capital.record(db.con(),P[m]["trade_id"],"BUY",P[m]["size"],(s or {}).get("cost_evidence",{}))
         exit_quotes.on_entry(db.con(),P[m]["trade_id"],m,p,P[m]["size"])
         execution.filled(db.con(),_order_id,P[m]["trade_id"],p,(s or {}).get("cost_evidence",{}))
+        __import__('shared_lots').publish_entry(db.con(),P[m],_order_id,(s or {}).get('born',time.time()))
     micro_register(m,p)
     return True,"ENTRY_OK"
 
@@ -659,6 +660,7 @@ def sell(m,p,reason,trigger_price=0.0,trigger_ts=0.0,_fill=False,_order_id=None,
     if config.EXECUTION_MODEL_ENABLED and not _fill:
         audit_order=execution.request(db.con(),m,"SELL",p,q["size"],reason,settlement_evidence,trade_id=q["trade_id"])
         exit_audit.signal(db.con(),q["trade_id"],m,audit_order,q,settlement_evidence)
+        __import__('shared_lots').publish_signal(db.con(),q['trade_id'],audit_order,execution.ORIGINS.get(audit_order),settlement_evidence)
         return
     r=p/q["entry"]-1
     if reason=="FAST_STOP" and config.FAST_SHADOW_V3:
@@ -1446,6 +1448,7 @@ async def run():
         provider="pumpapi"
     elif provider=="auto":
         provider="pumpapi"
+    db.setm('matched_mode_v64',1)
     publisher=branch_transport.Fanout(config.DB);branch_transport.ACTIVE=publisher
     runtime_probe=runtime_control.Probe(config.DB,extra=lambda:publisher.snapshot()).start()
     trade_task=pumpapi_trades(q) if provider=="pumpapi" else free_api_trades(q) if provider=="free_api" else bitquery_trades(q) if provider=="bitquery" else pumpportal_trades(q) if provider=="pumpportal" else cost_safe_no_trade_stream(q)
@@ -1461,11 +1464,13 @@ async def run():
             await asyncio.sleep(1)
     tasks.append(('amm_branch_watch',branch_watch()))
     running=[asyncio.create_task(system_health.supervise(name,task,config.DB,allow_return=name=='clock_reference')) for name,task in tasks]
+    counter_sink=__import__('counter_writer').start(config.DB,session=run_audit.ACTIVE)
     try:
         await asyncio.gather(*running)
     finally:
         branch_transport.ACTIVE=None
         tasks_stopped=await runtime_control.cancel_tasks(list(zip([name for name,_ in tasks],running)),config.DB)
+        await __import__('counter_writer').stop(counter_sink)
         try:await asyncio.to_thread(publisher.close)
         finally:await runtime_probe.close()
         if not tasks_stopped:raise RuntimeError('TASK_SHUTDOWN_TIMEOUT')

@@ -12,6 +12,7 @@ SCHEMA='''CREATE TABLE IF NOT EXISTS position_checks_v0730(
  CREATE INDEX IF NOT EXISTS position_checks_trade_time ON position_checks_v0730(trade_id,scheduled_ts);
  CREATE INDEX IF NOT EXISTS position_checks_trade_started_v51 ON position_checks_v0730(trade_id,started_ts DESC);
  CREATE TABLE IF NOT EXISTS position_health_v0730(trade_id TEXT PRIMARY KEY,first_problem_ts REAL,first_problem_status TEXT,first_error_ts REAL,last_good_ts REAL);'''
+SCHEMA+=__import__('priority_exit').SCHEMA
 SCHEMA+='CREATE INDEX IF NOT EXISTS checks_finished_v60 ON position_checks_v0730(finished_ts,id);'
 import connection_audit
 SCHEMA+=connection_audit.SCHEMA
@@ -33,23 +34,27 @@ def next_due(c,tid,opened):
     interval=AMM_INTERVAL if migrated(c,tid) else INTERVAL
     return max(backoff,row['started_ts']+interval)
 
-def recover(c):
-    c.execute("UPDATE position_checks_v0730 SET status='INTERRUPTED_RESTART',finished_ts=? WHERE status='RUNNING'",(time.time(),))
+def recover(c,status='INTERRUPTED_RESTART'):
+    c.execute("UPDATE position_checks_v0730 SET status=?,finished_ts=? WHERE status='RUNNING'",(status,time.time()))
 
-def next_job(c,now,lane=None):
+def next_job(c,now,lane=None,priority=None):
     # Dedicated first-check lane; one running check per position, no queued jobs.
     rows=c.execute('''SELECT p.*,MAX(m.started_ts) last_check FROM positions p LEFT JOIN position_checks_v0730 m ON m.trade_id=p.trade_id GROUP BY p.trade_id ORDER BY COALESCE(MAX(m.started_ts),0),p.opened_ts''').fetchall()
     for p in rows:
+        if priority and p['trade_id']!=priority['trade_id']:continue
         if lane=='initial' and p['last_check'] is not None:continue
         if lane=='regular' and p['last_check'] is None:continue
         if c.execute("SELECT 1 FROM position_checks_v0730 WHERE trade_id=? AND status='RUNNING'",(p['trade_id'],)).fetchone():continue
-        if now<next_due(c,p['trade_id'],p['opened_ts']):continue
+        if priority:
+            if now<(connection_audit.retry(c,p['trade_id'])['not_before_ts'] or 0):continue
+        elif now<next_due(c,p['trade_id'],p['opened_ts']):continue
         inv=c.execute('SELECT * FROM quote_inventory_v0723 WHERE trade_id=?',(p['trade_id'],)).fetchone()
         prior=c.execute("SELECT result_json FROM position_checks_v0730 WHERE trade_id=? AND result_json IS NOT NULL ORDER BY started_ts DESC LIMIT 1",(p['trade_id'],)).fetchone()
         previous=json.loads(prior[0]).get('reserves',{}).get('real_sol_lamports') if prior else None
         import config
         data=dict(route='PUMP_AMM' if migrated(c,p['trade_id']) else 'PUMP_CURVE',trial_loss_bps=config.QUOTE_MAX_LOSS_BPS,id=uuid.uuid4().hex,trade_id=p['trade_id'],mint=p['mint'],opened_ts=p['opened_ts'],scheduled_ts=now,
           inventory=dict(inv) if inv else None,entry_price=str(p['entry']),previous_reserve=previous,wallet_state=wallet_costs.ensure(c))
+        if priority:data['priority_exit']=dict(order_id=priority['order_id'],signal_ts=priority['signal_ts'],detected_ts=priority['detected_ts'],dispatched_ts=now,queue_wait_ms=(now-priority['detected_ts'])*1000)
         c.execute("INSERT INTO position_checks_v0730(id,trade_id,mint,scheduled_ts,started_ts,status,input_json) VALUES(?,?,?,?,?,'RUNNING',?)",(data['id'],p['trade_id'],p['mint'],now,now,json.dumps(data)))
         return data
 
@@ -72,6 +77,7 @@ def finish(c,job,r,archive=None,now=None):
     try:
         updated=c.execute("UPDATE position_checks_v0730 SET status=?,finished_ts=?,result_json=?,archive=? WHERE id=? AND status='RUNNING'",(status,now,json.dumps(r),archive,job['id'])).rowcount
         if updated:
+            __import__('priority_exit').finished(c,job,status,now)
             connection_audit.record_alert(c,job,status,now)
             state=trial.timing(c,job['trade_id'],now)
             if job.get('route')=='PUMP_AMM':
@@ -204,6 +210,39 @@ def amm_experiment(data,out):
     (out/'result.tmp').write_text(json.dumps(r));(out/'result.tmp').replace(out/'result.json')
     return r
 
+async def stop_simulation(proc):
+    """Reap the known simulation launcher and its descendants (Windows venv wrapper)."""
+    import psutil
+    family=[]
+    try:family=psutil.Process(proc.pid).children(recursive=True)
+    except psutil.NoSuchProcess:pass
+    except psutil.Error:
+        # The direct child is still reaped; inability to inspect descendants is explicit.
+        family=None
+    inspection_failed=family is None
+    for child in reversed(family or []):
+        try:child.kill()
+        except psutil.NoSuchProcess:pass
+        except psutil.Error:inspection_failed=True
+    if proc.returncode is None:
+        try:proc.kill()
+        except ProcessLookupError:pass
+        except PermissionError:raise RuntimeError('SIMULATION_CHILD_CLEANUP_UNCONFIRMED') from None
+    try:await asyncio.wait_for(proc.wait(),timeout=3)
+    except asyncio.TimeoutError:raise RuntimeError('SIMULATION_CHILD_CLEANUP_TIMEOUT') from None
+    if inspection_failed:raise RuntimeError('SIMULATION_CHILD_CLEANUP_UNCONFIRMED')
+    # Process handles include creation identity; no broad name-based termination.
+    deadline=time.monotonic()+2
+    while True:
+        alive=[]
+        for child in family:
+            try:
+                if child.is_running() and child.status()!=psutil.STATUS_ZOMBIE:alive.append(child)
+            except psutil.NoSuchProcess:pass
+        if not alive:return
+        if time.monotonic()>=deadline:raise RuntimeError('SIMULATION_CHILD_CLEANUP_TIMEOUT')
+        await asyncio.sleep(.02)
+
 async def launch_check(job,out,replay=None,timeout=None):
     """Same launch path for production and offline startup test. Never inherit stdin."""
     out=Path(out);out.mkdir(parents=True,exist_ok=True)
@@ -226,7 +265,7 @@ async def launch_check(job,out,replay=None,timeout=None):
         raise
     except Exception as e:result={'status':'WORKER_ERROR','error_code':type(e).__name__}
     finally:
-        if proc is not None and proc.returncode is None:proc.kill();await proc.wait()
+        if proc is not None and proc.returncode is None:await stop_simulation(proc)
         result=result or {'status':'WORKER_ERROR'}
         import rpc_timing
         rpc_timing.attach(result,out)
@@ -252,9 +291,12 @@ async def run_job(job,connection=None):
         import database as db
         connection=db.con()
     out=ROOT/job['id']
+    worker_ts=time.time();worker_mono=time.monotonic()
+    __import__('priority_exit').worker_started(connection,job,worker_ts)
     try:r=await launch_check(job,out)
     except asyncio.CancelledError:
-        finish(connection,job,{'status':'INTERRUPTED_STOP'},str(out/'diagnostic.zip'));raise
+        finish(connection,job,{'status':job.get('cancel_status','INTERRUPTED_STOP')},str(out/'diagnostic.zip'));raise
+    r['scheduler_timing_v65']=dict(scheduled_ts=job['scheduled_ts'],worker_started_ts=worker_ts,event_loop_dispatch_ms=max(0,(worker_ts-job['scheduled_ts'])*1000),worker_duration_ms=(time.monotonic()-worker_mono)*1000)
     archive=out/'evidence.zip'
     finish(connection,job,r,str(archive if archive.exists() else out/'diagnostic.zip'))
 
@@ -296,7 +338,7 @@ def summary(c,now=None):
     from collections import Counter
     migration=dict(counts=dict(Counter(x['status'] for x in amm_rows)),recent=amm_rows[:50],open_positions=sum(migrated(c,p['trade_id']) for p in rows),interval_s=AMM_INTERVAL)
     return dict(migration=migration,counts=counts,positions=rows,recent=recent,timing_counts=timing_counts,before_close_counts=before_counts,after_close_counts=after_counts,interval_s=INTERVAL,timeout_s=TIMEOUT,
-      note='Таймер 10 с на позицию; при медленном RPC фактический интервал больше. Проверяется прямой Pump-маршрут с синтетическими токенами. Проверка не закрывает PAPER-позицию и не обещает исполнение в сети.')
+      note='Один приоритетный свежий запрос после SELL без ожидания таймера; technical backoff сохранён. В остальное время таймер 10 с на позицию; при медленном RPC фактический интервал больше. Проверяется прямой Pump-маршрут с синтетическими токенами. Проверка не закрывает PAPER-позицию и не обещает исполнение в сети.')
 
 def export_evidence(db_path,folder='exports'):
     folder=Path(folder);folder.mkdir(parents=True,exist_ok=True)

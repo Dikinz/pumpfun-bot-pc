@@ -17,6 +17,14 @@ def main():
     command=sys.argv[1] if len(sys.argv)>1 else 'help'
     if command=='verify-release':
         print('CLEAN RELEASE VERIFIED:',ROOT);return 0
+    if command=='preserve-data':
+        import sqlite_preserve
+        selected=input('Stopped OLD app/data folder: ').strip().strip(chr(34))
+        if not selected:print('Cancelled: no folder selected.');return 1
+        return sqlite_preserve.main([selected])
+    if command=='review-archive':
+        import exit_cost_review
+        return exit_cost_review.main(sys.argv[2:])
     import launcher
     if command!='install':
         launcher.setup_env()

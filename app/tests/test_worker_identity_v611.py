@@ -16,28 +16,42 @@ def test_recorded_windows_false_alarm_is_reproduced_and_corrected():
     assert not corrected.observe(b['snapshot'],b['observed_ts'],16)
     assert corrected.snapshot()['state']=='HEALTHY'
 
-def test_actual_launcher_and_worker_can_have_different_pids(tmp_path,monkeypatch):
+def test_actual_launcher_and_worker_can_have_different_pids(tmp_path):
+    import psutil
     ready=tmp_path/'ready.json';stop=tmp_path/'stop'
-    worker="import os,json,sys,time;from pathlib import Path;p=Path(sys.argv[1]);p.write_text(json.dumps(dict(session='s',pid=os.getpid(),parent_pid=os.getppid())));stop=Path(sys.argv[2]);exec('while not stop.exists():time.sleep(.01)')"
+    worker="import os,json,sys,time;from pathlib import Path;p=Path(sys.argv[1]);t=p.with_suffix('.tmp');t.write_text(json.dumps(dict(session='s',pid=os.getpid(),parent_pid=os.getppid())));t.replace(p);stop=Path(sys.argv[2]);exec('while not stop.exists():time.sleep(.01)')"
     wrapper="import subprocess,sys;raise SystemExit(subprocess.call([sys.executable,'-c',sys.argv[1],*sys.argv[2:]]))"
-    child=subprocess.Popen([sys.executable,'-c',wrapper,worker,str(ready),str(stop)])
+    # Two explicit wrapper levels, plus any native Windows venv redirectors.
+    child=subprocess.Popen([sys.executable,'-c',wrapper,wrapper,worker,str(ready),str(stop)])
     try:
         deadline=time.monotonic()+5
         while not ready.exists() and time.monotonic()<deadline:time.sleep(.01)
+        assert ready.exists(),'Worker readiness timeout'
         report=json.loads(ready.read_text());assert report['pid']!=child.pid
-        assert report['parent_pid']==child.pid
-        # This sandbox virtualizes /proc parents. Validate real parent via IPC,
-        # then provide the same ancestry through the psutil adapter.
-        import psutil
-        monkeypatch.setattr(psutil,'Process',lambda pid:SimpleNamespace(parents=lambda:[SimpleNamespace(pid=report['parent_pid'])] if pid==report['pid'] else []))
+        if os.name!='nt':
+            try:visible_parent=psutil.Process(report['pid']).ppid()
+            except psutil.Error:visible_parent=None
+            if visible_parent!=report['parent_pid']:
+                pytest.skip('Sandbox /proc does not expose native process ancestry; deterministic multi-level ancestry tests still run')
+        # Use the real production ancestry check, never require a direct parent.
         pid=bt.bind_worker(child,report,'s');assert pid==report['pid']
         w=rt.ChildWatchdog('s',pid)
         assert not w.observe(dict(report,ts=100,state='RUNNING',loop_pulse_age_s=.01),100,0)
         assert w.snapshot()['state']=='HEALTHY'
         with pytest.raises(RuntimeError,match='NOT_DESCENDANT'):
-            bt.bind_worker(child,dict(session='s',pid=os.getpid(),parent_pid=os.getppid()),'s')
+            bt.bind_worker(child,dict(session='s',pid=os.getpid()),'s')
     finally:
-        stop.touch();child.wait(timeout=5)
+        stop.touch()
+        try:child.wait(timeout=10)
+        except subprocess.TimeoutExpired:bt.terminate_tree(child)
+
+@pytest.mark.parametrize('ancestry',[[20,7],[30,20,7],[40,30,20,7]])
+def test_worker_can_be_a_deep_descendant_without_weakening_binding(monkeypatch,ancestry):
+    import psutil
+    monkeypatch.setattr(psutil,'Process',lambda pid:SimpleNamespace(parents=lambda:[SimpleNamespace(pid=p) for p in ancestry]))
+    assert bt.bind_worker(SimpleNamespace(pid=7),dict(session='s',pid=99),'s')==99
+    with pytest.raises(RuntimeError,match='NOT_DESCENDANT'):
+        bt.bind_worker(SimpleNamespace(pid=555),dict(session='s',pid=99),'s')
 
 @pytest.mark.parametrize('pid',[None,0,-1,True,'123'])
 def test_ready_invalid_pid_is_rejected(pid):

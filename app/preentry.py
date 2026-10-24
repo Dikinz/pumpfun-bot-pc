@@ -100,6 +100,7 @@ def child(data,out,replay=None):
             minimum=int(Decimal(budget)/Decimal(10)**9/Decimal(data['signal_price'])*Decimal(10)**dec*Decimal(data['buy_min_fraction']))
         rpc_timing.stage('ROUNDTRIP_SIMULATION')
         report=rt.run_roundtrip(bundle,budget,max(1,minimum),data['max_loss_bps'],data['min_reserve_multiple'])
+        report['amount_decimals']=dec
         report['snapshot_received_ts']=bundle['snapshot']['received_ts']
         report['snapshot_request_ts']=bundle['snapshot']['started_ts']
         # Explicitly preserve VM failure and its raw program code.

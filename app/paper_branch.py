@@ -131,10 +131,15 @@ async def worker(primary,ready=None,session=None,scenario=None):
     target=engine.seed(primary);config.DB=str(target)
     import database as db,main,preentry,shadow_preflight,execution_model as ex,exit_quotes,run_audit,runtime_status,monitor_service
     db.init()
+    import shared_lots
+    matched=shared_lots.enabled(db.con())
     if scenario:scenario.configure()
     preentry.recover(db.con());shadow_preflight.recover(db.con());ex.restart(db.con());main.restore_positions()
+    if matched:
+        shared_lots.configure(main);shared_lots.restore_clocks(db.con())
     runtime_status.begin(db.con());run_audit.begin(db.con(),None)
     db.setmany(dict(branch_role='ROUTE_PAPER' if scenario else 'AMM_PAPER',branch_input_gap=int(db.getm('branch_input_gap',0)),trade_stream_state='STARTING',branch_input_seq=0,branch_session=session,branch_shutdown_state='RUNNING'))
+    if matched:db.setm('last_entry_result_v0722','MATCHED_PRIMARY_ENTRY_ONLY')
     db.runtime_mode()
     await exit_quotes.refresh_fx()
     if exit_quotes.FX_STATUS!='READY':raise RuntimeError('BRANCH_FX_NOT_READY')
@@ -208,13 +213,17 @@ async def worker(primary,ready=None,session=None,scenario=None):
     async def check():
         nonlocal monitor
         while True:
+            if matched:shared_lots.sync(main,primary)
             if monitor is None and main.P:
                 monitor=await asyncio.to_thread(__import__('subprocess').Popen,[sys.executable,'paper_branch.py','--monitor',str(target),'--parent',str(os.getpid())],stdin=__import__('subprocess').PIPE)
             if monitor is not None and monitor.poll() is not None:raise RuntimeError('BRANCH_MONITOR_EXITED')
             persist_input()
             engine.poll(main);await asyncio.sleep(.25)
-    tasks=[asyncio.create_task(t) for t in (main.heartbeat(),main.observation_timer(),main.clock_lab.local_watch(),preentry.worker(),exit_quotes.worker(),check())]
+    work=[main.heartbeat(),main.observation_timer(),main.clock_lab.local_watch(),exit_quotes.worker(),check()]
+    if not matched:work.append(preentry.worker())
+    tasks=[asyncio.create_task(t) for t in work]
     feed=asyncio.create_task(receive())
+    counter_sink=__import__('counter_writer').start(config.DB,session=session)
     failed=False
     try:
         done,_=await asyncio.wait([feed]+tasks,return_when=asyncio.FIRST_COMPLETED)
@@ -235,6 +244,7 @@ async def worker(primary,ready=None,session=None,scenario=None):
                 monitor_forced=True
                 from branch_transport import terminate_tree
                 await asyncio.to_thread(terminate_tree,monitor)
+        await __import__('counter_writer').stop(counter_sink)
         persist_input()
         await probe.close()
         final='FAILED' if failed or monitor_forced else 'STOPPED'

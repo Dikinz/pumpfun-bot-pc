@@ -102,6 +102,7 @@ async def local_watch():
         previous=current
 
 def count(c,variant,reason):
+    if __import__('counter_writer').buffered(c,variant,reason,'clock_shadow_v0740'):return
     c.execute('INSERT INTO clock_shadow_v0740 VALUES(?,?,1) ON CONFLICT(variant,reason) DO UPDATE SET n=n+1',(variant,reason))
 
 def observe(c,mint,price,e,mono=None,context=None):

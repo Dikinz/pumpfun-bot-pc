@@ -10,14 +10,24 @@ import diagnostics,exit_quotes,execution_verification,auto_simulation,exit_compa
 import replay_log,cost_evidence,execution_model,paper_capital,entry_activity
 
 class Connection(sqlite3.Connection):
+    def logged(self,operation,fn,*args):
+        try:return fn(*args)
+        except sqlite3.Error as exc:
+            __import__('sqlite_diagnostics').record(config.DB,operation,exc,in_transaction=self.in_transaction)
+            raise
     def execute(self,sql,parameters=(),/):
         import runtime_control as rt
-        if rt.ACTIVE is None:return super().execute(sql,parameters)
-        with rt.scope("SQL_"+sql.lstrip().split(None,1)[0].upper()):return super().execute(sql,parameters)
+        op="SQL_"+(sql.lstrip().split(None,1)[0].upper() if sql.strip() else 'EMPTY')
+        if rt.ACTIVE is None:return self.logged(op,super().execute,sql,parameters)
+        with rt.scope(op):return self.logged(op,super().execute,sql,parameters)
+    def executemany(self,sql,parameters,/):return self.logged('EXECUTEMANY',super().executemany,sql,parameters)
+    def executescript(self,sql,/):return self.logged('EXECUTESCRIPT',super().executescript,sql)
+    def commit(self):return self.logged('COMMIT',super().commit)
+    def rollback(self):return self.logged('ROLLBACK',super().rollback)
     atomic_depth=0
     def __exit__(self,*exc):
         if self.atomic_depth:return False
-        return super().__exit__(*exc)
+        return self.logged('TRANSACTION_EXIT',super().__exit__,*exc)
 
 @contextmanager
 def atomic():
@@ -45,6 +55,7 @@ def con():
         c.row_factory=sqlite3.Row
         c.execute("PRAGMA busy_timeout=30000")
         c.execute("PRAGMA synchronous=NORMAL")
+        __import__('sqlite_diagnostics').record(config.DB,'OPEN',journal_mode=c.execute('PRAGMA journal_mode').fetchone()[0],synchronous=c.execute('PRAGMA synchronous').fetchone()[0],busy_timeout=c.execute('PRAGMA busy_timeout').fetchone()[0])
         _LOCAL.conn=c
     return c
 
@@ -56,11 +67,16 @@ def runtime_mode():
 
 def init():
     with con() as c:
+        check=[x[0] for x in c.execute('PRAGMA quick_check(20)')]
+        if check!=['ok']:
+            __import__('sqlite_diagnostics').record(config.DB,'STARTUP_INTEGRITY_FAILED',findings=check)
+            raise RuntimeError('SQLITE_INTEGRITY_FAILED: stop and preserve data with 08_PRESERVE_DATA.bat; no repair performed')
         cols={r[1] for r in c.execute('PRAGMA table_info(trades)')}
         if cols and ('trade_id' not in cols or not c.execute("SELECT 1 FROM sqlite_master WHERE name='capital_ledger_v0721'").fetchone()):
             raise RuntimeError('v0.7.52 requires a NEW database. Keep old data; use data/rapid_07520.db.')
         c.execute("PRAGMA journal_mode=WAL")
         c.executescript(run_audit.SCHEMA)
+        c.executescript(__import__('shared_lots').SCHEMA)
         c.executescript(exit_audit.SCHEMA)
         c.executescript(replay_log.SCHEMA)
         c.executescript(cost_evidence.SCHEMA)
