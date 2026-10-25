@@ -71,7 +71,7 @@ def summary(c,limit=100):
         p=pre.get(oid) or {};g=[x for x in gates.get(p.get('job_id'),[]) if x['order_id'] in ('',oid)]
         end=o.get('fill_ts')
         if end is None:
-            endings=[x['last_ts'] for x in observations if x['kind']=='lifecycle' and x['code'] in ('EXPIRED','REJECTED','CANCELLED_RESTART')]
+            endings=[x['last_ts'] for x in observations if x['kind']=='lifecycle' and x['code'] in ('EXPIRED','REJECTED','CANCELLED_RESTART','CANCELLED_STOP')]
             end=max(endings) if endings else None
         rows.append(dict(order_id=oid,mint=o['mint'],status=o['status'],reason=code,signal_ts=o['signal_ts'],finished_ts=end,
           elapsed_ms=diff_ms(end,o['signal_ts']),preflight_job_id=p.get('job_id'),

@@ -31,6 +31,7 @@ def configure():
 
 def assess(c,row,job,result,signal,inventory,now):
     import amm_exit_scenario as amm,signal_exit as se,exit_rules_v33 as costs
+    if not __import__('recovery_gate').allowed(job):return 'RECOVERY_INVALIDATED',None
     f=se.finite;start=row.get('started_ts');end=row.get('finished_ts');snap=result.get('snapshot_received_ts');scheduled=job.get('scheduled_ts')
     if not all(f(x) for x in (start,end,snap,signal,now,scheduled)):return 'INVALID_TIMES',None
     if not signal<=scheduled<=start<=snap<=end<=now or now-snap>5 or now-end>5 or end-scheduled>25:return 'STALE_OR_PRE_SIGNAL',None

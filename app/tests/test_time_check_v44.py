@@ -74,8 +74,9 @@ def test_save_age_corruption_and_export(tmp_path,monkeypatch):
 
 def test_launcher_distinguishes_time_warning_from_failed_tests(monkeypatch):
     import launcher
-    monkeypatch.setattr(launcher.sys,'argv',['launcher.py','check']);calls=[];codes=iter([2,0,0])
+    monkeypatch.setattr(launcher.sys,'argv',['launcher.py','check']);calls=[];codes=iter([0,2,0,0])
     def call(*args):calls.append(args);return next(codes)
     monkeypatch.setattr(launcher,'call',call)
-    assert launcher.main()==2 and calls[0]==('time_check.py',) and calls[-1][0]=='-m'
-    codes=iter([0,0,1]);assert launcher.main()==1
+    assert launcher.main()==2 and calls[:2]==[('recovery_selftest.py',),('time_check.py',)] and calls[-1][0]=='-m'
+    codes=iter([0,0,0,1]);assert launcher.main()==1
+    calls.clear();codes=iter([1]);assert launcher.main()==1 and calls==[('recovery_selftest.py',)]

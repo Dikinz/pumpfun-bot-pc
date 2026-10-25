@@ -61,7 +61,7 @@ async def supervise(name, coroutine, primary, allow_return=False):
     import asyncio
     try:
         await coroutine
-    except asyncio.CancelledError:
+    except (asyncio.CancelledError,__import__('runtime_control').RequestedStop):
         raise
     except BaseException as exc:
         failure(primary,name,exc);raise

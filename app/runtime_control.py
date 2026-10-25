@@ -4,6 +4,20 @@ from pathlib import Path
 from contextlib import contextmanager
 ACTIVE=None
 
+class RequestedStop(Exception):
+    """Session-bound launcher request, handled as normal primary shutdown."""
+
+def request_primary_stop(primary):
+    import sqlite3
+    from contextlib import closing
+    # Bind STOP to a durable run, never a folder-wide flag reused by next run.
+    try:
+        with closing(sqlite3.connect(Path(primary).resolve().as_uri()+'?mode=ro',uri=True,timeout=.25)) as c:
+            row=c.execute("SELECT id FROM runs_v45 WHERE status='RUNNING' ORDER BY rowid DESC LIMIT 1").fetchone()
+    except sqlite3.Error:return None # Signal path still quiesces primary; never stop branches early.
+    if row:request_stop(primary,row[0]);return row[0]
+
+
 def control_path(primary,session):
     if not re.fullmatch(r'[A-Za-z0-9_-]{1,64}',session):raise ValueError('INVALID_CONTROL_SESSION')
     p=Path(primary).resolve();return p.with_name(p.stem+'_stop_'+session+'.json')

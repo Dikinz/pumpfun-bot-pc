@@ -21,6 +21,7 @@ def preempt(c,active):
     # Cleanup is awaited in the existing loop before a replacement is dispatched.
     import connection_audit
     now=time.time()
+    if now<__import__('fresh_retry').cooldown(c):return
     for req in waiting(c):
         if now<(connection_audit.retry(c,req['trade_id'])['not_before_ts'] or 0):continue
         candidates=[(task,job) for task,job in active.values() if not task.done() and not job.get('priority_exit') and not job.get('cancel_status')]
@@ -35,6 +36,7 @@ def dispatch(c,now):
     for req in waiting(c):
         blocker=None
         if now<req['signal_ts']:blocker='SIGNAL_IN_FUTURE'
+        elif now<__import__('fresh_retry').cooldown(c):blocker='RPC_RETRY_AFTER'
         elif now<(connection_audit.retry(c,req['trade_id'])['not_before_ts'] or 0):blocker='TECHNICAL_BACKOFF'
         elif c.execute("SELECT 1 FROM position_checks_v0730 WHERE trade_id=? AND status='RUNNING'",(req['trade_id'],)).fetchone():blocker='CHECK_ALREADY_RUNNING'
         if blocker:
@@ -43,7 +45,7 @@ def dispatch(c,now):
         if job:
             c.execute("UPDATE priority_exit_requests_v65 SET status='DISPATCHED',dispatched_ts=?,check_id=?,blocker=NULL WHERE order_id=?",(now,job['id'],req['order_id']))
             return job
-    return None
+    return __import__('fresh_retry').dispatch(c,now)
 
 def worker_started(c,job,now):
     if job.get('priority_exit'):c.execute('UPDATE priority_exit_requests_v65 SET worker_started_ts=? WHERE check_id=?',(now,job['id']))
@@ -52,9 +54,11 @@ def finished(c,job,status,now):
     if job.get('priority_exit'):c.execute('UPDATE priority_exit_requests_v65 SET finished_ts=?,status=? WHERE check_id=?',(now,status,job['id']))
 
 def recover(c):
+    __import__('fresh_retry').terminal(c,'INTERRUPTED_RESTART')
     c.execute("UPDATE priority_exit_requests_v65 SET status='INTERRUPTED_RESTART' WHERE status='DISPATCHED'")
 
 def stop(c,now,status='INTERRUPTED_STOP'):
+    __import__('fresh_retry').terminal(c,status)
     c.execute("UPDATE priority_exit_requests_v65 SET status=?,finished_ts=? WHERE status IN ('QUEUED','DISPATCHED')",(status,now))
 
 def summary(c):
@@ -66,5 +70,5 @@ def summary(c):
             x[name]=(x[b]-x[a])*1000 if x[a] is not None and x[b] is not None and x[b]>=x[a] else None
         if x['status']=='QUEUED' and not x.get('blocker'):x['blocker']='WORKER_CAPACITY_OR_SCHEDULER_WAIT'
         rows.append(x)
-    return dict(status='RECORDED',rows=rows,max_simultaneous_workers=2,
-      note='One priority check per SELL. Cadence bypassed once; technical backoff retained. Pre-signal results stay ineligible. Local queue times, no live execution claim.')
+    return dict(retry_v69=__import__('fresh_retry').summary(c),status='RECORDED',rows=rows,max_simultaneous_workers=2,
+      note='One initial priority check per SELL plus the bounded v69 retry chain. Retry-After and technical backoff retained. Pre-signal results stay ineligible. Local queue times, no live execution claim.')

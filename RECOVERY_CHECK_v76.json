@@ -1,0 +1,236 @@
+{
+  "schema": "RECOVERY_SELFTEST_V76",
+  "version": "v0.7.76",
+  "created_ts": 1792947208.480824,
+  "passed": true,
+  "scope": "OFFLINE_DISPOSABLE_PAPER_CLOCK_INJECTION",
+  "os_clock_modified": false,
+  "windows_suspend_resume_proven": false,
+  "live_rpc_proven": false,
+  "note": "Time reports and the market are injected test data. Test DBs are temporary; no existing trading DB is opened. The running bot is not paused or controlled.",
+  "child_returncode": 0,
+  "stdout": ".........................................                                [100%]\n==================================== PASSES ====================================\n-------- generated xml file: /tmp/pump_recovery_v76_mmoa906x/tests.xml ---------\n=========================== short test summary info ============================\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[READY-SUPERSEDED_BY_EXIT_SIGNAL]\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[READY-INTERRUPTED_STOP]\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[READY-REQUEST_TIMEOUT]\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[READY-REQUEST_ERROR]\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[READY-WORKER_ERROR]\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[READY-CLEANUP_FAILED]\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[RECOVERING-SUPERSEDED_BY_EXIT_SIGNAL]\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[RECOVERING-INTERRUPTED_STOP]\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[RECOVERING-REQUEST_TIMEOUT]\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[RECOVERING-REQUEST_ERROR]\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[RECOVERING-WORKER_ERROR]\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[RECOVERING-CLEANUP_FAILED]\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[STOPPED-SUPERSEDED_BY_EXIT_SIGNAL]\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[STOPPED-INTERRUPTED_STOP]\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[STOPPED-REQUEST_TIMEOUT]\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[STOPPED-REQUEST_ERROR]\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[STOPPED-WORKER_ERROR]\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[STOPPED-CLEANUP_FAILED]\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[STALE_CLIENT-SUPERSEDED_BY_EXIT_SIGNAL]\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[STALE_CLIENT-INTERRUPTED_STOP]\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[STALE_CLIENT-REQUEST_TIMEOUT]\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[STALE_CLIENT-REQUEST_ERROR]\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[STALE_CLIENT-WORKER_ERROR]\nPASSED tests/test_recovery_classification_v76.py::test_no_result_reason_survives_closed_or_open_admission[STALE_CLIENT-CLEANUP_FAILED]\nPASSED tests/test_recovery_classification_v76.py::test_cancelled_worker_keeps_sell_preemption_reason_after_pause\nPASSED tests/test_recovery_classification_v76.py::test_old_sale_stays_invalidated_with_explicit_epoch_reason\nPASSED tests/test_recovery_classification_v76.py::test_controlled_recovery_immediate_buy_then_authorized_buy\nPASSED tests/test_recovery_classification_v76.py::test_open_position_and_sell_intent_survive_recovery\nPASSED tests/test_recovery_gate_v75.py::test_pause_230s_invalidates_old_token_and_needs_all_three_conditions\nPASSED tests/test_recovery_gate_v75.py::test_time_pass_without_fresh_market_stays_blocked\nPASSED tests/test_recovery_gate_v75.py::test_expired_tick_and_old_time_report_do_not_unlock\nPASSED tests/test_recovery_gate_v75.py::test_new_clock_jump_restarts_recovery\nPASSED tests/test_recovery_gate_v75.py::test_controlled_paper_immediate_entry_blocked_old_order_cannot_fill\nPASSED tests/test_recovery_gate_v75.py::test_old_preflight_cannot_become_ready_after_recovery\nPASSED tests/test_recovery_gate_v75.py::test_old_exit_result_not_eligible_and_monitor_marks_invalidated\nPASSED tests/test_recovery_gate_v75.py::test_client_pause_requires_primary_recheck_and_same_epoch\nPASSED tests/test_recovery_gate_v75.py::test_unavailable_write_is_fail_closed\nPASSED tests/test_recovery_gate_v75.py::test_external_diagnostic_is_async_and_same_existing_collector\nPASSED tests/test_recovery_gate_v75.py::test_new_preflight_after_verified_recovery_can_authorize_entry\nPASSED tests/test_recovery_gate_v75.py::test_wall_valid_ready_permission_still_rejected_after_epoch_change\nPASSED tests/test_recovery_gate_v75.py::test_current_buy_rejects_still_fresh_tick_from_prior_epoch\n41 passed in 1.48s\n",
+  "stderr": "",
+  "tests": [
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[READY-SUPERSEDED_BY_EXIT_SIGNAL]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[READY-INTERRUPTED_STOP]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[READY-REQUEST_TIMEOUT]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[READY-REQUEST_ERROR]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[READY-WORKER_ERROR]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[READY-CLEANUP_FAILED]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[RECOVERING-SUPERSEDED_BY_EXIT_SIGNAL]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[RECOVERING-INTERRUPTED_STOP]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[RECOVERING-REQUEST_TIMEOUT]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[RECOVERING-REQUEST_ERROR]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[RECOVERING-WORKER_ERROR]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[RECOVERING-CLEANUP_FAILED]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[STOPPED-SUPERSEDED_BY_EXIT_SIGNAL]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[STOPPED-INTERRUPTED_STOP]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[STOPPED-REQUEST_TIMEOUT]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[STOPPED-REQUEST_ERROR]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[STOPPED-WORKER_ERROR]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[STOPPED-CLEANUP_FAILED]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[STALE_CLIENT-SUPERSEDED_BY_EXIT_SIGNAL]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[STALE_CLIENT-INTERRUPTED_STOP]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[STALE_CLIENT-REQUEST_TIMEOUT]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[STALE_CLIENT-REQUEST_ERROR]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[STALE_CLIENT-WORKER_ERROR]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_no_result_reason_survives_closed_or_open_admission[STALE_CLIENT-CLEANUP_FAILED]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_cancelled_worker_keeps_sell_preemption_reason_after_pause",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_old_sale_stays_invalidated_with_explicit_epoch_reason",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_controlled_recovery_immediate_buy_then_authorized_buy",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_open_position_and_sell_intent_survive_recovery",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_pause_230s_invalidates_old_token_and_needs_all_three_conditions",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_time_pass_without_fresh_market_stays_blocked",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_expired_tick_and_old_time_report_do_not_unlock",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_new_clock_jump_restarts_recovery",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_controlled_paper_immediate_entry_blocked_old_order_cannot_fill",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_old_preflight_cannot_become_ready_after_recovery",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_old_exit_result_not_eligible_and_monitor_marks_invalidated",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_client_pause_requires_primary_recheck_and_same_epoch",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_unavailable_write_is_fail_closed",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_external_diagnostic_is_async_and_same_existing_collector",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_new_preflight_after_verified_recovery_can_authorize_entry",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_wall_valid_ready_permission_still_rejected_after_epoch_change",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_current_buy_rejects_still_fresh_tick_from_prior_epoch",
+      "outcome": "PASSED"
+    }
+  ],
+  "scenario": {
+    "schema": "CONTROLLED_PAPER_RECOVERY_V76",
+    "pause_mono_s": 230,
+    "wall_gap_s": 225.741,
+    "immediate_buy": [
+      false,
+      "RECOVERY_BLOCKED"
+    ],
+    "cash_unchanged_while_blocked": true,
+    "reserve_unchanged_while_blocked": true,
+    "old_order_rejected_after_ready": true,
+    "old_time_pass_rejected": true,
+    "missing_time_pass_blocked": true,
+    "failed_time_check_blocked": true,
+    "new_buy": [
+      true,
+      "ENTRY_PENDING"
+    ],
+    "new_buy_fills": 1,
+    "financial_integrity": "OK",
+    "generation": 1,
+    "events": [
+      {
+        "kind": "RECOVERY_BEGIN",
+        "ts": 1791700226.041,
+        "gap_s": 230.0,
+        "wall_step_ms": -4259.000062942505,
+        "epoch": "e9e133e885644b2f867892a9ac6d3f87"
+      },
+      {
+        "kind": "NEW_CONNECTION",
+        "ts": 1791700226.041,
+        "epoch": "e9e133e885644b2f867892a9ac6d3f87"
+      },
+      {
+        "kind": "TIME_RECHECK",
+        "ts": 1791700226.041,
+        "status": "OFFSET_DETECTED",
+        "epoch": "e9e133e885644b2f867892a9ac6d3f87"
+      },
+      {
+        "kind": "TIME_RECHECK",
+        "ts": 1791700226.041,
+        "status": "PASS",
+        "epoch": "e9e133e885644b2f867892a9ac6d3f87"
+      },
+      {
+        "kind": "RECOVERY_READY",
+        "ts": 1791700226.041,
+        "epoch": "e9e133e885644b2f867892a9ac6d3f87"
+      }
+    ],
+    "os_clock_modified": false,
+    "external_time_probe": "INJECTED_TEST_REPORT",
+    "scope": "OFFLINE_CLOCK_INJECTION_NOT_WINDOWS_SUSPEND"
+  }
+}

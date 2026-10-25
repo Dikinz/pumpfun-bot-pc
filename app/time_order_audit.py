@@ -8,7 +8,7 @@ LABELS={'TIME_MISSING':'Время отсутствует','TIME_INVALID':'Не�
 'DELAY_NOT_ELAPSED':'Не прошла задержка 250 мс','BUY_WINDOW_PASSED':'Прошло окно покупки 2 с','ORIGIN_MISSING':'Нет локальной точки отсчёта',
 'SAME_SIGNAL_TX':'Повтор исходной сделки','OLDER_THAN_SIGNAL':'Событие старше сигнала','ELIGIBLE':'Событие подходит для исполнения',
 'FRESHNESS_REJECTED':'Повторная проверка свежести не пройдена','EXPIRED':'Истёк срок заявки','CANCELLED_RESTART':'Отменена при перезапуске',
-'FILLED':'Исполнена в PAPER','REJECTED':'Отклонена','CREATED':'Создана','PENDING':'Ожидает'}
+'CANCELLED_STOP':'Отменена при остановке','FILLED':'Исполнена в PAPER','REJECTED':'Отклонена','CREATED':'Создана','PENDING':'Ожидает'}
 
 def finite(x):return isinstance(x,(int,float)) and not isinstance(x,bool) and math.isfinite(x)
 

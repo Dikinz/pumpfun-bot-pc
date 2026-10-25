@@ -56,6 +56,10 @@ def legacy_results():
         audits=[dict(r,details=json.loads(r["data_json"])) for r in c.execute("SELECT * FROM exit_audit_v45")]
         for r in audits:r.pop("data_json")
         (folder/"exit_audit.json").write_text(json.dumps(audits,ensure_ascii=False,indent=2),encoding="utf-8")
+    recovery=__import__('recovery_gate').path(config.DB)
+    if recovery.exists():__import__('shutil').copy2(recovery,Path(folder)/recovery.name)
+    controlled=ROOT/'results/recovery_check_v76.json'
+    if controlled.exists():__import__('shutil').copy2(controlled,Path(folder)/controlled.name)
     monitor_service.export(config.DB,folder)
     import shutil
     if (APP/'data/monitor_selftest.json').exists():shutil.copy2(APP/'data/monitor_selftest.json',folder/'monitor_selftest.json')
@@ -95,6 +99,8 @@ def legacy_results():
     __import__('shared_lots').export(config.DB,folder)
     for diagnostic in Path(config.DB).resolve().parent.glob('*_counter_writer_v67.json'):
         shutil.copy2(diagnostic,folder/diagnostic.name)
+    for pattern in ('*_shutdown_v68.json','*_integrity_*_v68.json','*_connection_close_v68.json','*_counter_writer_stop_v68.json'):
+        for diagnostic in Path(config.DB).resolve().parent.glob(pattern):shutil.copy2(diagnostic,folder/diagnostic.name)
     benchmark=APP/'data/runtime_benchmark_v60.json'
     if benchmark.exists():shutil.copy2(benchmark,folder/benchmark.name)
     target_check=APP/'data/target_amm_check_v59.json'
@@ -148,13 +154,14 @@ def stop_child(child, graceful=False,primary=None):
     except psutil.Error:family=[]
     if graceful:
         try:
+            if primary:__import__('runtime_control').request_primary_stop(primary)
             child.send_signal(signal.CTRL_BREAK_EVENT if os.name=='nt' else signal.SIGINT)
-            if primary:__import__('runtime_control').request_branch_stops(primary)
             child.wait(timeout=35)
             _,remaining=psutil.wait_procs(family,timeout=1)
             remaining=[p for p in remaining if p.is_running() and p.status()!=psutil.STATUS_ZOMBIE]
             if not remaining:return dict(forced=False,exit_code=child.returncode)
-        except (OSError,subprocess.TimeoutExpired,psutil.Error):pass
+        except (OSError,subprocess.TimeoutExpired,psutil.Error):
+            if primary:__import__('runtime_control').request_branch_stops(primary)
     # Keep the pre-stop descendants: a Windows venv redirector can exit first.
     from branch_transport import terminate_tree
     if child.poll() is None:terminate_tree(child)
@@ -179,6 +186,7 @@ def start():
     lock=Path(config.DB).resolve().with_name(Path(config.DB).stem+'_launcher.lock')
     with monitor_service.singleton(lock):
         recorder=system_health.Recorder(config.DB);children={};code=1;reason='STARTUP_FAILED'
+        audit=__import__('shutdown_audit').Audit(config.DB)
         try:
             if call('monitor_selftest.py'):
                 raise RuntimeError('Monitor self-test FAILED; see app/data/monitor_selftest.json')
@@ -196,6 +204,7 @@ def start():
             # PID. A per-launch token binds the HTTP server to THIS launch.
             launch_id=__import__('uuid').uuid4().hex
             dash_env=dict(os.environ,PUMPFUN_DASHBOARD_LAUNCH_ID=launch_id)
+            __import__('shutdown_audit').closed(config.DB,'launcher')
             children['dashboard']=subprocess.Popen([sys.executable,'dashboard/server.py'],cwd=APP,env=dash_env)
             wait_dashboard(children['dashboard'],launch_id=launch_id)
             flags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name=='nt' else 0
@@ -203,13 +212,13 @@ def start():
             children['monitor']=subprocess.Popen([sys.executable,'monitor_service.py','--parent-pid',str(children['bot'].pid),'--stdin-lifetime'],cwd=APP,stdin=subprocess.PIPE)
             webbrowser.open('http://127.0.0.1:'+str(config.PORT))
             print('PAPER launched. Fresh time/market checks remain inside the bot. Ctrl+C once to stop.')
-            recorder.sample(children,force=True)
+            recorder.sample(children,force=True);audit.capture(children)
             while children['bot'].poll() is None:
                 for role in ('monitor','dashboard'):
                     if children[role].poll() is not None:
                         system_health.event(config.DB,'REQUIRED_PROCESS_EXIT',component=role,exit_code=children[role].returncode)
                         raise RuntimeError('Required process stopped: '+role)
-                sampled=recorder.sample(children)
+                sampled=recorder.sample(children);audit.capture(children)
                 if 'PRIMARY_HEARTBEAT_INVALID' in sampled.get('alerts',[]):
                     system_health.event(config.DB,'STALL_CONTROLLED_STOP')
                     raise RuntimeError('PRIMARY_EVENT_LOOP_STALLED; export diagnostics before restart')
@@ -223,6 +232,10 @@ def start():
             print('FAILED:',type(exc).__name__,str(exc))
         finally:
             try:
+                try:audit.begin_stop(children)
+                except Exception as exc:
+                    audit.before=dict(phase='before',status='PROBE_UNAVAILABLE',databases=[])
+                    system_health.failure(config.DB,'before_stop_integrity',exc)
                 bot_stop=stop_child(children.get('bot'),graceful=True,primary=config.DB)
                 shutdown=__import__('runtime_control').shutdown_status(config.DB,bot_stop)
                 recorder.last['shutdown']=shutdown
@@ -240,10 +253,21 @@ def start():
                         recorder.last['shutdown_confirmed']=False
                         recorder.last['shutdown']['confirmed']=False
                         recorder.last['shutdown']['monitor']=monitor_stop
-                stop_child(children.get('dashboard'))
+                if monitor and monitor.poll() is not None and 'monitor_stop' not in locals():monitor_stop=dict(forced=False,exit_code=monitor.returncode)
+                dashboard_stop=stop_child(children.get('dashboard'))
             except Exception as exc:
                 code=1;reason='SHUTDOWN_FAILED';system_health.failure(config.DB,'shutdown',exc)
-            finally:recorder.stop(code,reason)
+            finally:
+                __import__('shutdown_audit').closed(config.DB,'launcher')
+                try:
+                    audited=audit.finish(children,dict(bot=locals().get('bot_stop'),monitor=locals().get('monitor_stop'),dashboard=locals().get('dashboard_stop')))
+                    recorder.last['sqlite_shutdown_v68']=dict(all_observed_writers_finished=audited['all_observed_writers_finished'],comparison=audited['comparison'])
+                    if code==0 and not audited['all_observed_writers_finished']:code=1;reason='WRITER_SHUTDOWN_UNCONFIRMED'
+                    elif code==0 and not audited['integrity_phases_ok']:code=1;reason='SQLITE_INTEGRITY_PHASE_FAILED'
+                    print('SQLITE SHUTDOWN AUDIT: writers_finished='+str(audited['all_observed_writers_finished'])+' integrity_before_after_ok='+str(audited['integrity_phases_ok']),flush=True)
+                except Exception as exc:
+                    code=1;reason='SHUTDOWN_AUDIT_FAILED';system_health.failure(config.DB,'shutdown_audit',exc)
+                recorder.stop(code,reason)
         return code
 
 def main():
@@ -257,10 +281,11 @@ def main():
     if command=='settings':
         setup_env();return call('setup_quotes.py')
     if command=='check':
+        if call('recovery_selftest.py'):return 1
         time_code=call('time_check.py')
         if time_code not in (0,2):return 1
         if call('monitor_selftest.py'):return 1
-        test_code=call('-m','pytest','-q','tests/test_counter_writer_v67.py','tests/test_sqlite_preserve_v66.py','tests/test_priority_exit_v65.py','tests/test_shared_lots_v64.py','tests/test_exit_cost_review_v63.py','tests/test_clean_release_v62.py','tests/test_worker_identity_v611.py','tests/test_watchdog_lifecycle_v61.py','tests/test_runtime_delivery_v60.py','tests/test_route_exit_v59.py','tests/test_clean_campaign_v58.py','tests/test_program_cache_v57.py','tests/test_stop_consistency_v57.py','tests/test_rpc_timing_v56.py','tests/test_branch_shutdown_v541.py','tests/test_parallel_paper_v54.py','tests/test_phase2_v54.py','tests/test_dashboard_launch_hotfix.py','tests/test_execution_safety_v52.py','tests/test_wallet_rpc_phase1.py','tests/test_system_strategy_v51.py','tests/test_primary_integrity.py','tests/test_execution_model.py','tests/test_cost_price_v50.py','tests/test_signal_exit_v49.py','tests/test_monitor_evidence_v48.py','tests/test_entry_monitor_v47.py','tests/test_exit_timeline_v46.py','tests/test_dashboard_start_v46.py','tests/test_run_exit_v45.py','tests/test_time_check_v44.py','tests/test_shadow_preflight_v43.py','tests/test_candidates_v42.py','tests/test_runtime_v41.py','tests/test_clock_reference_v40.py','tests/test_time_order_v39.py','tests/test_entry_diagnostics_v38.py','tests/test_connection_v37.py','tests/test_migration_v36.py','tests/test_monitor_v35.py','tests/test_delta_v34.py','tests/test_rules_v33.py','tests/test_monitor_v32.py','tests/test_monitor_v31.py','tests/test_monitor_v30.py','tests/test_preentry.py','tests/test_local_simulation.py','tests/test_exit_comparison.py')
+        test_code=call('-m','pytest','-q','tests/test_amm_export_v74.py','tests/test_child_diagnostics_v73.py','tests/test_coordinated_stop_v72.py','tests/test_stop_buy_release_v71.py','tests/test_event_counters_v70.py','tests/test_fresh_retry_v69.py','tests/test_shutdown_audit_v68.py','tests/test_counter_writer_v67.py','tests/test_sqlite_preserve_v66.py','tests/test_priority_exit_v65.py','tests/test_shared_lots_v64.py','tests/test_exit_cost_review_v63.py','tests/test_clean_release_v62.py','tests/test_worker_identity_v611.py','tests/test_watchdog_lifecycle_v61.py','tests/test_runtime_delivery_v60.py','tests/test_route_exit_v59.py','tests/test_clean_campaign_v58.py','tests/test_program_cache_v57.py','tests/test_stop_consistency_v57.py','tests/test_rpc_timing_v56.py','tests/test_branch_shutdown_v541.py','tests/test_parallel_paper_v54.py','tests/test_phase2_v54.py','tests/test_dashboard_launch_hotfix.py','tests/test_execution_safety_v52.py','tests/test_wallet_rpc_phase1.py','tests/test_system_strategy_v51.py','tests/test_primary_integrity.py','tests/test_execution_model.py','tests/test_cost_price_v50.py','tests/test_signal_exit_v49.py','tests/test_monitor_evidence_v48.py','tests/test_entry_monitor_v47.py','tests/test_exit_timeline_v46.py','tests/test_dashboard_start_v46.py','tests/test_run_exit_v45.py','tests/test_time_check_v44.py','tests/test_shadow_preflight_v43.py','tests/test_candidates_v42.py','tests/test_runtime_v41.py','tests/test_clock_reference_v40.py','tests/test_time_order_v39.py','tests/test_entry_diagnostics_v38.py','tests/test_connection_v37.py','tests/test_migration_v36.py','tests/test_monitor_v35.py','tests/test_delta_v34.py','tests/test_rules_v33.py','tests/test_monitor_v32.py','tests/test_monitor_v31.py','tests/test_monitor_v30.py','tests/test_preentry.py','tests/test_local_simulation.py','tests/test_exit_comparison.py')
         if test_code:return 1
         print('Technical tests PASSED. '+('Time check PASSED.' if time_code==0 else 'TIME WARNING: review app/data/time_check.txt.'))
         return time_code

@@ -153,6 +153,7 @@ def test_partial_fanout_start_failure_closes_both_children(monkeypatch):
         def __init__(self,primary,module):
             self.child=object();self.module=module
             if module=='route_branch':raise RuntimeError('startup failed')
+        def begin_stop(self):pass
         def close(self):closed.append(self.module);return dict(status='STOPPED')
     monkeypatch.setattr(bt,'Publisher',Child)
     with pytest.raises(RuntimeError,match='startup failed'):bt.Fanout('unused')

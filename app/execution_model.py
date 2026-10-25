@@ -43,7 +43,9 @@ def request(c,mint,side,price,size,reason,evidence,score=0,snapshot=None,trade_i
     if old:return old['order_id']
     oid=uuid.uuid4().hex;wall=time.time();mono=time.monotonic();e=evidence or {}
     # Serialize the pre-signal features once. No future tick is used to relabel them.
-    data=json.dumps(snapshot or {},default=lambda x:list(x) if isinstance(x,(set,deque,tuple)) else str(x))
+    snap=dict(snapshot or {})
+    snap['_recovery_v75']=__import__('recovery_gate').stamp({})
+    data=json.dumps(snap,default=lambda x:list(x) if isinstance(x,(set,deque,tuple)) else str(x))
     c.execute('''INSERT INTO paper_orders_v0720(order_id,mint,side,status,signal_ts,signal_price,signal_signature,signal_provider_ts,size,score,snapshot,reason,trade_id,note) VALUES(?,?,?,'PENDING',?,?,?,?,?,?,?,?,?,?)''',
       (oid,mint,side,wall,price,e.get('signature'),e.get('provider_ts'),size,score,data,reason,trade_id,'tick proxy; no live order'))
     if side=='BUY':
@@ -55,6 +57,10 @@ def request(c,mint,side,price,size,reason,evidence,score=0,snapshot=None,trade_i
     return oid
 
 def eligible(order,e,mono=None):
+    import recovery_gate
+    if not recovery_gate.allowed():return False
+    if order['side']=='BUY' and not recovery_gate.allowed(json.loads(order['snapshot']).get('_recovery_v75',{})):return False
+    if not recovery_gate.allowed(e or {}):return False
     mono=time.monotonic() if mono is None else mono
     start=ORIGINS.get(order['order_id'])
     if start is None or not fresh(e,mono):return False
@@ -90,6 +96,30 @@ def expire(c,mono=None):
     active={r[0] for r in c.execute("SELECT order_id FROM paper_orders_v0720 WHERE status='PENDING'")}
     for oid in list(ORIGINS):
         if oid not in active:ORIGINS.pop(oid,None)
+
+def cancel_unfilled_buys_on_stop(c,reason='RUN_SHUTDOWN'):
+    """Atomic status/reservation/audit update; no trades, positions or cash writes.
+
+    Caller must quiesce order producers first. SAVEPOINT also works inside the
+    caller's final shutdown transaction; no implicit outer commit or RAM edits.
+    """
+    stamp=time.time();cancelled=[]
+    c.execute('SAVEPOINT stop_buys_v71')
+    try:
+        rows=c.execute("SELECT order_id,reserved_total FROM paper_orders_v0720 WHERE side='BUY' AND status='PENDING'").fetchall()
+        for row in rows:
+            oid=row['order_id'];released=row['reserved_total']
+            note=json.dumps(dict(code='CANCELLED_STOP',reason=reason,ts=stamp,released_reservation=released),allow_nan=False)
+            changed=c.execute("UPDATE paper_orders_v0720 SET status='CANCELLED_STOP',reserved_total=0,note=? WHERE order_id=? AND side='BUY' AND status='PENDING'",(note,oid)).rowcount
+            if changed:
+                ta.add(c,oid,'lifecycle','CANCELLED_STOP',now=stamp)
+                cancelled.append(oid)
+        c.execute('RELEASE stop_buys_v71')
+    except BaseException:
+        c.execute('ROLLBACK TO stop_buys_v71');c.execute('RELEASE stop_buys_v71')
+        raise
+    return cancelled
+
 
 def restart(c):
     for r in c.execute("SELECT order_id FROM paper_orders_v0720 WHERE side='BUY' AND status='PENDING'").fetchall():ta.add(c,r[0],'lifecycle','CANCELLED_RESTART')

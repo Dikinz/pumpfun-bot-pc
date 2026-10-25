@@ -1,0 +1,34 @@
+{
+  "version": "v0.7.76",
+  "passed": 783,
+  "skipped": 1,
+  "failed": 0,
+  "elapsed_s": 36.71,
+  "new_test_cases": 28,
+  "controlled_recovery": {
+    "passed": true,
+    "cases": 41,
+    "report": "RECOVERY_CHECK_v76.json",
+    "mechanism": "OFFLINE_CLOCK_INJECTION",
+    "native_windows_resume_proven": false
+  },
+  "changes": [
+    "Cancellation/technical failure retains its original status even if admission denied",
+    "Independent recovery_admission_v76 snapshot records state, epoch, session and exact rejection reason",
+    "Old usable simulation result still RECOVERY_INVALIDATED",
+    "04_CHECK runs disposable controlled recovery subprocess; 09_RECOVERY_CHECK repeats separately",
+    "05_RESULTS includes latest local recovery selftest JSON"
+  ],
+  "unchanged": [
+    "Strategy gates and thresholds",
+    "Clock settings and diagnostics thresholds",
+    "Watchdog thresholds",
+    "Financial atomicity and calculation modules",
+    "Historical user databases"
+  ],
+  "limitations": [
+    "Test uses injected market, time reports and clocks; no native OS pause or network RPC",
+    "No profitability, network AMM or Jito validation",
+    "One process ancestry test skipped in container"
+  ]
+}

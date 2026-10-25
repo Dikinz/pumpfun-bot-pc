@@ -119,7 +119,7 @@ def test_stop_control_bypasses_pending_market_queue():
     p.stopping=threading.Event();p.stopping.set();p.session='current';p.error=False
     p.child=type('Child',(),{'stdin':Pipe()})()
     p.send()
-    assert json.loads(p.child.stdin.getvalue())==dict(control='STOP',session='current')
+    assert p.child.stdin.getvalue()=='' # v72 uses independent session control, no STOP pipe write
     assert p.queue.qsize()==1 and not p.error
 
 

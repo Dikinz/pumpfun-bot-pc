@@ -252,7 +252,13 @@ def getm(k,d="0"):
         r=c.execute("SELECT v FROM meta WHERE k=?",(k,)).fetchone()
         return r["v"] if r else d
 def inc(k,n=1):
-    # Atomic numeric increment in one statement; avoids getm()+setm() round trips.
+    # Only these three diagnostic totals may lag by the batch interval.
+    # Cash, realized PNL, entries/exits and every other key keep prior semantics.
+    import counter_writer
+    if k in counter_writer.META_KEYS and counter_writer.ACTIVE is not None:
+        counter_writer.ACTIVE.add(k,'',table='meta',amount=n)
+        return
+    # Startup/offline callers retain the synchronous path; no failed-writer fallback.
     with con() as c:
         c.execute("INSERT INTO meta(k,v) VALUES(?,?) ON CONFLICT(k) DO UPDATE SET v=CAST(COALESCE(meta.v,'0') AS REAL)+excluded.v",(k,float(n)))
 

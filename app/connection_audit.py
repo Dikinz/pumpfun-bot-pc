@@ -13,7 +13,12 @@ def diagnostic(exc):
         if isinstance(current,urllib.error.HTTPError):
             item['http_status']=current.code;category='HTTP'
             retry=current.headers.get('Retry-After') if current.headers else None
-            if retry and retry.isdigit():item['retry_after_s']=min(int(retry),300)
+            if retry and retry.isdigit():item['retry_after_s']=int(retry)
+            elif retry:
+                try:
+                    import email.utils,math
+                    item['retry_after_s']=max(0,math.ceil(email.utils.parsedate_to_datetime(retry).timestamp()-time.time()))
+                except (TypeError,ValueError,OverflowError):pass
         elif isinstance(current,socket.gaierror):category='DNS'
         elif isinstance(current,ssl.SSLError):category='TLS'
         elif isinstance(current,TimeoutError):category='TIMEOUT'

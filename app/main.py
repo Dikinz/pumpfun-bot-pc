@@ -497,6 +497,7 @@ def transport_entry_ready():
     return str(db.getm("trade_watchdog_state","STARTING"))=="RECEIVING" and 0<=age<config.PUMPAPI_STALL_SECONDS
 
 def buy(m,p,score=0,s=None,_fill=False,_order_id=None):
+    if not __import__('recovery_gate').allowed():return False,'RECOVERY_BLOCKED'
     audit_ts=time.time()
     result=_buy(m,p,score,s,_fill,_order_id)
     if not _fill:
@@ -917,6 +918,7 @@ def clock_candidate_availability(m):
 
 @runtime_control.measured("PROCESS_TRADE")
 def process_trade(m,side,p,trader,source,evidence=None):
+    if isinstance(__import__('recovery_gate').ACTIVE,__import__('recovery_gate').Coordinator):__import__('recovery_gate').status()
     if not m or m not in S:return
     branch_transport.emit(m,side,p,trader,source,evidence,S[m]['born'])
     _t0=time.perf_counter(); HOT["trade_calls"]+=1
@@ -1230,12 +1232,15 @@ async def pumpapi_trades(q):
                     close_timeout=config.PUMPAPI_CLOSE_TIMEOUT,open_timeout=config.PUMPAPI_OPEN_TIMEOUT,
                     max_queue=config.WS_MAX_QUEUE)
                 probe.connected()
+                __import__('recovery_gate').connection()
+                connection_epoch=(__import__('recovery_gate').status() or {}).get('epoch')
                 connected_at=time.time(); last_market=connected_at
                 db.inc("stream_generation"); db.inc("pumpapi_connects")
                 db.setm("pumpapi_socket_active",1); db.setm("trade_stream_state","CONNECTED"); db.setm("trade_watchdog_state","CONNECTED"); db.setm("trade_stream_error","")
                 db.stream_debug("","WATCHDOG_CONNECTED",f"PumpApi connected; waiting for market traffic; timeout={config.PUMPAPI_STALL_SECONDS:.0f}s")
                 back=max(1.0,config.PUMPAPI_MIN_RECONNECT_DELAY)
                 while True:
+                    if (__import__('recovery_gate').status() or {}).get('epoch')!=connection_epoch:raise RuntimeError('RECOVERY_RECONNECT_REQUIRED')
                     recv_started=time.monotonic()
                     try:
                         raw=await asyncio.wait_for(ws.recv(),timeout=config.PUMPAPI_WATCHDOG_TICK_SECONDS)
@@ -1255,6 +1260,7 @@ async def pumpapi_trades(q):
                             db.setm("trade_stream_error",f"Market traffic stale for {stall:.1f}s; entries blocked, socket retained")
                             db.inc("trade_soft_stale_ticks")
                         continue
+                    if (__import__('recovery_gate').status() or {}).get('epoch')!=connection_epoch:raise RuntimeError('RECOVERY_RECONNECT_REQUIRED')
                     handler_started=probe.received(ws,recv_started)
                     try:
                         now=time.time(); recv_mono=time.monotonic(); telemetry.received(now);telemetry.flush(db)
@@ -1441,6 +1447,8 @@ async def run():
     runtime_status.begin(db.con())
     run_audit.begin(db.con(),startup_clock)
     db.runtime_mode()
+    import recovery_gate
+    db.setm('recovery_required_v75',1)
     db.setm("single_ws_guard",1)
     q=asyncio.Queue(maxsize=config.SUB_QUEUE_MAX)
     provider=config.DATA_PROVIDER
@@ -1450,15 +1458,23 @@ async def run():
         provider="pumpapi"
     db.setm('matched_mode_v64',1)
     publisher=branch_transport.Fanout(config.DB);branch_transport.ACTIVE=publisher
+    recovery_guard=recovery_gate.Coordinator(config.DB,run_audit.ACTIVE)
+    recovery_gate.ACTIVE=recovery_guard
     runtime_probe=runtime_control.Probe(config.DB,extra=lambda:publisher.snapshot()).start()
     trade_task=pumpapi_trades(q) if provider=="pumpapi" else free_api_trades(q) if provider=="free_api" else bitquery_trades(q) if provider=="bitquery" else pumpportal_trades(q) if provider=="pumpportal" else cost_safe_no_trade_stream(q)
-    tasks=[('clock_reference',clock_lab.references()),('clock_watch',clock_lab.local_watch()),
+    tasks=[('recovery_guard',recovery_guard.run()),('clock_reference',clock_lab.references()),('clock_watch',clock_lab.local_watch()),
       ('heartbeat',heartbeat()),('observation',observation_timer()),('quotes',exit_quotes.worker()),
       ('auto_simulation',auto_simulation.worker()),('preentry',preentry.worker()),
       ('shadow_preflight',shadow_preflight.worker()),('discovery',pumpportal_discovery(q)),('trade_stream',trade_task)]
     async def branch_watch():
         while True:
+            if runtime_control.stop_requested(config.DB,run_audit.ACTIVE):
+                publisher.begin_stop()
+                raise runtime_control.RequestedStop()
             await asyncio.to_thread(publisher.refresh_positions)
+            if runtime_control.stop_requested(config.DB,run_audit.ACTIVE):
+                publisher.begin_stop()
+                raise runtime_control.RequestedStop()
             db.setmany(dict(branch_queue=publisher.pending,branch_dropped=publisher.dropped))
             if publisher.failed:raise RuntimeError('PAPER_SCENARIO_FAILED: '+getattr(publisher,'failure_reason','UNKNOWN_BRANCH_FAILURE'))
             await asyncio.sleep(1)
@@ -1468,20 +1484,29 @@ async def run():
     try:
         await asyncio.gather(*running)
     finally:
+        if hasattr(publisher,'begin_stop'):publisher.begin_stop()
         branch_transport.ACTIVE=None
         tasks_stopped=await runtime_control.cancel_tasks(list(zip([name for name,_ in tasks],running)),config.DB)
-        await __import__('counter_writer').stop(counter_sink)
-        try:await asyncio.to_thread(publisher.close)
-        finally:await runtime_probe.close()
+        try:
+            if tasks_stopped:
+                with db.atomic():execution.cancel_unfilled_buys_on_stop(db.con())
+        finally:
+            await __import__('counter_writer').stop(counter_sink)
+            try:await asyncio.to_thread(publisher.close)
+            finally:
+                await runtime_probe.close()
+                recovery_guard.close();recovery_gate.ACTIVE=None
         if not tasks_stopped:raise RuntimeError('TASK_SHUTDOWN_TIMEOUT')
 
 if __name__=="__main__":
     if os.name=='nt':
         import signal
-        def request_stop(*_):raise KeyboardInterrupt
+        def request_stop(*_):
+            if branch_transport.LAST and hasattr(branch_transport.LAST,'begin_stop'):branch_transport.LAST.begin_stop()
+            raise KeyboardInterrupt
         signal.signal(signal.SIGBREAK,request_stop)
     try:asyncio.run(run())
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt,runtime_control.RequestedStop):
         branch_transport.close_last()
         flush_shadow_queue()
         with db.con() as c:
@@ -1503,3 +1528,6 @@ if __name__=="__main__":
         except Exception as storage_error:
             system_health.failure(config.DB,'failure_checkpoint',storage_error)
         raise
+
+    finally:
+        __import__('shutdown_audit').closed(config.DB,'primary',run_audit.ACTIVE)

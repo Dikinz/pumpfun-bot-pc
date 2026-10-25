@@ -1,7 +1,7 @@
 """Standard-library-only validation before importing any bot module."""
 import hashlib,json,socket
 from pathlib import Path
-VERSION='v0.7.67'
+VERSION='v0.7.76'
 
 def verify(root):
     root=Path(root).resolve()

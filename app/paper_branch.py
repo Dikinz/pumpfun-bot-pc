@@ -124,6 +124,10 @@ def read_lifecycle(primary,transport=False):
     except (ValueError,OSError):return {}
 
 async def worker(primary,ready=None,session=None,scenario=None):
+    with __import__('recovery_gate').reader(primary):
+        return await _worker(primary,ready,session,scenario)
+
+async def _worker(primary,ready=None,session=None,scenario=None):
     engine=scenario or sys.modules[__name__]
     import config,uuid,runtime_control
     strict_stop=session is not None
@@ -192,6 +196,8 @@ async def worker(primary,ready=None,session=None,scenario=None):
             except queue.Empty:
                 await asyncio.sleep(.005);continue
             if line is None:
+                if runtime_control.stop_requested(config.DB,session):
+                    stop_reason='PARENT_STOP';return
                 if strict_stop:raise RuntimeError('BRANCH_INPUT_EOF_WITHOUT_STOP')
                 return
             x=json.loads(line)
@@ -213,6 +219,7 @@ async def worker(primary,ready=None,session=None,scenario=None):
     async def check():
         nonlocal monitor
         while True:
+            __import__('recovery_gate').status()
             if matched:shared_lots.sync(main,primary)
             if monitor is None and main.P:
                 monitor=await asyncio.to_thread(__import__('subprocess').Popen,[sys.executable,'paper_branch.py','--monitor',str(target),'--parent',str(os.getpid())],stdin=__import__('subprocess').PIPE)
@@ -232,9 +239,10 @@ async def worker(primary,ready=None,session=None,scenario=None):
         failed=True;stop_reason='WORKER_ERROR'
         raise
     finally:
+        tasks_stopped=True
         for task in [feed]+tasks:task.cancel()
         try:await asyncio.wait_for(asyncio.gather(feed,*tasks,return_exceptions=True),timeout=5)
-        except (asyncio.TimeoutError,asyncio.CancelledError):failed=True;stop_reason='TASK_SHUTDOWN_TIMEOUT'
+        except (asyncio.TimeoutError,asyncio.CancelledError):tasks_stopped=False;failed=True;stop_reason='TASK_SHUTDOWN_TIMEOUT'
         monitor_forced=False
         if monitor is not None:
             try:
@@ -250,11 +258,13 @@ async def worker(primary,ready=None,session=None,scenario=None):
         final='FAILED' if failed or monitor_forced else 'STOPPED'
         # Final state, run boundary and shutdown metadata commit together.
         with db.atomic():
+            if tasks_stopped:main.execution.cancel_unfilled_buys_on_stop(db.con(),reason=stop_reason)
             runtime_status.beat(db.con(),stopped=True)
             db.setm('runtime_state_v41',final)
             run_audit.beat(db.con(),status=final,force=True)
             db.setmany(dict(trade_stream_state=final,stream_state=final,branch_shutdown_state=final,
                 branch_shutdown_reason=stop_reason,branch_shutdown_ts=time.time(),branch_monitor_forced=int(monitor_forced)))
+        __import__('shutdown_audit').closed(config.DB,'branch',session)
         engine.write_lifecycle(primary,dict(session=session,status=final,reason=stop_reason,run_id=run_audit.ACTIVE,
             monitor_forced=monitor_forced,pid=os.getpid(),ts=time.time()))
 
@@ -290,6 +300,13 @@ def export(primary,folder):
                     dst=Path(td)/src.name
                     with closing(sqlite3.connect(src.as_uri()+'?mode=ro',uri=True)) as a,closing(sqlite3.connect(dst)) as b:a.backup(b)
                     z.write(dst,dst.name)
+                if monitor_service.paths(p)['db'].exists():
+                    evidence=monitor_service.export(p,Path(td)/'monitor')
+                    z.write(evidence,'amm_monitor_evidence.zip')
+                    with zipfile.ZipFile(evidence) as nested:
+                        name=__import__('monitor_artifacts').MANIFEST
+                        z.writestr('amm_monitor_export_v74.json',nested.read(name))
+                else:z.writestr('amm_monitor_export_v74.json',json.dumps(dict(schema='MONITOR_ARTIFACTS_V74',status='MONITOR_DATABASE_MISSING',check_count=None,note='Cannot verify checks or artifact completeness; monitor may not have started.')))
 
 if __name__=='__main__':
     if sys.argv[1]=='--monitor':

@@ -19,12 +19,14 @@ MAX_LOSS_BPS=1500
 
 def request(c,mint,price,size,now):
     import exit_quotes as q
+    if not __import__('recovery_gate').allowed():return 'RECOVERY_BLOCKED'
     row=c.execute('SELECT * FROM preentry_v0729 WHERE mint=?',(mint,)).fetchone()
     if row:return row['status']
     fx=q.FX or {};rate=fx.get('rate');age=now-float(fx.get('ts',0))
     status='PENDING' if rate and 0<=age<=120 else 'MISSING_ENTRY_FX'
     inp=dict(mint=mint,signal_ts=now,signal_price=str(price),size_units=str(size),fx_rate=rate,fx_ts=fx.get('ts'),
              max_loss_bps=MAX_LOSS_BPS,min_reserve_multiple=1,buy_min_fraction='0.95')
+    __import__('recovery_gate').stamp(inp)
     ident=uuid.uuid4().hex
     c.execute('INSERT INTO preentry_v0729(job_id,mint,created_ts,input_json,status) VALUES(?,?,?,?,?)',
               (ident,mint,now,json.dumps(inp),status))
@@ -33,6 +35,7 @@ def request(c,mint,price,size,now):
 
 
 def _allow(c,mint,price,size,now,order_id=None):
+    if not __import__('recovery_gate').allowed():return False,'RECOVERY_BLOCKED'
     import exit_quotes as q
     row=c.execute('SELECT * FROM preentry_v0729 WHERE mint=?',(mint,)).fetchone()
     if row is None:return False,'PREFLIGHT_'+request(c,mint,price,size,now)
@@ -40,6 +43,7 @@ def _allow(c,mint,price,size,now,order_id=None):
     if row['status']=='USED' and row['order_id']!=order_id:return False,'PREFLIGHT_ALREADY_USED'
     if row['valid_until'] is None or not row['finished_ts']<=now<=row['valid_until']:return False,'PREFLIGHT_STALE'
     inp=json.loads(row['input_json'])
+    if not __import__('recovery_gate').allowed(inp):return False,'PREFLIGHT_RECOVERY_INVALIDATED'
     if Decimal(str(size))!=Decimal(inp['size_units']):return False,'PREFLIGHT_SIZE_CHANGED'
     if str((q.FX or {}).get('rate'))!=str(inp['fx_rate']):return False,'PREFLIGHT_FX_CHANGED'
     if abs(Decimal(str(price))/Decimal(inp['signal_price'])-1)>Decimal(str(MAX_PRICE_MOVE)):return False,'PREFLIGHT_PRICE_MOVED'
@@ -59,6 +63,7 @@ def consume(c,mint,oid):
 
 
 def ready(c,mint):
+    if not __import__('recovery_gate').allowed():return False
     return c.execute("SELECT 1 FROM preentry_v0729 WHERE mint=? AND status='READY' AND valid_until>=?",(mint,time.time())).fetchone() is not None
 
 
@@ -66,6 +71,8 @@ def complete(c,j,report,path=None,now=None):
     now=time.time() if now is None else now
     rpc_timing.attach(report,ROOT/j['job_id']);rpc_timing.queue_finish(c,j,report)
     status=report['status'];valid=None
+    if not __import__('recovery_gate').allowed(json.loads(j['input_json'])):
+        report=dict(report,status='RECOVERY_INVALIDATED');status='RECOVERY_INVALIDATED'
     if report.get('reserve_gate')=='INSUFFICIENT_PREENTRY_RESERVES':status='INSUFFICIENT_PREENTRY_RESERVES'
     elif status=='ROUNDTRIP_EXECUTED':
         if report.get('reserve_gate')!='PASS':status=report.get('reserve_gate','RESERVE_NOT_CONFIRMED')

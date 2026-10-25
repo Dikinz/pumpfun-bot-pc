@@ -17,6 +17,9 @@ def main():
     command=sys.argv[1] if len(sys.argv)>1 else 'help'
     if command=='verify-release':
         print('CLEAN RELEASE VERIFIED:',ROOT);return 0
+    if command=='recovery-check':
+        import recovery_selftest
+        return recovery_selftest.main()
     if command=='preserve-data':
         import sqlite_preserve
         selected=input('Stopped OLD app/data folder: ').strip().strip(chr(34))

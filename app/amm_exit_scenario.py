@@ -10,6 +10,7 @@ POLICY=dict(version='AMM_SIGNAL_EXIT_V1',max_snapshot_age_s=5,max_check_delay_s=
 def integer(x):return type(x)==int
 
 def assess(c,row,job,result,signal,closed,inventory):
+    if not __import__('recovery_gate').allowed(job):return 'RECOVERY_INVALIDATED',None
     f=signal_exit.finite;end=row.get('finished_ts');start=row.get('started_ts');snap=result.get('snapshot_received_ts')
     if not f(end) or not f(start):return 'UNFINISHED',None
     if closed is not None and end>=closed:return 'AFTER_OR_AT_TICK_CLOSE',None

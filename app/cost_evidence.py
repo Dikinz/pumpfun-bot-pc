@@ -40,13 +40,16 @@ def metadata(raw,source,price_basis,received_ts=None,received_mono=None):
     stamp=stamp/1000 if stamp else None
     lag=(wall-stamp)*1000 if stamp is not None else None
     clock='MISSING' if lag is None else ('FUTURE' if lag < 0 else 'OK')
-    return {'source':source,'price_basis':price_basis,'pool':str(raw.get('pool') or '')[:80],
+    result={'source':source,'price_basis':price_basis,'pool':str(raw.get('pool') or '')[:80],
       'quote_mint':str(raw.get('quoteMint') or '')[:100],'signature':str(raw.get('signature') or '')[:140],
       'timestamp_raw_ms':finite(raw.get('timestamp')) if source=='pumpapi_free' else None,
       'timestamp_input_state':('MISSING' if raw.get('timestamp') is None else 'INVALID' if stamp is None else 'VALID'),
       'provider_ts':stamp,'received_ts':wall,'received_mono':mono,'provider_lag_ms':lag,
       'pool_fee_rate':finite(raw.get('poolFeeRate'),0,.20) if source=='pumpapi_free' else None,
       'priority_fee_raw':finite(raw.get('priorityFee')) if source=='pumpapi_free' else None,'clock_status':clock}
+    import recovery_gate
+    recovery_gate.market(result)
+    return recovery_gate.stamp(result)
 
 def record(c,trade_id,side,mint,price,size,reason,evidence=None,wall=None,mono=None):
     wall=time.time() if wall is None else wall;mono=time.monotonic() if mono is None else mono

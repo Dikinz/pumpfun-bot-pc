@@ -12,7 +12,7 @@ SCHEMA='''CREATE TABLE IF NOT EXISTS position_checks_v0730(
  CREATE INDEX IF NOT EXISTS position_checks_trade_time ON position_checks_v0730(trade_id,scheduled_ts);
  CREATE INDEX IF NOT EXISTS position_checks_trade_started_v51 ON position_checks_v0730(trade_id,started_ts DESC);
  CREATE TABLE IF NOT EXISTS position_health_v0730(trade_id TEXT PRIMARY KEY,first_problem_ts REAL,first_problem_status TEXT,first_error_ts REAL,last_good_ts REAL);'''
-SCHEMA+=__import__('priority_exit').SCHEMA
+SCHEMA+=__import__('priority_exit').SCHEMA+__import__('fresh_retry').SCHEMA
 SCHEMA+='CREATE INDEX IF NOT EXISTS checks_finished_v60 ON position_checks_v0730(finished_ts,id);'
 import connection_audit
 SCHEMA+=connection_audit.SCHEMA
@@ -28,8 +28,11 @@ def migrated(c,tid):
 
 def next_due(c,tid,opened):
     row=c.execute('SELECT started_ts,finished_ts,status,input_json FROM position_checks_v0730 WHERE trade_id=? ORDER BY started_ts DESC LIMIT 1',(tid,)).fetchone()
-    backoff=connection_audit.retry(c,tid)['not_before_ts'] or 0
-    if not row:return opened
+    import fresh_retry
+    backoff=max(connection_audit.retry(c,tid)['not_before_ts'] or 0,fresh_retry.cooldown(c))
+    urgent=fresh_retry.waiting_due(c,tid)
+    if urgent is not None:return max(backoff,urgent)
+    if not row:return max(backoff,opened)
     if row['status'] in ('POOL_COMPLETED',MIGRATION_STATUS):return max(backoff,(row['finished_ts'] or row['started_ts'])+1)
     interval=AMM_INTERVAL if migrated(c,tid) else INTERVAL
     return max(backoff,row['started_ts']+interval)
@@ -38,6 +41,8 @@ def recover(c,status='INTERRUPTED_RESTART'):
     c.execute("UPDATE position_checks_v0730 SET status=?,finished_ts=? WHERE status='RUNNING'",(status,time.time()))
 
 def next_job(c,now,lane=None,priority=None):
+    import fresh_retry
+    if now<fresh_retry.cooldown(c):return
     # Dedicated first-check lane; one running check per position, no queued jobs.
     rows=c.execute('''SELECT p.*,MAX(m.started_ts) last_check FROM positions p LEFT JOIN position_checks_v0730 m ON m.trade_id=p.trade_id GROUP BY p.trade_id ORDER BY COALESCE(MAX(m.started_ts),0),p.opened_ts''').fetchall()
     for p in rows:
@@ -45,6 +50,7 @@ def next_job(c,now,lane=None,priority=None):
         if lane=='initial' and p['last_check'] is not None:continue
         if lane=='regular' and p['last_check'] is None:continue
         if c.execute("SELECT 1 FROM position_checks_v0730 WHERE trade_id=? AND status='RUNNING'",(p['trade_id'],)).fetchone():continue
+        if not priority and fresh_retry.blocks_regular(c,p['trade_id']):continue
         if priority:
             if now<(connection_audit.retry(c,p['trade_id'])['not_before_ts'] or 0):continue
         elif now<next_due(c,p['trade_id'],p['opened_ts']):continue
@@ -54,6 +60,7 @@ def next_job(c,now,lane=None,priority=None):
         import config
         data=dict(route='PUMP_AMM' if migrated(c,p['trade_id']) else 'PUMP_CURVE',trial_loss_bps=config.QUOTE_MAX_LOSS_BPS,id=uuid.uuid4().hex,trade_id=p['trade_id'],mint=p['mint'],opened_ts=p['opened_ts'],scheduled_ts=now,
           inventory=dict(inv) if inv else None,entry_price=str(p['entry']),previous_reserve=previous,wallet_state=wallet_costs.ensure(c))
+        __import__('recovery_gate').stamp(data)
         if priority:data['priority_exit']=dict(order_id=priority['order_id'],signal_ts=priority['signal_ts'],detected_ts=priority['detected_ts'],dispatched_ts=now,queue_wait_ms=(now-priority['detected_ts'])*1000)
         c.execute("INSERT INTO position_checks_v0730(id,trade_id,mint,scheduled_ts,started_ts,status,input_json) VALUES(?,?,?,?,?,'RUNNING',?)",(data['id'],p['trade_id'],p['mint'],now,now,json.dumps(data)))
         return data
@@ -73,12 +80,20 @@ def classify(r,now):
 def finish(c,job,r,archive=None,now=None):
     now=time.time() if now is None else now
     status=classify(r,now)
+    admission=__import__('recovery_gate').admission(job)
+    r=dict(r,recovery_admission_v76=dict(admission,classified_status=status))
+    # Cancellation/worker/transport failures explain why no result exists.
+    # Preserve that outcome even when the execution gate is independently closed.
+    no_result=TECHNICAL|{'SUPERSEDED_BY_EXIT_SIGNAL','INTERRUPTED_STOP','CLEANUP_FAILED','WORKER_EXCEPTION'}
+    if not admission['allowed'] and status not in no_result:
+        status='RECOVERY_INVALIDATED';r=dict(r,recovery_invalidated_v75=True)
     c.execute('SAVEPOINT monitor_finish')
     try:
         updated=c.execute("UPDATE position_checks_v0730 SET status=?,finished_ts=?,result_json=?,archive=? WHERE id=? AND status='RUNNING'",(status,now,json.dumps(r),archive,job['id'])).rowcount
         if updated:
             __import__('priority_exit').finished(c,job,status,now)
             connection_audit.record_alert(c,job,status,now)
+            __import__('fresh_retry').completed(c,job,r,status,now)
             state=trial.timing(c,job['trade_id'],now)
             if job.get('route')=='PUMP_AMM':
                 c.execute('INSERT OR IGNORE INTO monitor_timing_v0731 VALUES(?,?,?,?,?)',(job['id'],job['trade_id'],now,state,None))
@@ -210,28 +225,39 @@ def amm_experiment(data,out):
     (out/'result.tmp').write_text(json.dumps(r));(out/'result.tmp').replace(out/'result.json')
     return r
 
-async def stop_simulation(proc):
+async def stop_simulation(proc,diagnostic=None):
     """Reap the known simulation launcher and its descendants (Windows venv wrapper)."""
     import psutil
     family=[]
+    def note(phase,**fields):
+        if diagnostic:diagnostic.event(phase,**fields)
+    note('CLEANUP_INSPECT',child_pid=proc.pid)
     try:family=psutil.Process(proc.pid).children(recursive=True)
     except psutil.NoSuchProcess:pass
-    except psutil.Error:
+    except psutil.Error as exc:
+        note('CLEANUP_INSPECT_FAILED',exception=__import__('child_diagnostics').exception(exc))
         # The direct child is still reaped; inability to inspect descendants is explicit.
         family=None
     inspection_failed=family is None
+    note('CLEANUP_KILL_DESCENDANTS',inspection_failed=inspection_failed,descendants=[__import__('child_diagnostics').identity(p) for p in (family or [])])
     for child in reversed(family or []):
         try:child.kill()
         except psutil.NoSuchProcess:pass
-        except psutil.Error:inspection_failed=True
+        except psutil.Error as exc:
+            inspection_failed=True;note('CLEANUP_KILL_DESCENDANT_FAILED',pid=child.pid,exception=__import__('child_diagnostics').exception(exc))
+    note('CLEANUP_KILL_LAUNCHER',returncode=proc.returncode)
     if proc.returncode is None:
         try:proc.kill()
         except ProcessLookupError:pass
-        except PermissionError:raise RuntimeError('SIMULATION_CHILD_CLEANUP_UNCONFIRMED') from None
+        except PermissionError as exc:
+            note('CLEANUP_KILL_LAUNCHER_FAILED',exception=__import__('child_diagnostics').exception(exc));raise RuntimeError('SIMULATION_CHILD_CLEANUP_UNCONFIRMED') from exc
+    note('CLEANUP_WAIT_LAUNCHER',timeout_s=3);wait_started=time.monotonic()
     try:await asyncio.wait_for(proc.wait(),timeout=3)
     except asyncio.TimeoutError:raise RuntimeError('SIMULATION_CHILD_CLEANUP_TIMEOUT') from None
+    note('CLEANUP_LAUNCHER_EXIT',returncode=proc.returncode,wait_ms=(time.monotonic()-wait_started)*1000)
     if inspection_failed:raise RuntimeError('SIMULATION_CHILD_CLEANUP_UNCONFIRMED')
     # Process handles include creation identity; no broad name-based termination.
+    note('CLEANUP_WAIT_DESCENDANTS',timeout_s=2)
     deadline=time.monotonic()+2
     while True:
         alive=[]
@@ -239,14 +265,18 @@ async def stop_simulation(proc):
             try:
                 if child.is_running() and child.status()!=psutil.STATUS_ZOMBIE:alive.append(child)
             except psutil.NoSuchProcess:pass
-        if not alive:return
-        if time.monotonic()>=deadline:raise RuntimeError('SIMULATION_CHILD_CLEANUP_TIMEOUT')
+        if not alive:
+            note('CLEANUP_CONFIRMED',returncode=proc.returncode,descendants_remaining=[]);return
+        if time.monotonic()>=deadline:
+            note('CLEANUP_DESCENDANTS_REMAIN',pids=[p.pid for p in alive]);raise RuntimeError('SIMULATION_CHILD_CLEANUP_TIMEOUT')
         await asyncio.sleep(.02)
 
 async def launch_check(job,out,replay=None,timeout=None):
     """Same launch path for production and offline startup test. Never inherit stdin."""
     out=Path(out);out.mkdir(parents=True,exist_ok=True)
     (out/'input.json').write_text(json.dumps(job),encoding='utf-8')
+    from child_diagnostics import Trace
+    trace=Trace(out,job);trace.event('SPAWN');cleanup_error=None
     stage(out,'SPAWN');proc=None;result=None
     options={}
     if sys.platform=='win32':
@@ -257,33 +287,58 @@ async def launch_check(job,out,replay=None,timeout=None):
     try:
         with (out/'child.log').open('wb') as log:
             proc=await asyncio.create_subprocess_exec(*args,stdin=asyncio.subprocess.DEVNULL,stdout=log,stderr=log,cwd=str(Path(__file__).resolve().parent),**options)
+            trace.data['child_pid']=proc.pid
+            try:trace.data['child_created_ts']=__import__('psutil').Process(proc.pid).create_time()
+            except __import__('psutil').Error:pass
+            trace.event('WAIT_RESULT',timeout_s=TIMEOUT if timeout is None else timeout)
+            wait_started=time.monotonic()
             await asyncio.wait_for(proc.wait(),TIMEOUT if timeout is None else timeout)
+            trace.event('CHILD_EXIT',returncode=proc.returncode,wait_ms=(time.monotonic()-wait_started)*1000)
         result=json.loads((out/'result.json').read_text()) if proc.returncode==0 and (out/'result.json').exists() else {'status':'CHILD_ERROR'}
-    except asyncio.TimeoutError:result={'status':'REQUEST_TIMEOUT','network_error':{'category':'CHILD_DEADLINE','chain':[],'note':'Whole child exceeded deadline; transport cause unknown.'}}
-    except asyncio.CancelledError:
+    except asyncio.TimeoutError as e:
+        trace.error('worker_exception',e);result={'status':'REQUEST_TIMEOUT','network_error':{'category':'CHILD_DEADLINE','chain':[],'note':'Whole child exceeded deadline; transport cause unknown.'}}
+    except asyncio.CancelledError as e:
+        trace.error('cancellation',e)
         result={'status':'INTERRUPTED_STOP'}
         raise
-    except Exception as e:result={'status':'WORKER_ERROR','error_code':type(e).__name__}
+    except Exception as e:
+        trace.error('worker_exception',e);result={'status':'WORKER_ERROR','error_code':type(e).__name__}
     finally:
-        if proc is not None and proc.returncode is None:await stop_simulation(proc)
+        try:
+            if proc is not None and proc.returncode is None:await stop_simulation(proc,diagnostic=trace)
+        except Exception as e:
+            cleanup_error=e;trace.error('cleanup_exception',e)
+            result=dict(status='CLEANUP_FAILED',worker_result=result)
+        trace.event('SAVE_DIAGNOSTICS',returncode=proc.returncode if proc else None)
         result=result or {'status':'WORKER_ERROR'}
-        import rpc_timing
-        rpc_timing.attach(result,out)
-        try:result['progress']=json.loads((out/'progress.json').read_text())
-        except (OSError,ValueError):pass
-        result['child_returncode']=proc.returncode if proc else None
-        # URLs may contain credentials. Keep error types, stack locations and stage, redact URLs.
-        import re
-        logpath=out/'child.log'
-        if logpath.exists():
-            clean=re.sub(r'https?://[^\s\"\']+','[URL REDACTED]',logpath.read_text(errors='replace'))[-12000:]
-            logpath.write_text(clean,encoding='utf-8');result['child_log_tail']=clean[-3000:]
-        if result['status']=='CHILD_ERROR' and result.get('child_returncode') in (3221225786,-1073741510):
-            result['status']='INTERRUPTED_STOP'
-        (out/'diagnostic.json').write_text(json.dumps(result),encoding='utf-8')
-        with zipfile.ZipFile(out/'diagnostic.zip','w',zipfile.ZIP_DEFLATED) as z:
-            for name in ('input.json','progress.json','rpc_timing.json','child.log','diagnostic.json'):
-                if (out/name).exists():z.write(out/name,name)
+        result['child_diagnostics_v73']=trace.data
+        result=result or {'status':'WORKER_ERROR'}
+        try:
+            import rpc_timing
+            rpc_timing.attach(result,out)
+            try:result['progress']=json.loads((out/'progress.json').read_text())
+            except (OSError,ValueError):pass
+            result['child_returncode']=proc.returncode if proc else None
+            # URLs may contain credentials. Keep error types, stack locations and stage, redact URLs.
+            import re
+            logpath=out/'child.log'
+            if logpath.exists():
+                with logpath.open('rb') as f:
+                    f.seek(0,2);size=f.tell();f.seek(max(0,size-12000));tail=f.read(12000).decode(errors='replace')
+                clean=__import__('child_diagnostics').clean(tail,12000)
+                logpath.write_text(clean,encoding='utf-8');result['child_log_tail']=clean[-3000:]
+            if result['status']=='CHILD_ERROR' and result.get('child_returncode') in (3221225786,-1073741510):
+                result['status']='INTERRUPTED_STOP'
+            (out/'diagnostic.json').write_text(json.dumps(result),encoding='utf-8')
+            with zipfile.ZipFile(out/'diagnostic.zip','w',zipfile.ZIP_DEFLATED) as z:
+                for name in ('input.json','progress.json','rpc_timing.json','child.log','diagnostic.json','child_lifecycle_v73.json'):
+                    if (out/name).exists():z.write(out/name,name)
+        except Exception as e:
+            trace.error('diagnostic_exception',e)
+            if cleanup_error is None:cleanup_error=e
+        if cleanup_error is not None:
+            cleanup_error.child_diagnostics_v73=trace.data
+            raise cleanup_error
     return result
 
 async def run_job(job,connection=None):
@@ -293,7 +348,12 @@ async def run_job(job,connection=None):
     out=ROOT/job['id']
     worker_ts=time.time();worker_mono=time.monotonic()
     __import__('priority_exit').worker_started(connection,job,worker_ts)
-    try:r=await launch_check(job,out)
+    try:r=await launch_check(job,out,timeout=job.get('deadline_timeout_s'))
+    except Exception as exc:
+        from child_diagnostics import exception
+        detail=dict(status='CLEANUP_FAILED' if str(exc).startswith('SIMULATION_CHILD_CLEANUP_') or getattr(exc,'child_diagnostics_v73',{}).get('cleanup_exception') else 'WORKER_ERROR',worker_exception=exception(exc),child_diagnostics_v73=getattr(exc,'child_diagnostics_v73',{}))
+        finish(connection,job,detail,str(out/'diagnostic.zip'))
+        raise
     except asyncio.CancelledError:
         finish(connection,job,{'status':job.get('cancel_status','INTERRUPTED_STOP')},str(out/'diagnostic.zip'));raise
     r['scheduler_timing_v65']=dict(scheduled_ts=job['scheduled_ts'],worker_started_ts=worker_ts,event_loop_dispatch_ms=max(0,(worker_ts-job['scheduled_ts'])*1000),worker_duration_ms=(time.monotonic()-worker_mono)*1000)
