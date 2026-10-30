@@ -106,6 +106,7 @@ def test_rpc_cap_partial_journal(queue,tmp_path,monkeypatch):
 def test_cancel_kills_child(queue,tmp_path,monkeypatch):
     offer(queue);j,_=sp.next_job(queue,100);monkeypatch.setattr(sp,'ROOT',tmp_path)
     class Proc:
+        pid=999999999
         returncode=None;killed=False
         async def wait(self):
             if self.killed:return self.returncode
@@ -113,7 +114,7 @@ def test_cancel_kills_child(queue,tmp_path,monkeypatch):
         def kill(self):self.killed=True;self.returncode=-9
     proc=Proc()
     async def spawn(*a,**k):return proc
-    monkeypatch.setattr(asyncio,'create_subprocess_exec',spawn)
+    monkeypatch.setattr(__import__('position_monitor'),'create_simulation_process',spawn)
     async def run():
         task=asyncio.create_task(sp.run_job(j));await asyncio.sleep(.01);task.cancel()
         with pytest.raises(asyncio.CancelledError):await task
@@ -122,9 +123,9 @@ def test_cancel_kills_child(queue,tmp_path,monkeypatch):
 def test_actual_subprocess_replay(queue,tmp_path,monkeypatch):
     b=json.loads(Path('research/local_snapshot_v26.json').read_text());now=time.time();b['snapshot']['received_ts']=now
     replay=tmp_path/'offline.json';replay.write_text(json.dumps(b));monkeypatch.setattr(q,'FX',{'rate':'100','ts':now});monkeypatch.setattr(sp,'ROOT',tmp_path/'jobs')
-    sp.request(queue,b['mint'],1.,now,{});j,_=sp.next_job(queue,now);original=asyncio.create_subprocess_exec
-    async def spawn(*args,**kw):return await original(*args,'--replay',str(replay),**kw)
-    monkeypatch.setattr(asyncio,'create_subprocess_exec',spawn);asyncio.run(sp.run_job(j));r=job(queue,b['mint'])
+    sp.request(queue,b['mint'],1.,now,{});j,_=sp.next_job(queue,now);original=__import__('position_monitor').create_simulation_process
+    async def spawn(args,out,trace):return await original([*args,'--replay',str(replay)],out,trace)
+    monkeypatch.setattr(__import__('position_monitor'),'create_simulation_process',spawn);asyncio.run(sp.run_job(j));r=job(queue,b['mint'])
     assert r['raw_status']=='ROUNDTRIP_EXECUTED' and r['started_ts']<=r['finished_ts'] and r['wait_s']==0
     assert r['buy_ok']==r['sell_ok']==1 and r['archive'] and json.loads(r['result_json'])['rpc_calls']==0
     assert queue.execute('select count(*) from paper_orders_v0720').fetchone()[0]==0

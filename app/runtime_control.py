@@ -115,15 +115,19 @@ class Probe:
             a['calls']+=1;a['total_ms']+=seconds*1000;a['max_ms']=max(a['max_ms'],seconds*1000)
     def inspect(self):
         now=time.monotonic();lag=now-self.pulse
+        sql=getattr(self,'sql_v91',None)
+        sql=dict(sql,age_s=max(0,now-sql['started_mono'])) if sql else None
         if lag>3 and (not self.last_stall or now-self.last_stall>=30):
             self.last_stall=now;self.stalls+=1
             frame=sys._current_frames().get(self.main_thread);stack=[]
             while frame and len(stack)<16:
                 stack.append(dict(file=Path(frame.f_code.co_filename).name,function=frame.f_code.co_name,line=frame.f_lineno));frame=frame.f_back
-            if self.first_stack is None:self.first_stack=dict(age_s=lag,stage=self.stage,frames=stack,ts=time.time())
+            if self.first_stack is None:self.first_stack=dict(age_s=lag,stage=self.stage,frames=stack,ts=time.time(),sql_v91=sql)
         with self.lock:samples={k:dict(v) for k,v in self.samples.items()}
+        import counter_writer
+        writer=counter_writer.ACTIVE.snapshot() if counter_writer.ACTIVE is not None else None
         return dict(schema='RUNTIME_V60',pid=os.getpid(),started_ts=self.started_ts,session=self.control[1] if self.control else None,ts=time.time(),state='PROBE_STOPPED' if self.closed.is_set() else 'RUNNING',
-            loop_pulse_age_s=lag,active_stage=self.stage,stalls=self.stalls,first_stall=self.first_stack,samples=samples,**self.extra())
+            loop_pulse_age_s=lag,active_stage=self.stage,sql_v91=sql,diagnostic_writer_v92=writer,market_telemetry_v92=getattr(self,'market_telemetry_v92',None),stalls=self.stalls,first_stall=self.first_stack,samples=samples,**self.extra())
     def watch(self):
         while not self.closed.wait(.5):
             try:
@@ -162,20 +166,37 @@ def measured(name):
 
 class MarketTelemetry:
     """Only counters/timestamps. Trading ledger, evidence and prices never buffered."""
-    def __init__(self):self.count=0;self.raw_ts=0.;self.market_ts=None;self.last=0.
-    def received(self,now):self.count+=1;self.raw_ts=now
+    def __init__(self):
+        self.count=0;self.raw_ts=0.;self.market_ts=None;self.last=0.;self.retry_at=0.;self.pending_since=None
+        self.deferred=0;self.committed=0;self.error=None
+    def snapshot(self):
+        return dict(pending_messages=self.count,committed_messages=self.committed,local_busy_deferrals=self.deferred,
+          pending_age_s=max(0,time.monotonic()-self.pending_since) if self.pending_since is not None else 0,
+          last_error=self.error,raw_received_ts=self.raw_ts,last_market_ts=self.market_ts)
+    def publish_memory(self):
+        if ACTIVE is not None:ACTIVE.market_telemetry_v92=self.snapshot()
+    def received(self,now):
+        if self.pending_since is None:self.pending_since=time.monotonic()
+        self.count+=1;self.raw_ts=now
     def market(self,now):self.market_ts=now
     def flush(self,db,force=False):
         mono=time.monotonic()
+        if mono<self.retry_at:return False
         if not force and mono-self.last<.25:return False
         if not self.count and self.market_ts is None:return False
         # Clear only after commit: a failed flush never invents delivered counters.
-        with db.atomic():
-            if self.count:db.inc('pumpapi_messages',self.count)
-            values=dict(pumpapi_last_message_ts=self.raw_ts,trade_last_raw_ts=self.raw_ts)
-            if self.market_ts is not None:values.update(trade_last_market_ts=self.market_ts,trade_stream_state='RECEIVING',trade_watchdog_state='RECEIVING')
-            db.setmany(values)
-        self.count=0;self.market_ts=None;self.last=mono;return True
+        try:
+            with db.telemetry_atomic():
+                if self.count:db.inc('pumpapi_messages',self.count)
+                values=dict(pumpapi_last_message_ts=self.raw_ts,trade_last_raw_ts=self.raw_ts)
+                if self.market_ts is not None:values.update(trade_last_market_ts=self.market_ts,trade_stream_state='RECEIVING',trade_watchdog_state='RECEIVING')
+                db.setmany(values)
+        except __import__('sqlite3').Error as exc:
+            if getattr(exc,'sqlite_errorcode',0)&255 not in (5,6):raise
+            self.deferred+=1;self.retry_at=mono+.25
+            self.error=__import__('sqlite_diagnostics').error(exc);self.publish_memory();return False
+        self.committed+=self.count;self.count=0;self.market_ts=None;self.last=mono;self.pending_since=None;self.retry_at=0.;self.error=None
+        self.publish_memory();return True
 
 def read(primary):
     try:return json.loads(status_path(primary).read_text(encoding='utf-8'))
@@ -245,7 +266,7 @@ def shutdown_status(primary,bot_result):
     children={}
     for engine in (paper_branch,route_branch):
         ack=engine.read_lifecycle(primary);transport=engine.read_lifecycle(primary,True)
-        children[engine.__name__]=dict(ack=ack,transport=transport,confirmed=bool(ack.get('status')=='STOPPED' and transport.get('status')=='STOPPED' and ack.get('session')==transport.get('session') and transport.get('exit_code')==0 and not transport.get('forced') and not ack.get('monitor_forced')))
+        children[engine.__name__]=dict(ack=ack,transport=transport,confirmed=bool(ack.get('status')=='STOPPED' and (transport.get('status')=='STOPPED' or (transport.get('status')=='FAILED' and transport.get('failure') and transport.get('cleanup_confirmed') is True)) and ack.get('session')==transport.get('session') and transport.get('exit_code')==0 and not transport.get('forced') and not ack.get('monitor_forced')))
     state=None
     try:
         with closing(sqlite3.connect(Path(primary).resolve().as_uri()+'?mode=ro',uri=True,timeout=.1)) as c:

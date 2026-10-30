@@ -1,0 +1,56 @@
+{
+  "main.py": {
+    "identical": true,
+    "sha256": "35f20c231286fcca7e8dc7459da30bc1415759e6e2047604c4c8e484ba57a029"
+  },
+  "paper_branch.py": {
+    "identical": true,
+    "sha256": "dce989f2125f4cf5a208440e6e5fc38ab20f34e0ea6a875d5dbf6d8d6b698147"
+  },
+  "route_branch.py": {
+    "identical": true,
+    "sha256": "a1526e0824c8b89da4d331f04c09baa9086ee6f91eec1dd1c70dd5b08b0e4ad5"
+  },
+  "paper_capital.py": {
+    "identical": true,
+    "sha256": "0eba316b935ea1af3b8cb92b696081141b05561d1de6583c9bbc28573cfe4e1c"
+  },
+  "fresh_retry.py": {
+    "identical": true,
+    "sha256": "b85379190fb54f9f9802ba6b4c9baff0bcdaecef28c3d167290d145ff7c2425c"
+  },
+  "windows_child.py": {
+    "identical": true,
+    "sha256": "18fb6f161a62e1b96a6a8dd073f0ae19c0b0a316ccc03f81e920d4478ede641c"
+  },
+  "late_spawn.py": {
+    "identical": true,
+    "sha256": "ab728543ac1f565a71f747cb560d54cb569e1bf484b3711016b7a316adaf57a5"
+  },
+  "position_monitor.py": {
+    "identical": true,
+    "sha256": "b4712dcb1ae173f333b7cbee4a00831bd803215cc05fd3f24e7e31226c47b335"
+  },
+  "execution_review_v92.py": {
+    "identical": true,
+    "sha256": "8cc38e7db7d7f5d48135869b555311bd481b90b35f3484be89caf1c634bdf22a"
+  },
+  "cost_price_audit.py": {
+    "identical": true,
+    "sha256": "78028ead1f718106962b827c905d924477b6e26446ddfbb228ea75331e429d11"
+  },
+  "counter_writer.py": {
+    "identical": true,
+    "sha256": "cd5c9f1031f62a8a1bf8cc157b8ab0260db67496a830bccc331e313b3fa57e68"
+  },
+  "candidate_lab.py": {
+    "identical": true,
+    "sha256": "58044bd3fe854098aa6c1bab2df6116c1359dcb08363178dd3667fd41dda6b6d"
+  },
+  "rpc_priority.py": {
+    "identical": true,
+    "sha256": "191373195d58a3f7e263330e0618d83cf2f88c53146f9540c89b3d6c6dbe2df9"
+  },
+  "config_except_version": true,
+  "local_run_snapshot_and_account_sizing_ast": true
+}

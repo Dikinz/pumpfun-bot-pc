@@ -1,0 +1,115 @@
+{
+  "version": "v0.7.95",
+  "build_revision": "RPC_ADMISSION_V95",
+  "full_suite": {
+    "passed": 1048,
+    "skipped": 16,
+    "failed": 0,
+    "seconds": 150.188
+  },
+  "controlled_suite": {
+    "passed": true,
+    "counts": {
+      "PASSED": 315,
+      "SKIPPED": 15
+    },
+    "seconds": 114.32710558300005,
+    "budget_s": 300,
+    "new_required_cases": 16,
+    "required_bank_proof_cases": 4
+  },
+  "native_windows_verified": false,
+  "current_provider_rpc_test_run": false,
+  "current_amm_target_proven": false,
+  "production_limits": {
+    "rate_per_origin": 6,
+    "max_inflight": 4,
+    "admission_wait_s": 0.75,
+    "worker_deadline_s": 10,
+    "retry_after_preserved": true
+  },
+  "protocol": {
+    "one_connection_per_thread": true,
+    "atomic_batched_outcomes": true,
+    "receipt_bound": 32,
+    "original_control_failure_markers_preserved": true,
+    "rate_timestamp_written_after_admission_bookkeeping": true,
+    "outcome_unlink_outside_metadata_only_after_commit": true,
+    "readonly_program_cache": true,
+    "trading_bank_cache": false
+  },
+  "bench": {
+    "scope": "LINUX_OFFLINE_COORDINATION_ONLY",
+    "actual_http": false,
+    "production_limit_changed": false,
+    "test_rate": 1000,
+    "requests_per_trial": 50,
+    "trials": {
+      "v941": [
+        {
+          "opens": 150,
+          "closes": 150,
+          "explicit_commits": 100,
+          "gc_autocommits": 50,
+          "elapsed_s": 0.280106620999959,
+          "requests": 50
+        },
+        {
+          "opens": 150,
+          "closes": 150,
+          "explicit_commits": 100,
+          "gc_autocommits": 50,
+          "elapsed_s": 0.3142097110001032,
+          "requests": 50
+        },
+        {
+          "opens": 150,
+          "closes": 150,
+          "explicit_commits": 100,
+          "gc_autocommits": 50,
+          "elapsed_s": 0.30534370500004115,
+          "requests": 50
+        }
+      ],
+      "v95": [
+        {
+          "opens": 0,
+          "closes": 0,
+          "explicit_commits": 100,
+          "gc_autocommits": 0,
+          "elapsed_s": 0.08877944999994725,
+          "requests": 50
+        },
+        {
+          "opens": 0,
+          "closes": 0,
+          "explicit_commits": 100,
+          "gc_autocommits": 0,
+          "elapsed_s": 0.0775310819999504,
+          "requests": 50
+        },
+        {
+          "opens": 0,
+          "closes": 0,
+          "explicit_commits": 100,
+          "gc_autocommits": 0,
+          "elapsed_s": 0.10164102699991417,
+          "requests": 50
+        }
+      ]
+    },
+    "median_elapsed_s": {
+      "v941": 0.30534370500004115,
+      "v95": 0.08877944999994725
+    }
+  },
+  "dashboard": {
+    "syntax_verified_both": true,
+    "roadmap_bars_preserved_both": true,
+    "browser_layout_not_rechecked": true
+  },
+  "root_cause_old_sqlite_hang": "UNKNOWN",
+  "actual_windows_exit_latency_improvement_verified": false,
+  "overall_memory_reduction_verified": false,
+  "limits": "Offline Linux tests and coordination-only synthetic benchmark. Existing fresh-bank/version/slot checks and historical Curve/AMM VM outcomes retained. A new Windows/provider run is required; no live or profitability proof."
+}

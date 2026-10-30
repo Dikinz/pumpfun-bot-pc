@@ -1,0 +1,48 @@
+{
+  "version": "v0.7.94",
+  "build_revision": "CANDIDATE_WRITER_V94",
+  "full_suite": {
+    "passed": 1031,
+    "skipped": 16,
+    "failed": 0,
+    "seconds": 156.542
+  },
+  "controlled_suite": {
+    "passed": true,
+    "outcomes": {
+      "PASSED": 283,
+      "SKIPPED": 15
+    },
+    "seconds": 109.27955370100017,
+    "budget_s": 300,
+    "new_required_cases": 17
+  },
+  "native_windows_verified": false,
+  "current_network_test_run": false,
+  "dashboard": {
+    "javascript_syntax": "PASS_BOTH",
+    "dom_warning_and_cleanup_contracts": "PASS_BOTH",
+    "browser_layout_verified": false
+  },
+  "record_buffer": {
+    "pending_keys": 256,
+    "inflight_keys": 256,
+    "max_single_row_payload_bytes": 8192,
+    "max_row_payload_bytes": 4194304,
+    "overflow": "DROP_NEW_MARK_HISTORY_INCOMPLETE",
+    "synchronous_runtime_fallback": false
+  },
+  "rpc": {
+    "rate_per_origin_unchanged": 6,
+    "max_inflight_unchanged": 4,
+    "lease_ttl_s": 10,
+    "admission_wait_changed": false,
+    "worker_deadline_changed": false,
+    "retry_after_preserved": true,
+    "real_exit_latency_improvement_verified": false
+  },
+  "financial_modules_unchanged": true,
+  "windows_insert_root_cause": "UNKNOWN",
+  "sustained_ram_improvement_verified": false,
+  "limits": "Offline Linux regression and injected/native SQLite contention tests; Windows check and current provider/AMM execution require a new user run. No profitability or live proof."
+}

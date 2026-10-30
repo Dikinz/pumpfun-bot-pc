@@ -130,20 +130,20 @@ def child(data,out,replay=None):
 async def run_job(j):
     import database as db
     if not re.fullmatch('[a-f0-9]{32}',j['job_id']):complete(db.con(),j,{'status':'INVALID_JOB_ID'});return
-    out=ROOT/j['job_id'];proc=None
+    out=ROOT/j['job_id']
     try:
         out.mkdir(parents=True,exist_ok=True);(out/'input.json').write_text(j['input_json'])
-        proc=await asyncio.create_subprocess_exec(sys.executable,str(Path(__file__).resolve()),'--child',str(out),
-                  stdout=asyncio.subprocess.DEVNULL,stderr=asyncio.subprocess.DEVNULL)
-        await asyncio.wait_for(proc.wait(),CHILD_TIMEOUT)
-        r=json.loads((out/'result.json').read_text()) if proc.returncode==0 and (out/'result.json').exists() else {'status':'CHILD_ERROR'}
+        import position_monitor as pm
+        payload=json.loads(j['input_json']);payload.setdefault('id',j['job_id'])
+        r=await pm.launch_check(payload,out,timeout=CHILD_TIMEOUT,child_script=__file__)
+        if r.get('status')=='WORKER_TIMEOUT':r['status']='PREFLIGHT_TIMEOUT'
         complete(db.con(),j,r,str(out/'evidence.zip') if (out/'evidence.zip').exists() else None)
     except asyncio.TimeoutError:complete(db.con(),j,{'status':'PREFLIGHT_TIMEOUT'})
     except asyncio.CancelledError:
         complete(db.con(),j,{'status':'INTERRUPTED_STOP'});raise
-    except Exception as e:complete(db.con(),j,{'status':'WORKER_ERROR_'+type(e).__name__})
-    finally:
-        if proc is not None and proc.returncode is None:proc.kill();await proc.wait()
+    except Exception as e:
+        complete(db.con(),j,{'status':'WORKER_ERROR_'+type(e).__name__,'error_type':type(e).__name__,'child_diagnostics_v73':getattr(e,'child_diagnostics_v73',{})})
+        if str(e).startswith('SIMULATION_CHILD_CLEANUP_') or getattr(e,'child_diagnostics_v73',{}).get('cleanup_exception'):raise
 
 
 async def worker():
@@ -175,7 +175,7 @@ def summary(c,limit=100):
 def export(db_path,folder='exports'):
     folder=Path(folder);folder.mkdir(exist_ok=True,parents=True)
     with sqlite3.connect(Path(db_path).resolve().as_uri()+'?mode=ro',uri=True) as c:
-        c.row_factory=sqlite3.Row;data=summary(c,-1);files=list(c.execute('SELECT job_id FROM preentry_v0729 WHERE archive IS NOT NULL'))
+        c.row_factory=sqlite3.Row;data=summary(c,-1);files=list(c.execute('SELECT job_id FROM preentry_v0729 WHERE started_ts IS NOT NULL OR archive IS NOT NULL'))
     target=folder/('preentry_'+time.strftime('%Y%m%d_%H%M%S')+'.zip');missing=[]
     with zipfile.ZipFile(target,'w',zipfile.ZIP_STORED) as z:
         z.writestr('summary.json',json.dumps(data,ensure_ascii=False))
@@ -183,6 +183,9 @@ def export(db_path,folder='exports'):
             p=ROOT/jid/'evidence.zip'
             if p.exists():z.write(p,jid+'/evidence.zip')
             else:missing.append(jid)
+            for name in ('diagnostic.zip','child_lifecycle_v73.json'):
+                f=ROOT/jid/name
+                if f.exists():z.write(f,jid+'/'+name)
         z.writestr('missing_evidence.json',json.dumps(missing))
     return target
 

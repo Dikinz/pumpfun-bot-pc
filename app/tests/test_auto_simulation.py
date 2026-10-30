@@ -65,6 +65,7 @@ def test_child_lifecycle(prepared,tmp_path,monkeypatch,mode,expected):
     c,j,_=prepared;job=a.claim(c,j['signal_ts']+.1)
     monkeypatch.setattr(a,'ROOT',tmp_path)
     class Process:
+        pid=999999999
         returncode=None
         killed=False
         async def wait(self):
@@ -75,7 +76,7 @@ def test_child_lifecycle(prepared,tmp_path,monkeypatch,mode,expected):
         def kill(self):self.killed=True;self.returncode=-9
     proc=Process()
     async def spawn(*args,**kwargs):return proc
-    monkeypatch.setattr(asyncio,'create_subprocess_exec',spawn)
+    monkeypatch.setattr(__import__('position_monitor'),'create_simulation_process',spawn)
     if mode=='cancel':
         with pytest.raises(asyncio.CancelledError):asyncio.run(a.run_job(job))
     else:asyncio.run(a.run_job(job))

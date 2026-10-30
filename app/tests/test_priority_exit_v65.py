@@ -77,6 +77,7 @@ def test_break_even_preserves_setup_costs():
 def test_scheduler_preempts_pre_signal_check_then_starts_one_fresh_check(fresh,monkeypatch):
     # Run the actual scheduler with controllable workers; no network and no tick.
     tid=opened(fresh);fresh.execute("delete from paper_orders_v0720")
+    __import__('recovery_gate').Coordinator(config.DB,'offline-primary')
     stop=threading.Event();events=[];active=0;peak=0
     async def worker(job,connection=None):
         nonlocal active,peak
@@ -105,10 +106,10 @@ def test_scheduler_preempts_pre_signal_check_then_starts_one_fresh_check(fresh,m
 def test_preempted_real_subprocess_is_reaped_before_replacement(fresh,monkeypatch,tmp_path):
     import sys
     opened(fresh);now=time.time();procs=[]
-    real=asyncio.create_subprocess_exec
-    async def sleeper(*args,**kwargs):
-        proc=await real(sys.executable,'-c','import time; time.sleep(20)',**kwargs);procs.append(proc);return proc
-    monkeypatch.setattr(asyncio,'create_subprocess_exec',sleeper)
+    real=pm.create_simulation_process
+    async def sleeper(args,out,trace):
+        proc=await real([sys.executable,'-c','import time; time.sleep(20)'],out,trace);procs.append(proc);return proc
+    monkeypatch.setattr(__import__('position_monitor'),'create_simulation_process',sleeper)
     async def case(c):
         job=pm.next_job(c,now);task=asyncio.create_task(pm.run_job(job,c))
         deadline=time.monotonic()+2

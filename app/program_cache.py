@@ -37,21 +37,35 @@ def fingerprint(a,payload=None):
 
 class Store:
     def __init__(self,path=CACHE):self.path=Path(path);self.write_failed=False
-    def connect(self):
+    def connect(self,readonly=False):
+        if readonly:
+            c=sqlite3.connect(self.path.resolve().as_uri()+'?mode=ro',uri=True,timeout=.2);c.row_factory=sqlite3.Row
+            return c
         self.path.parent.mkdir(parents=True,exist_ok=True)
         c=sqlite3.connect(self.path,timeout=.2);c.row_factory=sqlite3.Row
         c.execute('PRAGMA journal_mode=WAL');c.execute('PRAGMA synchronous=NORMAL')
         c.execute('CREATE TABLE IF NOT EXISTS programs(namespace TEXT,pid TEXT,pd TEXT,root INTEGER,header_hash TEXT,sha TEXT,account TEXT,touched REAL,PRIMARY KEY(namespace,pid,pd))')
         return c
     def get(self,namespace,pid,pd):
+        return self.get_many(namespace,{pid:pd})[pid]
+    def get_many(self,namespace,programs):
+        # One read-only connection for all code records. No DDL, journal-mode
+        # transition, touching timestamps, or cache write lock on a warm hit.
+        results={pid:None for pid in programs}
         try:
-            with closing(self.connect()) as c:r=c.execute('SELECT * FROM programs WHERE namespace=? AND pid=? AND pd=?',(namespace,pid,pd)).fetchone()
-            if not r or type(r['root'])!=int or r['root']<0:return None
-            if len(r['account'])>MAX_BYTES*2:return None
-            a=json.loads(r['account']);b=raw(a);_,slot,space=header(a,b)
-            if len(b)!=space or b[45:49]!=b'\x7fELF' or hashlib.sha256(b).hexdigest()!=r['sha'] or fingerprint(a,b)!=r['header_hash'] or not slot<r['root']:return None
-            return dict(account=a,root=r['root'],sha=r['sha'],header_hash=r['header_hash'],code_bytes=len(b)-45)
-        except (sqlite3.Error,OSError,ValueError,TypeError,CacheError):return None
+            with closing(self.connect(readonly=True)) as c:
+                for pid,pd in programs.items():
+                    r=c.execute('SELECT * FROM programs WHERE namespace=? AND pid=? AND pd=?',(namespace,pid,pd)).fetchone()
+                    results[pid]=self.decode_record(r)
+        except (sqlite3.Error,OSError,ValueError,TypeError,CacheError):return {pid:None for pid in programs}
+        return results
+    @staticmethod
+    def decode_record(r):
+        if not r or type(r['root'])!=int or r['root']<0:return None
+        if len(r['account'])>MAX_BYTES*2:return None
+        a=json.loads(r['account']);b=raw(a);_,slot,space=header(a,b)
+        if len(b)!=space or b[45:49]!=b'\x7fELF' or hashlib.sha256(b).hexdigest()!=r['sha'] or fingerprint(a,b)!=r['header_hash'] or not slot<r['root']:return None
+        return dict(account=a,root=r['root'],sha=r['sha'],header_hash=r['header_hash'],code_bytes=len(b)-45)
     def put(self,namespace,pid,pd,a,root):
         b=raw(a);_,slot,space=header(a,b)
         if type(root)!=int or len(b)!=space or b[45:49]!=b'\x7fELF' or not slot<root:raise CacheError('CACHE_CODE_NOT_ROOTED')
@@ -101,7 +115,7 @@ def capture_bank(lab,addresses,programs,min_slot,store=None,chain=None):
         try:chain_id=chain if chain is not None else genesis(lab)
         except Exception:return fallback('GENESIS_UNAVAILABLE')
     namespace=hashlib.sha256((lab.config.QUOTE_RPC_URL+'\0'+chain_id).encode()).hexdigest()
-    records={pid:store.get(namespace,pid,pd) for pid,pd in programs.items()}
+    records=store.get_many(namespace,programs)
     missing={pid:pd for pid,pd in programs.items() if not records[pid]}
     if missing:
         fetch=list(missing)+list(missing.values())

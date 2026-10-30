@@ -17,11 +17,29 @@ def path(database):
     p=primary_path(database);return p.with_name(p.stem+'_recovery_v75.json')
 
 def read(database):
+    p=path(database)
+    def failed(reason,exc=None,field=None):
+        error=dict(reason=reason,path=str(p),observed_ts=time.time(),observed_mono=time.monotonic(),pid=__import__('os').getpid())
+        if exc is not None:
+            error.update(error_type=type(exc).__name__,errno=getattr(exc,'errno',None),winerror=getattr(exc,'winerror',None),strerror=getattr(exc,'strerror',None))
+            # Do not log file contents or arbitrary exception payloads.
+            if isinstance(exc,json.JSONDecodeError):error.update(line=exc.lineno,column=exc.colno)
+        if field:error['field']=field
+        return dict(state='RECOVERING',epoch=None,session=None,reason=reason,read_error_v77=error)
     try:
-        s=json.loads(path(database).read_text(encoding='utf-8'))
-        if s.get('schema')!='RECOVERY_GATE_V75' or not isinstance(s.get('epoch'),str):raise ValueError()
-        return s
-    except (OSError,ValueError,AttributeError):return dict(state='RECOVERING',epoch=None,reason='RECOVERY_STATE_UNAVAILABLE')
+        s=json.loads(p.read_text(encoding='utf-8'))
+    except FileNotFoundError as exc:return failed('RECOVERY_STATE_MISSING',exc)
+    except PermissionError as exc:return failed('RECOVERY_STATE_PERMISSION_DENIED',exc)
+    except OSError as exc:return failed('RECOVERY_STATE_IO_ERROR',exc)
+    except json.JSONDecodeError as exc:return failed('RECOVERY_STATE_INVALID_JSON',exc)
+    except UnicodeError as exc:return failed('RECOVERY_STATE_INVALID_ENCODING',exc)
+    if not isinstance(s,dict) or s.get('schema')!='RECOVERY_GATE_V75':return failed('RECOVERY_STATE_INVALID_SCHEMA',field='schema')
+    for field in ('epoch','session'):
+        if not isinstance(s.get(field),str) or not s[field]:return failed('RECOVERY_STATE_INVALID_FIELDS',field=field)
+    if s.get('state') not in ('READY','RECOVERING','STOPPED'):return failed('RECOVERY_STATE_INVALID_FIELDS',field='state')
+    pulse=s.get('pulse_mono')
+    if type(pulse) not in (int,float) or not math.isfinite(pulse):return failed('RECOVERY_STATE_INVALID_FIELDS',field='pulse_mono')
+    return s
 
 def pair():
     import clock_lab
@@ -106,13 +124,23 @@ class Coordinator:
         self.data.update(state='STOPPED',reason='PRIMARY_STOP');self.event('RECOVERY_STOP')
 
 class Client:
-    def __init__(self,database,clock=pair):self.database=database;self.clock=clock;self.previous=clock();self.previous_error=getattr(clock,'uncertainty',0);self.epoch=read(database).get('epoch');self.await_epoch=None
+    def __init__(self,database,clock=pair):
+        self.database=database;self.clock=clock;self.previous=clock();self.previous_error=getattr(clock,'uncertainty',0)
+        s=read(database);self.epoch=s.get('epoch');self.await_epoch=None;self.last_valid=None
+        if not s.get('read_error_v77'):self.remember(s)
+    def remember(self,s):
+        self.last_valid={k:s.get(k) for k in ('session','epoch','generation','state','pulse_mono')}
     def status(self):
         import clock_lab
         w,m=self.clock();pw,pm=self.previous;self.previous=(w,m)
         error=getattr(self.clock,'uncertainty',0);limit=clock_lab.JUMP_MS+1000*(error+self.previous_error);self.previous_error=error
         if m-pm>LOOP_GAP_S or m<pm or abs((w-pw)-(m-pm))*1000>limit:self.await_epoch=self.epoch
         s=read(self.database)
+        if s.get('read_error_v77'):
+            # Last-known identifiers are diagnostic only, never an authorization.
+            return dict(s,last_valid_state_v77=dict(self.last_valid) if self.last_valid else None,
+                        waiting_for_epoch_v77=self.await_epoch)
+        self.remember(s)
         if self.await_epoch is not None:
             if s.get('epoch')!=self.await_epoch and s.get('state')=='READY':self.await_epoch=None
             else:
@@ -124,8 +152,11 @@ class Client:
                 return dict(s,state='RECOVERING',reason='LOCAL_PAUSE_WAITING_PRIMARY_EPOCH')
         self.epoch=s.get('epoch')
         pulse=s.get('pulse_mono')
-        if type(pulse) not in (int,float) or not 0<=m-pulse<=LOOP_GAP_S:return dict(s,state='RECOVERING',reason='PRIMARY_GATE_PULSE_STALE')
-        return s
+        age=m-pulse
+        s=dict(s,primary_state_v77=s.get('state'),pulse_mono_v77=pulse,observed_mono_v77=m)
+        if age<0:return dict(s,state='RECOVERING',reason='PRIMARY_GATE_PULSE_IN_FUTURE',pulse_age_s_v77=age)
+        if age>LOOP_GAP_S:return dict(s,state='RECOVERING',reason='PRIMARY_GATE_PULSE_STALE',pulse_age_s_v77=age)
+        return dict(s,pulse_age_s_v77=age)
 
 def status():return ACTIVE.status() if ACTIVE is not None else None
 def admission(data=None):
@@ -133,17 +164,21 @@ def admission(data=None):
     s=status()
     if s is None:return dict(allowed=True,reason='GATE_NOT_ACTIVE')
     d=dict(allowed=False,state=s.get('state'),session=s.get('session'),epoch=s.get('epoch'),generation=s.get('generation'),
-           gate_reason=s.get('reason'),write_error=s.get('write_error'),job_epoch=data.get('recovery_epoch_v75') if data is not None else None)
+           gate_reason=s.get('reason'),write_error=s.get('write_error'),job_epoch=data.get('recovery_epoch_v75') if data is not None else None,
+           job_session=data.get('recovery_session_v77') if data is not None else None,
+           read_error_v77=s.get('read_error_v77'),last_valid_state_v77=s.get('last_valid_state_v77'),pulse_age_s_v77=s.get('pulse_age_s_v77'),
+           primary_state_v77=s.get('primary_state_v77'),pulse_mono_v77=s.get('pulse_mono_v77'),observed_mono_v77=s.get('observed_mono_v77'))
     if s.get('write_error'):d['reason']='STATE_WRITE_FAILED'
     elif s.get('state')!='READY':d['reason']=s.get('reason') or 'GATE_NOT_READY'
     elif data is not None and data.get('recovery_epoch_v75')!=s.get('epoch'):d['reason']='EPOCH_MISMATCH'
+    elif data is not None and data.get('recovery_session_v77')!=s.get('session'):d['reason']='SESSION_MISMATCH'
     elif data is not None and data.get('recovery_authorized_v75') is not True:d['reason']='JOB_NOT_AUTHORIZED'
     else:d.update(allowed=True,reason='READY')
     return d
 def allowed(data=None):return admission(data)['allowed']
 def stamp(data):
     s=status()
-    if s is not None:data.update(recovery_epoch_v75=s.get('epoch'),recovery_authorized_v75=s.get('state')=='READY' and not s.get('write_error'))
+    if s is not None:data.update(recovery_epoch_v75=s.get('epoch'),recovery_session_v77=s.get('session'),recovery_authorized_v75=s.get('state')=='READY' and not s.get('write_error'))
     return data
 
 def connection():
@@ -162,6 +197,8 @@ def required(database):
 def reader(database):
     global ACTIVE
     previous=ACTIVE
-    if required(database):ACTIVE=Client(database)
+    # The monitor can start before primary writes its DB marker/state file.
+    # Installing the client must not depend on evidence that appears later.
+    ACTIVE=Client(database)
     try:yield
     finally:ACTIVE=previous

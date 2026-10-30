@@ -145,7 +145,10 @@ def export(primary,folder):
         if not src.execute("SELECT 1 FROM sqlite_master WHERE name='comparison_lots_v64'").fetchone():return
         lots=src.execute('SELECT * FROM comparison_lots_v64 ORDER BY id').fetchall()
         for role,target in [('amm',paper_branch.path(primary)),('route',route_branch.path(primary))]:
-            if not target.exists():continue
+            if not target.exists():
+                for lot in lots:
+                    rows.append(dict(role=role,trade_id=lot['trade_id'],mint=lot['mint'],lot_hash=lot['lot_hash'],status='NOT_RECEIVED',identical_entry_lot=False,signal_status=None,signal_delivery_ms=None,identical_sell_signal=False,input_integrity_ok=False,complete_pair=False,eligible_pair=False,exclusion_reason='BRANCH_UNAVAILABLE'))
+                continue
             with closing(sqlite3.connect(target.resolve().as_uri()+'?mode=ro',uri=True)) as child:
                 child.row_factory=sqlite3.Row
                 gap=one(child,"SELECT v FROM meta WHERE k='branch_input_gap'").get('v','0')!='0'
@@ -160,11 +163,15 @@ def export(primary,folder):
                     same=bool(receipt.get('status')=='APPLIED' and receipt.get('lot_hash')==lot['lot_hash'] and
                       all(a.get(k)==b.get(k) for k in ('mint','size_usdc','entry_sol_price','sol_usdc','fx_ts','token_units','raw_amount','decimals')) and entry.get('fill_signature')==got.get('fill_signature'))
                     closed=[bool(c.execute("SELECT 1 FROM trades WHERE trade_id=? AND side='SELL'",(lot['trade_id'],)).fetchone()) for c in (src,child)]
+                    end=one(src,"SELECT MAX(ts) ts FROM trades WHERE trade_id=? AND side='SELL'",(lot['trade_id'],)).get('ts')
+                    outage=__import__('branch_isolation').exclusion(primary,'paper_branch' if role=='amm' else 'route_branch',lot['created_ts'],end)
                     rows.append(dict(role=role,trade_id=lot['trade_id'],mint=lot['mint'],lot_hash=lot['lot_hash'],status=receipt.get('status','NOT_RECEIVED'),
                       identical_entry_lot=same,signal_status=receipt.get('signal_status'),signal_delivery_ms=receipt.get('signal_delivery_ms'),
-                      identical_sell_signal=same_signal,input_integrity_ok=not gap,complete_pair=all(closed),eligible_pair=same and same_signal and not gap and all(closed) and receipt.get('signal_status')=='SHARED_SIGNAL'))
+                      identical_sell_signal=same_signal,input_integrity_ok=not gap,exclusion_reason='BRANCH_UNAVAILABLE' if outage else None,complete_pair=all(closed) and not outage,eligible_pair=not outage and same and same_signal and not gap and all(closed) and receipt.get('signal_status')=='SHARED_SIGNAL'))
     folder=Path(folder);(folder/'matched_lots_v64.json').write_text(json.dumps(dict(rows=rows,note='Only identical entry, shared signal and both closed qualify. Different cost models remain explicit; not a profitability claim.'),indent=2),encoding='utf-8')
     if rows:
         with (folder/'matched_lots_v64.csv').open('w',encoding='utf-8-sig',newline='') as f:
             w=csv.DictWriter(f,list(rows[0]));w.writeheader();w.writerows(rows)
+    outage_file=__import__('branch_isolation').path(primary)
+    if outage_file.exists():__import__('shutil').copy2(outage_file,folder/outage_file.name)
     return rows

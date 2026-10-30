@@ -19,7 +19,7 @@ async def broken_cleanup(proc,diagnostic=None):
     raise RuntimeError('SIMULATION_CHILD_CLEANUP_TIMEOUT')
 
 def test_cleanup_error_always_saves_pid_cause_stack_and_archive(tmp_path,monkeypatch):
-    monkeypatch.setattr(asyncio,'create_subprocess_exec',spawn);monkeypatch.setattr(pm,'stop_simulation',broken_cleanup)
+    monkeypatch.setattr(__import__('position_monitor'),'create_simulation_process',spawn);monkeypatch.setattr(pm,'stop_simulation',broken_cleanup)
     with pytest.raises(RuntimeError,match='CLEANUP_TIMEOUT') as caught:asyncio.run(pm.launch_check({'id':'check'},tmp_path,timeout=.001))
     d=json.loads((tmp_path/'diagnostic.json').read_text());t=d['child_diagnostics_v73']
     assert d['status']=='CLEANUP_FAILED' and t['child_pid']==Proc.pid and t['monitor_pid']==os.getpid()
@@ -30,14 +30,14 @@ def test_cleanup_error_always_saves_pid_cause_stack_and_archive(tmp_path,monkeyp
     with zipfile.ZipFile(tmp_path/'diagnostic.zip') as z:assert 'child_lifecycle_v73.json' in z.namelist()
 
 def test_cancel_does_not_hide_cleanup_error(tmp_path,monkeypatch):
-    monkeypatch.setattr(asyncio,'create_subprocess_exec',spawn);monkeypatch.setattr(pm,'stop_simulation',broken_cleanup)
+    monkeypatch.setattr(__import__('position_monitor'),'create_simulation_process',spawn);monkeypatch.setattr(pm,'stop_simulation',broken_cleanup)
     async def run():
         task=asyncio.create_task(pm.launch_check({'id':'check'},tmp_path));await asyncio.sleep(.01);task.cancel();await task
     with pytest.raises(RuntimeError,match='CLEANUP_TIMEOUT'):asyncio.run(run())
     d=json.loads((tmp_path/'diagnostic.json').read_text());assert d['status']=='CLEANUP_FAILED' and d['child_diagnostics_v73']['cancellation']['chain'][0]['error_type']=='CancelledError'
 
 def test_secondary_archive_error_does_not_mask_cleanup_error(tmp_path,monkeypatch):
-    monkeypatch.setattr(asyncio,'create_subprocess_exec',spawn);monkeypatch.setattr(pm,'stop_simulation',broken_cleanup)
+    monkeypatch.setattr(__import__('position_monitor'),'create_simulation_process',spawn);monkeypatch.setattr(pm,'stop_simulation',broken_cleanup)
     def fail(*a):raise OSError(13,'denied')
     monkeypatch.setattr(__import__('rpc_timing'),'attach',fail)
     with pytest.raises(RuntimeError,match='CLEANUP_TIMEOUT'):asyncio.run(pm.launch_check({'id':'check'},tmp_path,timeout=.001))
@@ -45,7 +45,7 @@ def test_secondary_archive_error_does_not_mask_cleanup_error(tmp_path,monkeypatc
 
 def test_real_child_timeout_records_reaping(tmp_path):
     r=asyncio.run(pm.launch_check({'id':'real'},tmp_path,timeout=.001));t=r['child_diagnostics_v73']
-    assert r['status']=='REQUEST_TIMEOUT' and t['child_pid']>0 and t['cleanup_phase']=='CLEANUP_CONFIRMED'
+    assert r['status']=='WORKER_TIMEOUT' and t['child_pid']>0 and t['cleanup_phase']=='CLEANUP_CONFIRMED'
     events={x['phase']:x for x in t['events']};assert events['CLEANUP_LAUNCHER_EXIT']['returncode'] is not None
     assert events['CLEANUP_LAUNCHER_EXIT']['wait_ms']>=0
 
@@ -63,7 +63,7 @@ def test_access_denied_preserved_with_wait_result(tmp_path,monkeypatch):
 
 def test_run_job_populates_result_json_and_monitor_journal(fresh,tmp_path,monkeypatch):
     open_case(fresh);monkeypatch.setattr(pm,'ROOT',tmp_path)
-    monkeypatch.setattr(asyncio,'create_subprocess_exec',spawn);monkeypatch.setattr(pm,'stop_simulation',broken_cleanup)
+    monkeypatch.setattr(__import__('position_monitor'),'create_simulation_process',spawn);monkeypatch.setattr(pm,'stop_simulation',broken_cleanup)
     with ms.connect() as c:
         job=pm.next_job(c,__import__('time').time());job['deadline_timeout_s']=.001
         with pytest.raises(RuntimeError) as caught:asyncio.run(pm.run_job(job,c))

@@ -46,20 +46,13 @@ def snap():
         result['overview']=__import__('campaign_view').overview(config.DB)
         return result
 
-_SNAP_LOCK=threading.Lock()
-_SNAP_CACHE={"ts":0.0,"body":b""}
+from dashboard.cache import LatestJSON
+_FULL_VIEW=LatestJSON(ttl=2.)
+_SNAP_LOCK=_FULL_VIEW.lock  # compatibility: the full snapshot still has a single build lock
+_OVERVIEW_VIEW=LatestJSON(ttl=2.)
 
-def snap_bytes():
-    now=time.monotonic()
-    if _SNAP_CACHE["body"] and now-_SNAP_CACHE["ts"]<1.0:
-        return _SNAP_CACHE["body"]
-    with _SNAP_LOCK:
-        now=time.monotonic()
-        if _SNAP_CACHE["body"] and now-_SNAP_CACHE["ts"]<1.0:
-            return _SNAP_CACHE["body"]
-        body=json.dumps(snap(),separators=(",",":"),allow_nan=False).encode()
-        _SNAP_CACHE["body"]=body;_SNAP_CACHE["ts"]=time.monotonic()
-        return body
+def snap_bytes():return _FULL_VIEW.get(str(Path(config.DB).resolve()),snap)
+def overview_bytes():return _OVERVIEW_VIEW.get(str(Path(config.DB).resolve()),lambda:__import__('campaign_view').overview(config.DB))
 
 class DashboardHTTPServer(ThreadingHTTPServer):
     daemon_threads=True
@@ -80,7 +73,7 @@ class H(BaseHTTPRequestHandler):
             if self.path=="/health":
                 self._reply(json.dumps(dict(version=config.VERSION,database_identity=system_health.identity(config.DB),pid=os.getpid(),launch_id=os.environ.get('PUMPFUN_DASHBOARD_LAUNCH_ID'))).encode(),"application/json")
             elif self.path=="/overview":
-                self._reply(json.dumps(__import__('campaign_view').overview(config.DB),allow_nan=False).encode(),"application/json")
+                self._reply(overview_bytes(),"application/json")
             elif self.path=="/details":
                 self._reply(DETAILS,"text/html;charset=utf-8")
             elif self.path.startswith("/api"):

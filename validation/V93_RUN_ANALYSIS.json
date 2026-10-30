@@ -1,0 +1,45 @@
+{
+  "version": "v0.7.93",
+  "archive": "20261029_202344.zip",
+  "archive_sha256": "906f0e1b775f7ed71c9f7dfdfb2cd46647e999312597638204e42aaf4d2b847b",
+  "preservation_sha256": "a890120dca126e5b56d22bcc35de055fba64c9afe12f40ca246fc37a878ad45b",
+  "failure": {
+    "stage": "SQL_INSERT",
+    "function": "candidate_lab.first",
+    "source_line": 42,
+    "age_s": 35.7397108,
+    "busy_timeout_ms": 250,
+    "in_transaction": false,
+    "reason": "UNDETERMINED",
+    "sqlite_lock_proven": false
+  },
+  "stream": {
+    "messages": 3160627,
+    "connections": 1,
+    "receive_errors": 0,
+    "write_errors": 0
+  },
+  "rpc": {
+    "started": 1024,
+    "server_429": 0,
+    "local_deferred": 61
+  },
+  "route": {
+    "entries": 1,
+    "closed": 1,
+    "curve_exits": 1,
+    "amm_exits": 0,
+    "signal_to_settle_ms": 33218.093156814575,
+    "net": -0.6101400749365731,
+    "dropped_events": 4281
+  },
+  "primary": {
+    "net": -0.37411630440083365
+  },
+  "integrity": {
+    "databases": 7,
+    "all_ok": true,
+    "graceful_all_writer_acknowledgements": false
+  },
+  "input_archives_modified": false
+}

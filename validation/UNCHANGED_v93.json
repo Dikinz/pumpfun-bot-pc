@@ -1,0 +1,20 @@
+{
+  "checks": {
+    "main.py": true,
+    "paper_capital.py": true,
+    "paper_branch.py": true,
+    "route_branch.py": true,
+    "rpc_budget.py": true,
+    "fresh_retry.py": true,
+    "database.py": true,
+    "counter_writer.py": true,
+    "runtime_control.py": true,
+    "execution_review_v92.py": true,
+    "cost_price_audit.py": true,
+    "windows_child.py:NativeGroup": true,
+    "position_monitor.py:experiment": true,
+    "position_monitor.py:amm_experiment": true,
+    "configuration_except_version": true
+  },
+  "preserved_route_database_byte_identical": true
+}

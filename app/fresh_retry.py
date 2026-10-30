@@ -23,11 +23,13 @@ def details(result):
       error_stage=result.get('error_stage'),rpc_stage=last.get('stage'),rpc_method=last.get('method'))
 
 def policy(status,d):
+    if d.get('category')=='LOCAL_RPC_ADMISSION' and status in ('DATA_REJECTED','AMM_DATA_REJECTED','REQUEST_ERROR','AMM_REQUEST_ERROR'):
+        return True,'LOCAL_RPC_ADMISSION',d['retry_after_s']
     if status not in ('REQUEST_ERROR','AMM_REQUEST_ERROR','REQUEST_TIMEOUT','AMM_REQUEST_TIMEOUT'):return False,'NOT_TRANSPORT_FAILURE',0.
     if d['http_status']==429:return True,'HTTP_RATE_LIMIT',max(1.,d['retry_after_s'] or 5.)
     if d['http_status'] in (500,502,503,504):return True,'HTTP_TEMPORARY',d['retry_after_s']
     if d['http_status'] is not None:return False,'HTTP_NONRETRYABLE',0.
-    if status in ('REQUEST_TIMEOUT','AMM_REQUEST_TIMEOUT') or d['category'] in ('TIMEOUT','CONNECTION','DNS'):return True,'TRANSPORT_TEMPORARY',d['retry_after_s']
+    if status in ('REQUEST_TIMEOUT','AMM_REQUEST_TIMEOUT') or d['category'] in ('TIMEOUT','CONNECTION','DNS','LOCAL_RPC_ADMISSION'):return True,'TRANSPORT_TEMPORARY',d['retry_after_s']
     return False,'UNKNOWN_OR_NONRETRYABLE',0.
 
 def cooldown(c):
@@ -41,7 +43,7 @@ def completed(c,job,result,status,now):
     import connection_audit
     d=details(result);retryable,reason,delay=policy(status,d)
     # Apply Retry-After to all subsequent monitor checks, including background jobs.
-    if delay>0:
+    if delay>0 and d.get('category')!='LOCAL_RPC_ADMISSION':
         c.execute('INSERT INTO monitor_rpc_pause_v69 VALUES(1,?,?) ON CONFLICT(id) DO UPDATE SET not_before_ts=MAX(not_before_ts,excluded.not_before_ts),reason=excluded.reason',(now+delay,reason))
     meta=job.get('retry_v69')
     root=c.execute('SELECT * FROM priority_exit_requests_v65 WHERE check_id=?',(job['id'],)).fetchone() if not meta else None
@@ -112,4 +114,4 @@ def summary(c):
     for r in c.execute('SELECT * FROM exit_retry_attempts_v69 ORDER BY scheduled_ts'):
         d=dict(r);d['details']=json.loads(d.pop('details_json'));attempts.append(d)
     return dict(rows=rows,attempts=attempts,monitor_cooldown_until=cooldown(c),max_additional_attempts=MAX_RETRIES,window_s=WINDOW,
-      scope='Monitor-local cooldown; does not throttle other application RPC callers. In-flight checks are not replayed or converted into fills.')
+      scope='Bounded fresh-check retries; shared PAPER RPC admission remains mandatory. Monitor-local HTTP cooldown complements common endpoint cooldown. In-flight checks are not replayed or converted into fills.')

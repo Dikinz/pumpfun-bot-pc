@@ -1,10 +1,11 @@
 """Timer-driven shadow sell checks; no PAPER mutation and no stream dependency."""
-import asyncio,json,time,uuid,sys,zipfile,zlib,hashlib,sqlite3,argparse
+import asyncio,json,time,uuid,sys,zipfile,zlib,hashlib,sqlite3,argparse,copy
 from pathlib import Path
 import wallet_costs,price_exit_trial as trial
 ROOT=Path(__file__).resolve().parent/'monitor_evidence'
 INTERVAL=10.0
-TIMEOUT=25.0
+TIMEOUT=25.0 # Existing result-age limit; unchanged.
+CHECK_DEADLINE=10.0
 FRESH_SECONDS=5.0
 SCHEMA='''CREATE TABLE IF NOT EXISTS position_checks_v0730(
  id TEXT PRIMARY KEY,trade_id TEXT,mint TEXT,scheduled_ts REAL,started_ts REAL,finished_ts REAL,
@@ -21,7 +22,7 @@ GOOD={'SELLABLE','RESERVE_DROP','NET_BELOW_FLOOR','INSUFFICIENT_RESERVES','SALE_
 
 MIGRATION_STATUS='CURVE_COMPLETED_NEW_POOL_UNCHECKED'
 AMM_INTERVAL=60.0
-TECHNICAL={'REQUEST_TIMEOUT','REQUEST_ERROR','REQUEST_INVALID_JSON','DATA_REJECTED','STALE_RESULT','CHILD_ERROR','WORKER_ERROR','INTERRUPTED_RESTART','NEGATIVE_CONTROL_FAILED','AMM_REQUEST_ERROR','AMM_REQUEST_INVALID_JSON','AMM_DATA_REJECTED','AMM_STALE_RESULT','AMM_NEGATIVE_CONTROL_FAILED','AMM_EFFECTS_MISMATCH'}
+TECHNICAL={'WORKER_TIMEOUT','REQUEST_TIMEOUT','REQUEST_ERROR','REQUEST_INVALID_JSON','DATA_REJECTED','STALE_RESULT','CHILD_ERROR','WORKER_ERROR','INTERRUPTED_RESTART','NEGATIVE_CONTROL_FAILED','AMM_REQUEST_ERROR','AMM_REQUEST_INVALID_JSON','AMM_DATA_REJECTED','AMM_STALE_RESULT','AMM_NEGATIVE_CONTROL_FAILED','AMM_EFFECTS_MISMATCH'}
 
 def migrated(c,tid):
     return c.execute("SELECT 1 FROM position_checks_v0730 WHERE trade_id=? AND status IN ('POOL_COMPLETED','CURVE_COMPLETED_NEW_POOL_UNCHECKED') LIMIT 1",(tid,)).fetchone() is not None
@@ -111,7 +112,7 @@ def finish(c,job,r,archive=None,now=None):
 
 def pack_bundle(bundle,root=ROOT):
     # Deduplicate unchanged large program binaries; every sample remains replayable.
-    bundle=json.loads(json.dumps(bundle));folder=root/'blobs';folder.mkdir(parents=True,exist_ok=True)
+    bundle=copy.deepcopy(bundle);folder=root/'blobs';folder.mkdir(parents=True,exist_ok=True)
     for a in bundle['snapshot']['accounts'].values():
         if a and len(json.dumps(a.get('data',[])))>100000:
             raw=json.dumps(a['data']).encode();digest=hashlib.sha256(raw).hexdigest();path=folder/(digest+'.zlib')
@@ -121,7 +122,7 @@ def pack_bundle(bundle,root=ROOT):
     return bundle
 
 def unpack_bundle(bundle,root=ROOT):
-    bundle=json.loads(json.dumps(bundle))
+    bundle=copy.deepcopy(bundle)
     for a in bundle['snapshot']['accounts'].values():
         if a and isinstance(a.get('data'),dict):
             digest=a['data']['blob_sha256']
@@ -227,6 +228,11 @@ def amm_experiment(data,out):
 
 async def stop_simulation(proc,diagnostic=None):
     """Reap the known simulation launcher and its descendants (Windows venv wrapper)."""
+    from windows_child import BackgroundChild
+    if isinstance(proc,BackgroundChild):
+        registry=__import__('late_spawn')
+        if registry.ACTIVE is not None and diagnostic is not None:registry.ACTIVE.register(proc,diagnostic.out,diagnostic.data,retain_cleanup=True)
+        await proc.stop();return
     import psutil
     family=[]
     def note(phase,**fields):
@@ -271,47 +277,74 @@ async def stop_simulation(proc,diagnostic=None):
             note('CLEANUP_DESCENDANTS_REMAIN',pids=[p.pid for p in alive]);raise RuntimeError('SIMULATION_CHILD_CLEANUP_TIMEOUT')
         await asyncio.sleep(.02)
 
-async def launch_check(job,out,replay=None,timeout=None):
+async def create_simulation_process(args,out,trace):
+    if sys.platform=='win32':
+        from windows_child import BackgroundChild
+        return BackgroundChild(args,str(Path(__file__).resolve().parent),out/'child.log',trace)
+    with (out/'child.log').open('wb') as log:
+        return await asyncio.create_subprocess_exec(*args,stdin=asyncio.subprocess.DEVNULL,stdout=log,stderr=log,cwd=str(Path(__file__).resolve().parent))
+
+async def launch_check(job,out,replay=None,timeout=None,child_script=None):
     """Same launch path for production and offline startup test. Never inherit stdin."""
     out=Path(out);out.mkdir(parents=True,exist_ok=True)
     (out/'input.json').write_text(json.dumps(job),encoding='utf-8')
     from child_diagnostics import Trace
     trace=Trace(out,job);trace.event('SPAWN');cleanup_error=None
     stage(out,'SPAWN');proc=None;result=None
-    options={}
-    if sys.platform=='win32':
-        import subprocess
-        options['creationflags']=subprocess.CREATE_NEW_PROCESS_GROUP
-    args=[sys.executable,'-u',str(Path(__file__).resolve()),'--child',str(out)]
+    args=[sys.executable,'-u',str(Path(child_script or __file__).resolve()),'--child',str(out)]
     if replay:args+=['--replay',str(replay)]
     try:
-        with (out/'child.log').open('wb') as log:
-            proc=await asyncio.create_subprocess_exec(*args,stdin=asyncio.subprocess.DEVNULL,stdout=log,stderr=log,cwd=str(Path(__file__).resolve().parent),**options)
-            trace.data['child_pid']=proc.pid
-            try:trace.data['child_created_ts']=__import__('psutil').Process(proc.pid).create_time()
+        budget=CHECK_DEADLINE if timeout is None else timeout;launch_started=time.monotonic()
+        proc=await create_simulation_process(args,out,trace)
+        from windows_child import BackgroundChild
+        if isinstance(proc,BackgroundChild) and __import__('late_spawn').ACTIVE is not None:
+            proc.retain_delayed_cleanup=True
+        if not isinstance(proc,BackgroundChild):
+            created=None
+            try:created=__import__('psutil').Process(proc.pid).create_time()
             except __import__('psutil').Error:pass
-            trace.event('WAIT_RESULT',timeout_s=TIMEOUT if timeout is None else timeout)
+            trace.identify(proc.pid,created)
+        async def wait_child():
+            from windows_child import BackgroundChild
+            if isinstance(proc,BackgroundChild):await proc.spawned()
+            created=getattr(proc,'created_ts',None)
+            if created is None:
+                try:created=__import__('psutil').Process(proc.pid).create_time()
+                except __import__('psutil').Error:pass
+            trace.identify(proc.pid,created)
+            trace.event('WAIT_RESULT',timeout_s=budget)
             wait_started=time.monotonic()
-            await asyncio.wait_for(proc.wait(),TIMEOUT if timeout is None else timeout)
+            await proc.wait()
             trace.event('CHILD_EXIT',returncode=proc.returncode,wait_ms=(time.monotonic()-wait_started)*1000)
+        await asyncio.wait_for(wait_child(),max(0,budget-(time.monotonic()-launch_started)))
         result=json.loads((out/'result.json').read_text()) if proc.returncode==0 and (out/'result.json').exists() else {'status':'CHILD_ERROR'}
     except asyncio.TimeoutError as e:
-        trace.error('worker_exception',e);result={'status':'REQUEST_TIMEOUT','network_error':{'category':'CHILD_DEADLINE','chain':[],'note':'Whole child exceeded deadline; transport cause unknown.'}}
+        trace.error('worker_exception',e);trace.event('WORKER_DEADLINE_EXPIRED_V79',deadline_s=budget,elapsed_s=time.monotonic()-launch_started);result={'status':'WORKER_TIMEOUT','deadline_s':budget,'deadline_elapsed_s':time.monotonic()-launch_started,'network_error':{'category':'CHILD_DEADLINE','chain':[],'note':'Whole child exceeded deadline; transport cause unknown.'}}
     except asyncio.CancelledError as e:
         trace.error('cancellation',e)
-        result={'status':'INTERRUPTED_STOP'}
+        cancel_reason=job.get('cancel_status','INTERRUPTED_STOP')
+        trace.event('CHECK_CANCELLED_V80',reason=cancel_reason)
+        saved=out/'result.json'
+        try:stat=saved.stat();saved_info=dict(exists=True,size_bytes=stat.st_size,mtime_ts=stat.st_mtime)
+        except OSError as exc:saved_info=dict(exists=False,error_type=type(exc).__name__,errno=getattr(exc,'errno',None))
+        try:
+            progress=json.loads((out/'progress.json').read_text());saved_info.update(stage=progress.get('stage'),stage_ts=progress.get('ts'))
+        except (OSError,ValueError):pass
+        trace.event('SAVED_RESULT_AT_CANCEL_V80',artifact=saved_info)
+        result={'status':cancel_reason}
         raise
     except Exception as e:
         trace.error('worker_exception',e);result={'status':'WORKER_ERROR','error_code':type(e).__name__}
     finally:
         try:
-            if proc is not None and proc.returncode is None:await stop_simulation(proc,diagnostic=trace)
+            from windows_child import BackgroundChild
+            if proc is not None and (isinstance(proc,BackgroundChild) or proc.returncode is None):await stop_simulation(proc,diagnostic=trace)
         except Exception as e:
             cleanup_error=e;trace.error('cleanup_exception',e)
             result=dict(status='CLEANUP_FAILED',worker_result=result)
         trace.event('SAVE_DIAGNOSTICS',returncode=proc.returncode if proc else None)
         result=result or {'status':'WORKER_ERROR'}
-        result['child_diagnostics_v73']=trace.data
+        result['child_diagnostics_v73']=trace.snapshot()
         result=result or {'status':'WORKER_ERROR'}
         try:
             import rpc_timing
@@ -321,18 +354,20 @@ async def launch_check(job,out,replay=None,timeout=None):
             result['child_returncode']=proc.returncode if proc else None
             # URLs may contain credentials. Keep error types, stack locations and stage, redact URLs.
             import re
-            logpath=out/'child.log'
+            logpath=out/'child.log';clean=''
             if logpath.exists():
                 with logpath.open('rb') as f:
                     f.seek(0,2);size=f.tell();f.seek(max(0,size-12000));tail=f.read(12000).decode(errors='replace')
                 clean=__import__('child_diagnostics').clean(tail,12000)
-                logpath.write_text(clean,encoding='utf-8');result['child_log_tail']=clean[-3000:]
+                if not isinstance(proc,BackgroundChild) or proc.done.is_set():logpath.write_text(clean,encoding='utf-8')
+                result['child_log_tail']=clean[-3000:]
             if result['status']=='CHILD_ERROR' and result.get('child_returncode') in (3221225786,-1073741510):
                 result['status']='INTERRUPTED_STOP'
             (out/'diagnostic.json').write_text(json.dumps(result),encoding='utf-8')
             with zipfile.ZipFile(out/'diagnostic.zip','w',zipfile.ZIP_DEFLATED) as z:
                 for name in ('input.json','progress.json','rpc_timing.json','child.log','diagnostic.json','child_lifecycle_v73.json'):
-                    if (out/name).exists():z.write(out/name,name)
+                    if name=='child.log' and logpath.exists():z.writestr(name,clean)
+                    elif (out/name).exists():z.write(out/name,name)
         except Exception as e:
             trace.error('diagnostic_exception',e)
             if cleanup_error is None:cleanup_error=e
@@ -348,7 +383,7 @@ async def run_job(job,connection=None):
     out=ROOT/job['id']
     worker_ts=time.time();worker_mono=time.monotonic()
     __import__('priority_exit').worker_started(connection,job,worker_ts)
-    try:r=await launch_check(job,out,timeout=job.get('deadline_timeout_s'))
+    try:r=await launch_check(job,out,timeout=min(CHECK_DEADLINE,job.get('deadline_timeout_s',CHECK_DEADLINE)))
     except Exception as exc:
         from child_diagnostics import exception
         detail=dict(status='CLEANUP_FAILED' if str(exc).startswith('SIMULATION_CHILD_CLEANUP_') or getattr(exc,'child_diagnostics_v73',{}).get('cleanup_exception') else 'WORKER_ERROR',worker_exception=exception(exc),child_diagnostics_v73=getattr(exc,'child_diagnostics_v73',{}))
@@ -436,7 +471,8 @@ if __name__=='__main__':
             else:lab.capture=offline
             def blocked(*args,**kwargs):raise RuntimeError('NETWORK_FORBIDDEN_IN_SELFTEST')
             socket.socket.connect=blocked
-        experiment(json.loads((out/'input.json').read_text()),out)
+        job=json.loads((out/'input.json').read_text())
+        with __import__('rpc_priority').exit_check(job):experiment(job,out)
     else:
         import config
         print(export_evidence(config.DB))

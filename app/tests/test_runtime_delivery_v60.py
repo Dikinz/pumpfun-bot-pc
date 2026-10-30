@@ -147,6 +147,7 @@ def test_primary_background_tasks_cancel_before_branch_close(fresh,monkeypatch):
         def __init__(self,*a):pass
         def refresh_positions(self):pass
         def snapshot(self):return {}
+        def isolate_failures(self):return []
         def close(self):assert stopped.is_set();return []
     monkeypatch.setattr(config,'JUPITER_API_KEY','test')
     monkeypatch.setattr(main.exit_quotes,'refresh_fx',noop);monkeypatch.setattr(main.exit_quotes,'FX_STATUS','READY')
@@ -154,8 +155,10 @@ def test_primary_background_tasks_cancel_before_branch_close(fresh,monkeypatch):
     monkeypatch.setattr(main.time_check,'startup',noop);monkeypatch.setattr(bt,'Fanout',Group)
     for name in ('heartbeat','observation_timer','pumpportal_discovery','pumpapi_trades'):monkeypatch.setattr(main,name,idle)
     for obj,name in ((main.clock_lab,'references'),(main.clock_lab,'local_watch'),(main.exit_quotes,'worker'),(main.auto_simulation,'worker'),(main.preentry,'worker'),(main.shadow_preflight,'worker')):monkeypatch.setattr(obj,name,idle)
+    async def fatal(*args):await asyncio.sleep(.05);raise RuntimeError('PRIMARY_FATAL')
+    monkeypatch.setattr(main,'pumpapi_trades',fatal)
     try:
-        with pytest.raises(RuntimeError,match='PAPER_SCENARIO_FAILED'):asyncio.run(main.run())
+        with pytest.raises(RuntimeError,match='PRIMARY_FATAL'):asyncio.run(main.run())
         assert stopped.is_set() and rt.ACTIVE is None
     finally:bt.ACTIVE=None
 

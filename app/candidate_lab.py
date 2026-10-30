@@ -38,20 +38,36 @@ def count(c,v,r):
     if __import__('counter_writer').buffered(c,v,r):return
     c.execute('INSERT INTO candidate_counts_v0742 VALUES(?,?,1) ON CONFLICT(variant,reason) DO UPDATE SET n=n+1',(v,r))
 
-def first(c,v,m,stage,now,e,d):
-    return c.execute('INSERT OR IGNORE INTO candidate_first_v0742 VALUES(?,?,?,?,?,?)',(v,m,stage,now,e['signature'],json.dumps(d,ensure_ascii=False))).rowcount
+def first(c,v,m,stage,now,e,d,history=None):
+    # One immutable first-pass row per stage/history, using the existing bounded writer.
+    stages=history.setdefault('first_stages_v94',set()) if history is not None else set()
+    if stage in stages:return 0
+    writer=__import__('counter_writer').ACTIVE
+    params=(v,m,stage,now,e['signature'],json.dumps(d,ensure_ascii=False))
+    if writer is not None:
+        created=writer.add_row('candidate_first_v0742',params)
+        if not created and history is not None:history['diagnostic_gap_v94']=True
+    else:
+        created=c.execute('INSERT OR IGNORE INTO candidate_first_v0742 VALUES(?,?,?,?,?,?)',params).rowcount
+    stages.add(stage)
+    return int(created)
 
 def observe(c,v,m,p,e,history,context):
     now=context['now'];born=context['born']
     if 'features' not in history:
-        existed=c.execute('SELECT 1 FROM candidate_seen_v0742 WHERE variant=? AND mint=?',(v,m)).fetchone()
-        c.execute('INSERT OR IGNORE INTO candidate_seen_v0742 VALUES(?,?,?)',(v,m,now))
+        writer=__import__('counter_writer').ACTIVE
+        existed=(writer is not None and writer.seen_pending(v,m)) or c.execute('SELECT 1 FROM candidate_seen_v0742 WHERE variant=? AND mint=?',(v,m)).fetchone()
+        if writer is not None:
+            if not existed and not writer.add_row('candidate_seen_v0742',(v,m,now)):history['diagnostic_gap_v94']=True
+        else:c.execute('INSERT OR IGNORE INTO candidate_seen_v0742 VALUES(?,?,?)',(v,m,now))
         s=history['features']=state();s['born']=born
         history['incomplete']=bool(existed)
         if existed:count(c,v,'HISTORY_RESTARTED')
     s=history['features']
     if s['born']!=born:
         history['incomplete']=True
+    if history.get('diagnostic_gap_v94'):
+        count(c,v,'EXCLUDED_DIAGNOSTIC_GAP');return
     if history['incomplete']:
         count(c,v,'EXCLUDED_INCOMPLETE_HISTORY');return
     side=context['side'];trader=context['trader']
@@ -62,17 +78,17 @@ def observe(c,v,m,p,e,history,context):
     s['last']=p;s['prices'].append(p);s['model_events'].append((side,p,now))
     reason,d=evaluate(s,now);count(c,v,reason)
     d.update(price=p,provider_ts=e['provider_ts'],original_lag_ms=context.get('original_lag_ms'),preflight='NOT_CHECKED',orders_enabled=False)
-    if d['signal_gate']=='PASS' and d['score']>=config.MIN_SCORE:first(c,v,m,'SIGNAL_PASS',now,e,d)
-    if reason!='FEATURE_PASS':return
+    if d['signal_gate']=='PASS' and d['score']>=config.MIN_SCORE:first(c,v,m,'SIGNAL_PASS',now,e,d,history)
+    if reason!='FEATURE_PASS' or history.get('diagnostic_gap_v94'):return
     available=context['availability']() if callable(context.get('availability')) else context.get('availability',{'reasons':['UNKNOWN']})
     d['actual_portfolio']=available
-    created=first(c,v,m,'FEATURE_PASS',now,e,d)
+    created=first(c,v,m,'FEATURE_PASS',now,e,d,history)
     if created and v=='SHADOW_100':
         import shadow_preflight
         shadow_preflight.request(c,m,p,now,d)
-    if s['trades'] in MILESTONES:first(c,v,m,'ENTRY_MILESTONE',now,e,d)
+    if s['trades'] in MILESTONES:first(c,v,m,'ENTRY_MILESTONE',now,e,d,history)
     for r in available['reasons']:count(c,v,'PORTFOLIO_'+r)
-    if not available['reasons']:first(c,v,m,'ACTUAL_PORTFOLIO_AVAILABLE',now,e,d)
+    if not available['reasons']:first(c,v,m,'ACTUAL_PORTFOLIO_AVAILABLE',now,e,d,history)
 
 def summary(c,limit=100):
     totals={v:{} for v in ('STRICT_0','SHADOW_100')}
@@ -85,4 +101,4 @@ def summary(c,limit=100):
     for r in c.execute('SELECT * FROM candidate_first_v0742 ORDER BY ts DESC LIMIT ?',(limit,)):
         d=dict(r);d['details']=json.loads(d.pop('details_json'));rows.append(d)
     return dict(totals=totals,matches=matches,reasons=[dict(r) for r in c.execute('SELECT * FROM candidate_counts_v0742 ORDER BY variant,n DESC')],recent=rows,
-      note='Unique tracked mints ever passing each stage, not trades. FEATURE_PASS evaluates every accepted tick; ENTRY_MILESTONE restricts to scanner request milestones (not approval-driven rechecks). Actual portfolio sampled before primary tick; no counterfactual balances, preflight, routes or purchases. Histories reset by eviction/restart/rediscovery are excluded; previous complete observations remain. All first-pass rows included in full JSON export.')
+      note='Only committed first-pass rows are shown; runtime writer diagnostics expose queued/lost evidence. Unique tracked mints ever passing each stage, not trades. FEATURE_PASS evaluates every accepted tick; ENTRY_MILESTONE restricts to scanner request milestones (not approval-driven rechecks). Actual portfolio sampled before primary tick; no counterfactual balances, preflight, routes or purchases. Histories reset by eviction/restart/rediscovery are excluded; previous complete observations remain. All first-pass rows included in full JSON export.')

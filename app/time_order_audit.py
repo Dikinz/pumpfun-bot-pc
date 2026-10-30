@@ -32,6 +32,11 @@ def bucket(s):
 
 def clock(c,e,now=None):
     s=sample(e,now);b=bucket(s);v=s['lag_ms'];minute=int(s['processed_ts']//60)
+    # Diagnostics only. Eligibility still uses the original event synchronously.
+    writer=__import__('counter_writer').ACTIVE
+    if writer is not None:
+        writer.add_clock(minute,b,v,json.dumps(s,allow_nan=False))
+        return
     c.execute("""INSERT INTO clock_minutes_v0739 VALUES(?,?,1,?,?,?,?) ON CONFLICT(minute,bucket) DO UPDATE SET
       n=n+1,min_ms=MIN(min_ms,excluded.min_ms),max_ms=MAX(max_ms,excluded.max_ms),sum_ms=sum_ms+excluded.sum_ms,last_json=excluded.last_json""",
       (minute,b,v,v,v,json.dumps(s,allow_nan=False)))

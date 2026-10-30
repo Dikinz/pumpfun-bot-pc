@@ -40,6 +40,14 @@ def request_json(url,stage,body=None,key=None):
     import rpc_timing
     method=body.get('method') if isinstance(body,dict) else 'HTTP_GET'
     with rpc_timing.request(method) as trace:
+        if isinstance(body,dict) and body.get('jsonrpc')=='2.0':
+            import rpc_budget
+            try:
+                with rpc_budget.guard(url) as permit:
+                    trace.row['rpc_admission_v89']=permit.telemetry()
+                    return _request_json(url,stage,body,key,trace)
+            except rpc_budget.Deferred as exc:
+                raise ProbeError('RPC_DEFERRED',stage,payload={'retry_after_s':exc.retry_after_s,'reason':exc.rpc_budget_reason}) from None
         return _request_json(url,stage,body,key,trace)
 
 def _request_json(url,stage,body=None,key=None,trace=None):
@@ -67,7 +75,9 @@ def _request_json(url,stage,body=None,key=None,trace=None):
         try:data=json.loads(e.read(16384))
         except Exception:data={}
         if stage=='QUOTE' and e.code==400 and isinstance(data,dict) and no_route(data):status='NO_ROUTE_PROVIDER'
-        raise ProbeError(status,stage,e.code,sanitize(data)) from None
+        failure=ProbeError(status,stage,e.code,sanitize(data))
+        failure.retry_after_s=__import__('rpc_budget').retry_after(e.headers)
+        raise failure from None
     except (TimeoutError,socket.timeout):raise ProbeError('TIMEOUT',stage) from None
     except urllib.error.URLError as e:
         raise ProbeError('TIMEOUT' if isinstance(e.reason,(TimeoutError,socket.timeout)) else 'REQUEST_ERROR',stage) from None

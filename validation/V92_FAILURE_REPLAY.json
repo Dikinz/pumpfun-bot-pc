@@ -1,0 +1,35 @@
+{
+  "failure_v93": {
+    "primary_cause": "SIMULATION_CHILD_CLEANUP_TIMEOUT",
+    "monitor_cause": "SIMULATION_CHILD_CLEANUP_TIMEOUT",
+    "branch_cause": "BRANCH_MONITOR_EXITED: exit_code=1",
+    "transport_cause": "route_branch:PIPE_WRITE_ERROR",
+    "source": "MONITOR_FAILURE"
+  },
+  "runtime": {
+    "state": "FAILED",
+    "label": "Ветка аварийно остановлена",
+    "elapsed_s": 5172.743860399991,
+    "started_ts": 1793281071.1738665,
+    "updated_ts": 1793286243.9021113,
+    "heartbeat_age_s": 1496.9221308231354,
+    "frozen": true,
+    "note": "Elapsed monotonic time recorded by bot heartbeat, refreshed with dashboard data. Stop freezes final duration; missing heartbeat freezes last confirmed duration. Process activity does not mean market data are eligible."
+  },
+  "blocks": [
+    "Отказ ветки: SIMULATION_CHILD_CLEANUP_TIMEOUT",
+    "Состояние транспорта: route_branch:PIPE_WRITE_ERROR",
+    "Бот завершён с ошибкой"
+  ],
+  "entries": 3,
+  "closed": 2,
+  "net": -0.9676377257947943,
+  "input_gap": true,
+  "provenance": {
+    "source_version": "v0.7.92",
+    "analysis_version": "v0.7.93",
+    "read_only": true,
+    "source_archive": "preservation_20261029_172854_d88fa6.zip",
+    "source_archive_sha256": "149d38db24c143997261780fed01ad043c14b5b71ab8465a44be8c77d31d9cbc"
+  }
+}

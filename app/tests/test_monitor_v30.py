@@ -121,7 +121,7 @@ def test_auto_exit_persists_same_wallet_after_real_vm(prepared,tmp_path,monkeypa
 from test_exit_quotes import prepared
 from test_execution_model import env
 
-@pytest.mark.parametrize('mode,expected',[('timeout','REQUEST_TIMEOUT'),('cancel','INTERRUPTED_STOP'),('crash','CHILD_ERROR')])
+@pytest.mark.parametrize('mode,expected',[('timeout','WORKER_TIMEOUT'),('cancel','INTERRUPTED_STOP'),('crash','CHILD_ERROR')])
 def test_monitor_child_cleanup(fresh,tmp_path,monkeypatch,mode,expected):
     import asyncio
     main.buy('mintA',1);job=pm.next_job(fresh,time.time());monkeypatch.setattr(pm,'ROOT',tmp_path)
@@ -140,7 +140,7 @@ def test_monitor_child_cleanup(fresh,tmp_path,monkeypatch,mode,expected):
     def no_os_process(pid):raise psutil.NoSuchProcess(pid)
     monkeypatch.setattr(psutil,'Process',no_os_process)
     async def create(*a,**kw):return proc
-    monkeypatch.setattr(asyncio,'create_subprocess_exec',create)
+    monkeypatch.setattr(__import__('position_monitor'),'create_simulation_process',create)
     if mode=='cancel':
         with pytest.raises(asyncio.CancelledError):asyncio.run(pm.run_job(job))
     else:asyncio.run(pm.run_job(job))

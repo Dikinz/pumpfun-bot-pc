@@ -1,0 +1,22 @@
+{
+  "schema": "CURVE_OVERFLOW_FIXTURE_V83",
+  "archive": "20261026_135248.zip",
+  "role": "ROUTE",
+  "check_id": "99147767c21e4c63b46bb204bbb8c982",
+  "trade_id": "7c5adcc3d2da49aa9cae7ba86b8ad5ac",
+  "snapshot_slot": 461653435,
+  "amount": "987574537154",
+  "snapshot_sha256": "8e9f0a0c8fcc80a15675031035d5ddd3ca0158fa147c62979e112ebea76fd688",
+  "program_sha256": {
+    "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P": "7a19affaa2c6187e04a5fe0ea298cee81fa5eb8c24cfcc30d85f615e89f7b02d",
+    "pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ": "4f2955d0f6b40cc9ff7daa18ccad7d19119ba1249759f4e7e3bb691beee6b35e",
+    "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb": "15a2e615a42e20f31714bbaaee43002ae6f1cda2e8d7118243117ab3c1342e2d",
+    "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA": "8190d3f7ceb6cb7a7a8d8924bff89f9f611e15ce1f806f2b6237f3311a98f697"
+  },
+  "expected_program_error": 6024,
+  "wallet_state": {
+    "volume": null
+  },
+  "scope": "HISTORICAL_SYNTHETIC_SELL_NOT_EXECUTED_POSITION",
+  "note": "Original pool bank and program binaries; PAPER seller tokens are synthetic. Counterfactuals are copies only."
+}

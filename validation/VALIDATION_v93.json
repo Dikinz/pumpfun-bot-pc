@@ -1,0 +1,49 @@
+{
+  "version": "v0.7.93",
+  "build_revision": "CLEANUP_OWNER_V93",
+  "full_suite": {
+    "passed": 1014,
+    "skipped": 16,
+    "failed": 0,
+    "seconds": 149.091
+  },
+  "controlled_suite": {
+    "passed": true,
+    "outcomes": {
+      "PASSED": 266,
+      "SKIPPED": 15
+    },
+    "seconds": 107.17512021500033,
+    "cleanup_owner_models_passed": true,
+    "native_cleanup_owner_windows_verified": false
+  },
+  "acceptance_report_consistent": true,
+  "ui": {
+    "js_syntax": true,
+    "primary_monitor_cause_before_pipe": true,
+    "pending_and_resolved_dom_contract": true,
+    "five_roadmap_bars": true,
+    "browser_layout_verified": false
+  },
+  "regressions": [
+    "KNOWN_PID_UNSIGNALED_EMPTY_JOB_RETAINS_HANDLES",
+    "DESCENDANTS_REMAIN_AFTER_LAUNCHER_EXIT",
+    "STOP_WAITS_FOR_REGISTRY_OWNER",
+    "ONLY_NEW_CHECKS_AFTER_CONFIRMATION",
+    "SAVED_RESULT_CANCEL_NOT_PROMOTED",
+    "TRANSIENT_QUERY_ERROR_WHILE_PENDING",
+    "SETUP_BEFORE_PID_PUBLICATION_RETAINED",
+    "ORIGINAL_MONITOR_CAUSE_DISPLAYED"
+  ],
+  "deadlines_unchanged": {
+    "check_s": 10,
+    "stop_wait_s": 5.2,
+    "launcher_boundary_s": 3,
+    "descendant_boundary_s": 2
+  },
+  "financial_simulation_and_nativegroup_ast_unchanged": true,
+  "rpc_and_sql_admission_v92_files_unchanged": true,
+  "preserved_route_database_byte_identical_after_replay": true,
+  "retention_scope": "Persistent registry-managed monitor checks. Standalone auxiliary cleanup policy unchanged.",
+  "limits": "Linux regression and injected handle-state models. Native Windows test is included but skipped here; it uses real handles plus injected wait-state delay on Windows. No kernel root-cause fix, live provider endurance, wallet sends or profitability certified."
+}

@@ -1,0 +1,61 @@
+{
+  "source": "20261030_021328.zip",
+  "sha256": "32337b7c96200b39a665b757e26dd2fde9933042d1212c66b324e11c72c15683",
+  "windows_tests_passed": 299,
+  "stream": {
+    "messages": 6779342,
+    "connections": 1,
+    "receive_errors": 0,
+    "write_errors": 0
+  },
+  "rpc": {
+    "schema": "RPC_BUDGET_V89",
+    "scope": "ONE_INSTALLATION_PAPER_RPC_READERS",
+    "status": "READY",
+    "rate_per_origin": 6.0,
+    "max_inflight": 4,
+    "endpoints": [
+      {
+        "endpoint_hash": "8f430915d1a0c199390c7ff1",
+        "started": 1101,
+        "server_429": 0,
+        "other_errors": 0,
+        "local_deferred": 55,
+        "total_wait_ms": 297983.04960125824,
+        "max_wait_ms": 1311.400800012052,
+        "cooldown_remaining_s": 0
+      }
+    ],
+    "exit_priority_pending_v94": 0,
+    "pending_outcomes": 0,
+    "inflight": 0
+  },
+  "route_closed": 6,
+  "route_open": [],
+  "routes": {
+    "PUMP_CURVE": 6
+  },
+  "matched_costs": {
+    "pairs": 6,
+    "excluded_pairs": 0,
+    "primary_net": -1.7757064729834218,
+    "route_net": -2.179382756547369,
+    "net_difference": -0.40367628356394736,
+    "recorded_gross_difference": 1.0500266581230444,
+    "recorded_extra_cost": 1.453702941686992,
+    "reconciled": true,
+    "common_wallet_net": null,
+    "causal_price_effect": null,
+    "note": "Only closed pairs with identical entry inventory and shared sell signal. Recorded cost bases differ; this is descriptive accounting, not a common-wallet replay or causal price attribution."
+  },
+  "exit_latency_s": [
+    35.04367709159851,
+    8.470933198928833,
+    11.224103927612305,
+    7.412685871124268,
+    7.32526421546936,
+    15.874976634979248
+  ],
+  "sqlite_stall_root_cause": "UNKNOWN",
+  "state_locked_not_equated_to_sqlite_lock": true
+}

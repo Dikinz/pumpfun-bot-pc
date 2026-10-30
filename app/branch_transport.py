@@ -25,6 +25,12 @@ def terminate_tree(child):
     import psutil
     try:descendants=psutil.Process(child.pid).children(recursive=True)
     except psutil.Error:descendants=[]
+    if __import__('late_spawn').wait_before_force(child,descendants):
+        try:
+            child.wait(timeout=3)
+            _,remaining=psutil.wait_procs(descendants,timeout=0)
+            if not remaining:return False
+        except subprocess.TimeoutExpired:pass
     for p in reversed(descendants):
         try:p.terminate()
         except psutil.Error:pass
@@ -70,12 +76,16 @@ class Publisher:
             self.persist_status(force=True)
         return getattr(self,'stop_started_ts',None)
     def valid_stop_ack(self,ack):
+        since=getattr(self,'stop_started_ts',float('inf'))
+        if hasattr(self,'primary') and hasattr(self,'module'):
+            request=__import__('branch_isolation').controlled_request(self.primary,self.module,self.session,getattr(self,'worker_pid',None))
+            if request:since=min(since,request['ts'])
         return (ack.get('session')==self.session and ack.get('status')=='STOPPED'
             and ack.get('pid')==getattr(self,'worker_pid',None)
-            and type(ack.get('ts')) in (int,float) and ack['ts']>=getattr(self,'stop_started_ts',float('inf'))
+            and type(ack.get('ts')) in (int,float) and ack['ts']>=since
             and not ack.get('monitor_forced'))
     def snapshot(self):
-        return dict(stop_requested=self.stopping.is_set(),stop_started_ts=getattr(self,'stop_started_ts',None),stop_pipe_error=getattr(self,'stop_pipe_error',None),sender_finished=not self.thread.is_alive() if getattr(self,'thread',None) else None,module=getattr(self,'module','paper_branch'),session=self.session,launcher_pid=getattr(getattr(self,'child',None),'pid',None),worker_pid=getattr(self,'worker_pid',None),queue_depth=self.queue.qsize(),pending_bytes=getattr(self,'pending_bytes',0),peak_bytes=getattr(self,'peak_bytes',0),dropped=self.dropped,first_gap=getattr(self,'first_gap',None),max_send_ms=getattr(self,'max_send_ms',0.),send_blocked_age_s=max(0,time.monotonic()-self.send_started) if getattr(self,'send_started',0) else 0,unsent_on_stop=self.queue.qsize()+getattr(self,'unsent_batch',0) if self.stopping.is_set() else 0,error=self.error)
+        return dict(failure=getattr(self,'failure',None),delivery_uncertain=getattr(self,'delivery_uncertain',0),unsent=self.queue.qsize()+getattr(self,'unsent_batch',0),stop_requested=self.stopping.is_set(),stop_started_ts=getattr(self,'stop_started_ts',None),stop_pipe_error=getattr(self,'stop_pipe_error',None),sender_finished=not self.thread.is_alive() if getattr(self,'thread',None) else None,module=getattr(self,'module','paper_branch'),session=self.session,launcher_pid=getattr(getattr(self,'child',None),'pid',None),worker_pid=getattr(self,'worker_pid',None),queue_depth=self.queue.qsize(),queue_capacity=self.queue.maxsize,pending_bytes=getattr(self,'pending_bytes',0),peak_bytes=getattr(self,'peak_bytes',0),dropped=self.dropped,first_gap=getattr(self,'first_gap',None),max_send_ms=getattr(self,'max_send_ms',0.),send_blocked_age_s=max(0,time.monotonic()-self.send_started) if getattr(self,'send_started',0) else 0,unsent_on_stop=self.queue.qsize()+getattr(self,'unsent_batch',0) if self.stopping.is_set() else 0,error=self.error)
     def record_gap(self,reason,**details):
         if getattr(self,'first_gap',None) is None:self.first_gap=dict(reason=reason,ts=time.time(),seq=self.seq,depth=self.queue.qsize(),**details)
     def persist_status(self,force=False):
@@ -87,7 +97,9 @@ class Publisher:
             except OSError:pass
             self.last_status=mono
     def emit(self,m,side,p,trader,source,evidence,born,_payload=None):
-        if getattr(self,'stopping',None) is not None and self.stopping.is_set():return
+        if getattr(self,'stopping',None) is not None and self.stopping.is_set():
+            if self.error or getattr(self,'failure',None):self.dropped+=1
+            return
         self.seq+=1
         item=dict(_payload) if _payload is not None else dict(mint=m,side=side,price=p,trader=trader,source=source,evidence=evidence,born=born,ts=time.time())
         item['seq']=self.seq
@@ -125,7 +137,10 @@ class Publisher:
                 self.persist_status()
         except (OSError,ValueError) as exc:
             if self.stopping.is_set():self.stop_pipe_error=dict(error_type=type(exc).__name__,ts=time.time(),errno=getattr(exc,'errno',None))
-            else:self.error=True;self.record_gap('PIPE_WRITE_ERROR')
+            else:
+                self.error=True;self.delivery_uncertain=len(batch) if 'batch' in locals() else 0
+                self.record_gap('PIPE_WRITE_ERROR',delivery_uncertain=self.delivery_uncertain,errno=getattr(exc,'errno',None))
+                self.begin_stop()
         finally:
             self.persist_status(force=True)
             # Keep stdin open during quiescence: EOF must not outrun control STOP.
@@ -146,7 +161,7 @@ class Publisher:
             forced=False
             try:self.child.wait(timeout=timeout)
             except subprocess.TimeoutExpired:
-                forced=True;terminate_tree(self.child)
+                forced=terminate_tree(self.child) is not False
             if self.thread is not None:self.thread.join(timeout=1)
             if self.thread is None or not self.thread.is_alive():
                 try:self.child.stdin.close()
@@ -154,9 +169,12 @@ class Publisher:
             engine=getattr(self,'engine',paper_branch)
             ack=engine.read_lifecycle(self.primary)
             valid=ack.get('session')==self.session and ack.get('status') in ('STOPPED','FAILED')
-            status='STOPPED' if self.valid_stop_ack(ack) and self.child.returncode==0 and not forced and not self.error and not (self.thread and self.thread.is_alive()) else 'FAILED' if valid and ack['status']=='FAILED' else 'FORCED_STOP' if forced else 'UNCONFIRMED_EXIT'
+            status='FAILED' if getattr(self,'failure',None) else 'STOPPED' if self.valid_stop_ack(ack) and self.child.returncode==0 and not forced and not self.error and not (self.thread and self.thread.is_alive()) else 'FAILED' if valid and ack['status']=='FAILED' else 'FORCED_STOP' if forced else 'UNCONFIRMED_EXIT'
             self.closed=dict(session=self.session,status=status,exit_code=self.child.returncode,forced=forced,ts=time.time(),stop_started_ts=getattr(self,'stop_started_ts',None),sender_finished=not self.thread.is_alive() if self.thread else True,stop_pipe_error=getattr(self,'stop_pipe_error',None),unsent_on_stop=(self.queue.qsize() if hasattr(self,'queue') else 0)+getattr(self,'unsent_batch',0))
+            self.closed['failure']=getattr(self,'failure',None)
+            self.closed['cleanup_confirmed']=bool(self.valid_stop_ack(ack) and self.child.returncode==0 and not forced and not (self.thread and self.thread.is_alive()))
             engine.write_transport(self.primary,self.closed)
+            if getattr(self,'failure',None):__import__('branch_isolation').finish(self.primary,self.session,self.closed)
             system_health.event(self.primary,'BRANCH_STOP_ACK' if status=='STOPPED' else 'BRANCH_STOP_UNCONFIRMED',session=self.session,status=status,exit_code=self.child.returncode)
             return self.closed
 
@@ -216,6 +234,17 @@ class Fanout:
                     self.failure_reason=p.module+':'+p.watchdog.confirmed['repeat']['reason']
                     p.record_gap('CHILD_WATCHDOG_CONFIRMED',watchdog=p.watchdog.confirmed);return True
         return False
+    def isolate_failures(self):
+        """Off-loop inspection. Failed scenarios stay disabled until next session."""
+        import branch_isolation
+        found=[]
+        for p in self.publishers:
+            if getattr(p,'failure',None):continue
+            single=Fanout.__new__(Fanout);single.publishers=[p]
+            if not single.failed:continue
+            p.failure=dict(status='FAILED',reason=single.failure_reason,ts=time.time(),session=p.session,module=p.module,stopped_open_positions=list(getattr(p,'protected',{})))
+            p.begin_stop();branch_isolation.record(p.primary,p.failure);p.persist_status(force=True);found.append(p)
+        return found
     def begin_stop(self):
         # Mark all branches before any branch receives STOP.
         return [p.begin_stop() for p in self.publishers]
@@ -223,4 +252,7 @@ class Fanout:
         self.begin_stop()
         from concurrent.futures import ThreadPoolExecutor
         if not self.publishers:return []
-        with ThreadPoolExecutor(max_workers=len(self.publishers)) as pool:return list(pool.map(lambda p:p.close(),self.publishers))
+        with ThreadPoolExecutor(max_workers=len(self.publishers)) as pool:results=list(pool.map(lambda p:p.close(),self.publishers))
+        failed=[p for p in self.publishers if getattr(p,'failure',None)]
+        if failed:__import__('branch_isolation').end_session(failed[0].primary,[p.session for p in failed])
+        return results

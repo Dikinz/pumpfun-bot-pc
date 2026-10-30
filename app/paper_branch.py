@@ -223,7 +223,10 @@ async def _worker(primary,ready=None,session=None,scenario=None):
             if matched:shared_lots.sync(main,primary)
             if monitor is None and main.P:
                 monitor=await asyncio.to_thread(__import__('subprocess').Popen,[sys.executable,'paper_branch.py','--monitor',str(target),'--parent',str(os.getpid())],stdin=__import__('subprocess').PIPE)
-            if monitor is not None and monitor.poll() is not None:raise RuntimeError('BRANCH_MONITOR_EXITED')
+            if monitor is not None and monitor.poll() is not None:
+                exc=RuntimeError('BRANCH_MONITOR_EXITED: exit_code='+str(monitor.returncode))
+                exc.monitor_failure_v81=monitor_service.read_state(config.DB)
+                raise exc
             persist_input()
             engine.poll(main);await asyncio.sleep(.25)
     work=[main.heartbeat(),main.observation_timer(),main.clock_lab.local_watch(),exit_quotes.worker(),check()]
@@ -231,27 +234,34 @@ async def _worker(primary,ready=None,session=None,scenario=None):
     tasks=[asyncio.create_task(t) for t in work]
     feed=asyncio.create_task(receive())
     counter_sink=__import__('counter_writer').start(config.DB,session=session)
-    failed=False
+    failed=False;branch_failure=None
     try:
         done,_=await asyncio.wait([feed]+tasks,return_when=asyncio.FIRST_COMPLETED)
         for task in done:task.result()
-    except BaseException:
+    except BaseException as exc:
         failed=True;stop_reason='WORKER_ERROR'
+        branch_failure=dict(exception=__import__('child_diagnostics').exception(exc),monitor_state=getattr(exc,'monitor_failure_v81',None))
         raise
     finally:
         tasks_stopped=True
         for task in [feed]+tasks:task.cancel()
         try:await asyncio.wait_for(asyncio.gather(feed,*tasks,return_exceptions=True),timeout=5)
         except (asyncio.TimeoutError,asyncio.CancelledError):tasks_stopped=False;failed=True;stop_reason='TASK_SHUTDOWN_TIMEOUT'
-        monitor_forced=False
+        monitor_forced=False;monitor_exit_code=None
         if monitor is not None:
             try:
                 monitor.stdin.close()
-                await asyncio.to_thread(monitor.wait,4)
+                monitor_exit_code=await asyncio.to_thread(monitor.wait,4)
             except Exception:
                 monitor_forced=True
                 from branch_transport import terminate_tree
-                await asyncio.to_thread(terminate_tree,monitor)
+                monitor_forced=(await asyncio.to_thread(terminate_tree,monitor)) is not False
+                monitor_exit_code=monitor.poll()
+        if monitor_exit_code not in (None,0):
+            failed=True
+            if branch_failure is None:
+                stop_reason='MONITOR_CLEANUP_FAILED'
+                branch_failure=dict(monitor_exit_code=monitor_exit_code,monitor_state=monitor_service.read_state(config.DB))
         await __import__('counter_writer').stop(counter_sink)
         persist_input()
         await probe.close()
@@ -266,7 +276,7 @@ async def _worker(primary,ready=None,session=None,scenario=None):
                 branch_shutdown_reason=stop_reason,branch_shutdown_ts=time.time(),branch_monitor_forced=int(monitor_forced)))
         __import__('shutdown_audit').closed(config.DB,'branch',session)
         engine.write_lifecycle(primary,dict(session=session,status=final,reason=stop_reason,run_id=run_audit.ACTIVE,
-            monitor_forced=monitor_forced,pid=os.getpid(),ts=time.time()))
+            monitor_forced=monitor_forced,failure_v81=branch_failure,pid=os.getpid(),ts=time.time()))
 
 def report(primary):
     p=path(primary)
@@ -313,9 +323,6 @@ if __name__=='__main__':
         import config
         config.DB=sys.argv[2]
         import monitor_service
-        import threading
-        stop=threading.Event()
-        threading.Thread(target=lambda: (sys.stdin.buffer.read(1),stop.set()),daemon=True).start()
-        asyncio.run(monitor_service.run(config.DB,int(sys.argv[4]),stop_event=stop))
+        asyncio.run(monitor_service.run_with_stdin(config.DB,int(sys.argv[4])))
     else:
         asyncio.run(worker(sys.argv[2],sys.argv[3] if len(sys.argv)>3 else None,sys.argv[4] if len(sys.argv)>4 else None))

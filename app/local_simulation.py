@@ -52,7 +52,8 @@ def read_accounts(addresses,min_slot=None,*,data_slice=None,commitment='confirme
     start=time.time()
     req=urllib.request.Request(url,json.dumps(payload).encode(),{'Content-Type':'application/json'})
     import rpc_timing
-    with rpc_timing.request('getMultipleAccounts',len(addresses)) as trace:
+    with __import__('rpc_budget').guard(url) as permit, rpc_timing.request('getMultipleAccounts',len(addresses)) as trace:
+        trace.row['rpc_admission_v89']=permit.telemetry()
         with trace.phase('OPEN_HEADERS'):
             response=urllib.request.build_opener(NoRedirect()).open(req,timeout=6)
         with response as f:
@@ -67,8 +68,9 @@ def read_accounts(addresses,min_slot=None,*,data_slice=None,commitment='confirme
                 raise LabError('RPC_ERROR_'+str(d['error'].get('code','UNKNOWN')))
             r=d['result'];slot=r['context']['slot']
             if type(slot)!=int or slot<0 or len(r['value'])!=len(addresses) or (min_slot is not None and slot<min_slot):raise LabError('INVALID_RPC_SNAPSHOT')
+            received=time.time() # Capture before admission bookkeeping; queue/IO cannot freshen a snapshot.
 
-    return dict(slot=slot,started_ts=start,received_ts=time.time(),accounts=dict(zip(addresses,r['value'])))
+    return dict(slot=slot,started_ts=start,received_ts=received,accounts=dict(zip(addresses,r['value'])))
 
 def addresses(mint,wallet,curve_account,mint_account,global_account):
     curve=v.decode_curve(curve_account)
@@ -130,8 +132,11 @@ def capture(mint,amount,minimum,wallet=None):
     if addresses(mint,wallet,a[curve],a[mint],a[g])!=names:raise LabError('ADDRESS_INPUTS_CHANGED_RETRY')
     for pid,pd in progdata.items():
         if program_data_address(a[pid])!=pd:raise LabError('PROGRAM_CHANGED_RETRY')
-        if a[pd] is None or a[pd]['owner']!=UPGRADE or len(raw(a[pd]))<49 or struct.unpack_from('<I',raw(a[pd]))[0]!=3:raise LabError('INVALID_PROGRAM_DATA')
-        if raw(a[pd])[45:49]!=b'\x7fELF':raise LabError('INVALID_PROGRAM_ELF')
+        if a[pd] is None or a[pd]['owner']!=UPGRADE:raise LabError('INVALID_PROGRAM_DATA')
+        code=raw(a[pd])
+        if len(code)<49 or struct.unpack_from('<I',code)[0]!=3:raise LabError('INVALID_PROGRAM_DATA')
+        if code[45:49]!=b'\x7fELF':raise LabError('INVALID_PROGRAM_ELF')
+        del code
     # Seller must have no mainnet funds/accounts. Local creation is explicit.
     if a[wallet] is not None or a[names['associated_base_user']] is not None:raise LabError('TEST_ADDRESS_ALREADY_EXISTS')
     return dict(schema='local_sell_v1',mint=mint,amount=str(amount),minimum=str(minimum),wallet=wallet,
@@ -154,8 +159,9 @@ def load_vm(bundle):
     # Exact cloned binaries for Pump, fee program and token program; no substitute mock program.
     hashes={}
     for pid,pd in bundle['program_data'].items():
-        if program_data_address(a[pid])!=pd or a[pd]['owner']!=UPGRADE or struct.unpack_from('<I',raw(a[pd]))[0]!=3:raise LabError('INVALID_PROGRAM_DATA')
-        binary=raw(a[pd])[45:]
+        code=raw(a[pd])
+        if program_data_address(a[pid])!=pd or a[pd]['owner']!=UPGRADE or struct.unpack_from('<I',code)[0]!=3:raise LabError('INVALID_PROGRAM_DATA')
+        binary=code[45:];del code
         if binary[:4]!=b'\x7fELF':raise LabError('INVALID_PROGRAM_ELF')
         vm.add_program(key(pid),binary);hashes[pid]=hashlib.sha256(binary).hexdigest()
     excluded=set(bundle['program_data'])|set(bundle['program_data'].values())|{SYSTEM,CLOCK,RENT}

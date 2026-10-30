@@ -1,0 +1,14 @@
+{
+  "version": "v0.7.94",
+  "archives": [
+    "recovery_failure_v89_20261029_212345_7875fe68.zip",
+    "recovery_failure_v89_20261029_213949_b050bc28.zip"
+  ],
+  "same_failure": true,
+  "test": "test_native_known_launcher_owner_survives_delayed_signal",
+  "expected": "PROCESS_HANDLE_CLEANUP_PENDING_V93",
+  "actual": "CREATEPROCESS_BOUNDARY_UNRETURNED_AT_STOP",
+  "cause": "80ms scaled deadline could register the owner while native CreateProcessW was still ENTERED and PID not yet published. Known-launcher setup had no readiness barrier.",
+  "new_candidate_rpc_tests_passed": 17,
+  "report_acceptance_pair_consistent": true
+}

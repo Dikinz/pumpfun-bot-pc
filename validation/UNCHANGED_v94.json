@@ -1,0 +1,48 @@
+{
+  "main.py": {
+    "identical": true,
+    "sha256": "35f20c231286fcca7e8dc7459da30bc1415759e6e2047604c4c8e484ba57a029"
+  },
+  "paper_branch.py": {
+    "identical": true,
+    "sha256": "dce989f2125f4cf5a208440e6e5fc38ab20f34e0ea6a875d5dbf6d8d6b698147"
+  },
+  "route_branch.py": {
+    "identical": true,
+    "sha256": "a1526e0824c8b89da4d331f04c09baa9086ee6f91eec1dd1c70dd5b08b0e4ad5"
+  },
+  "paper_capital.py": {
+    "identical": true,
+    "sha256": "0eba316b935ea1af3b8cb92b696081141b05561d1de6583c9bbc28573cfe4e1c"
+  },
+  "fresh_retry.py": {
+    "identical": true,
+    "sha256": "b85379190fb54f9f9802ba6b4c9baff0bcdaecef28c3d167290d145ff7c2425c"
+  },
+  "execution_review_v92.py": {
+    "identical": true,
+    "sha256": "8cc38e7db7d7f5d48135869b555311bd481b90b35f3484be89caf1c634bdf22a"
+  },
+  "cost_price_audit.py": {
+    "identical": true,
+    "sha256": "78028ead1f718106962b827c905d924477b6e26446ddfbb228ea75331e429d11"
+  },
+  "windows_child.py": {
+    "identical": true,
+    "sha256": "18fb6f161a62e1b96a6a8dd073f0ae19c0b0a316ccc03f81e920d4478ede641c"
+  },
+  "late_spawn.py": {
+    "identical": true,
+    "sha256": "ab728543ac1f565a71f747cb560d54cb569e1bf484b3711016b7a316adaf57a5"
+  },
+  "runtime_control.py": {
+    "identical": true,
+    "sha256": "4a388c6a37c5512b6aa862b466cab1c11673815675adfa19f1fcf578e9b83e28"
+  },
+  "monitor_service.py": {
+    "identical": true,
+    "sha256": "2af7b2da1a7d6270a0800484740ae074c51a1e184150f2a421924b941358f7d1"
+  },
+  "configuration_except_version": true,
+  "simulation_and_launcher_functions": true
+}

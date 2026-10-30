@@ -41,32 +41,43 @@ def rebalance(c):
         total-=r['reserved_total']
 
 def summary(c):
-    s=settings(c);rows=[dict(r) for r in c.execute('SELECT * FROM capital_ledger_v0721')];trades={(r['trade_id'],r['side']):dict(r) for r in c.execute('SELECT * FROM trades')};errors=[]
-    keys={(r['trade_id'],r['side']) for r in rows}
-    if keys!=set(trades):errors.append('Ledger/trade coverage mismatch')
-    for r in rows:
-        t=trades.get((r['trade_id'],r['side']));b=trades.get((r['trade_id'],'BUY'))
-        expected=b['size'] if b and r['side']=='BUY' else b['size']*t['price']/b['price'] if b and t else None
+    s=settings(c);errors=[]
+    def issue(message):
+        if message not in errors:errors.append(message)
+    coverage=c.execute("""SELECT EXISTS(SELECT 1 FROM capital_ledger_v0721 l LEFT JOIN trades t ON t.trade_id=l.trade_id AND t.side=l.side WHERE t.trade_id IS NULL)
+        OR EXISTS(SELECT 1 FROM trades t LEFT JOIN capital_ledger_v0721 l ON l.trade_id=t.trade_id AND l.side=t.side WHERE l.trade_id IS NULL)""").fetchone()[0]
+    if coverage:issue('Ledger/trade coverage mismatch')
+    settlements=bool(c.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='branch_amm_settlements'").fetchone())
+    extra="a.gross settle_gross,a.receipt settle_receipt,a.cost settle_cost" if settlements else "NULL settle_gross,NULL settle_receipt,NULL settle_cost"
+    join="LEFT JOIN branch_amm_settlements a ON a.trade_id=l.trade_id" if settlements else ""
+    query="""SELECT l.*,t.price audit_price,t.trade_id audit_trade,b.size audit_size,b.price audit_entry,b.trade_id audit_buy,
+       sold.trade_id audit_closed,"""+extra+""" FROM capital_ledger_v0721 l
+       LEFT JOIN trades t ON t.trade_id=l.trade_id AND t.side=l.side
+       LEFT JOIN trades b ON b.trade_id=l.trade_id AND b.side='BUY'
+       LEFT JOIN trades sold ON sold.trade_id=l.trade_id AND sold.side='SELL' """+join
+    total=pool_total=route_total=fixed_total=closed_cost=0.;missing_rate=0
+    for r in c.execute(query):
+        total+=r['total_cost'];pool_total+=r['pool_fee'];route_total+=r['route_fee'];fixed_total+=r['fixed_cost']
+        if r['audit_closed'] is not None:closed_cost+=r['total_cost']
+        missing_rate+=r['rate_source'] not in ('provider','AMM_VERIFIED_ISOLATED','CURVE_VERIFIED_ISOLATED')
+        expected=r['audit_size'] if r['audit_buy'] is not None and r['side']=='BUY' else r['audit_size']*r['audit_price']/r['audit_entry'] if r['audit_buy'] is not None and r['audit_trade'] is not None else None
         close=lambda a,b: a is not None and b is not None and math.isclose(a,b,rel_tol=1e-9,abs_tol=1e-9)
-        if not close(expected,r['notional']):errors.append('Notional mismatch')
-        if not close(r['total_cost'],r['pool_fee']+r['route_fee']+r['fixed_cost']):errors.append('Cost sum mismatch')
+        if not close(expected,r['notional']):issue('Notional mismatch')
+        if not close(r['total_cost'],r['pool_fee']+r['route_fee']+r['fixed_cost']):issue('Cost sum mismatch')
         special=r['rate_source'] in ('AMM_VERIFIED_ISOLATED','CURVE_VERIFIED_ISOLATED')
         if special:
-            try:a=c.execute('SELECT gross,receipt,cost FROM branch_amm_settlements WHERE trade_id=?',(r['trade_id'],)).fetchone()
-            except sqlite3.Error:a=None
-            if not a or r['side']!='SELL' or not close(r['notional'],a['gross']) or not close(r['total_cost'],a['cost']) or not close(r['cash_delta'],a['receipt']) or not close(a['gross']-a['receipt'],a['cost']):errors.append('AMM settlement mismatch')
-        elif not close(r['pool_fee'],r['notional']*r['pool_rate']) or not close(r['route_fee'],r['notional']*s['route_rate']) or not close(r['fixed_cost'],s['fixed_per_fill']):errors.append('Fee arithmetic mismatch')
-        if not close(r['cash_delta'],(-r['notional'] if r['side']=='BUY' else r['notional'])-r['total_cost']):errors.append('Cash delta mismatch')
+            a=dict(gross=r['settle_gross'],receipt=r['settle_receipt'],cost=r['settle_cost']) if r['settle_gross'] is not None else None
+            if not a or r['side']!='SELL' or not close(r['notional'],a['gross']) or not close(r['total_cost'],a['cost']) or not close(r['cash_delta'],a['receipt']) or not close(a['gross']-a['receipt'],a['cost']):issue('AMM settlement mismatch')
+        elif not close(r['pool_fee'],r['notional']*r['pool_rate']) or not close(r['route_fee'],r['notional']*s['route_rate']) or not close(r['fixed_cost'],s['fixed_per_fill']):issue('Fee arithmetic mismatch')
+        if not close(r['cash_delta'],(-r['notional'] if r['side']=='BUY' else r['notional'])-r['total_cost']):issue('Cash delta mismatch')
     net=cash(c);pending=c.execute("SELECT COALESCE(SUM(reserved_total),0) FROM paper_orders_v0720 WHERE side='BUY' AND status='PENDING'").fetchone()[0]
-    if pending>max(0,net)+1e-8:errors.append('Entry reservations exceed net cash')
+    if pending>max(0,net)+1e-8:issue('Entry reservations exceed net cash')
     positions=[dict(r) for r in c.execute('SELECT * FROM positions')];principal=sum(p['size'] for p in positions)
-    total=sum(r['total_cost'] for r in rows)
     gross_cash=float(c.execute("SELECT v FROM meta WHERE k='cash'").fetchone()[0])
-    if not math.isclose(net,gross_cash-total,rel_tol=1e-9,abs_tol=1e-9):errors.append('Gross/net reconciliation mismatch')
+    if not math.isclose(net,gross_cash-total,rel_tol=1e-9,abs_tol=1e-9):issue('Gross/net reconciliation mismatch')
     for o in c.execute("SELECT size,reserved_total FROM paper_orders_v0720 WHERE side='BUY' AND status='PENDING'"):
-        if not math.isclose(o['reserved_total'],budget(c,o['size']),rel_tol=1e-9,abs_tol=1e-9):errors.append('Wrong entry reservation')
-    closed={tid for tid,side in trades if side=='SELL'};gross=sum(t['pnl'] for (tid,side),t in trades.items() if side=='SELL')
-    closed_cost=sum(r['total_cost'] for r in rows if r['trade_id'] in closed)
+        if not math.isclose(o['reserved_total'],budget(c,o['size']),rel_tol=1e-9,abs_tol=1e-9):issue('Wrong entry reservation')
+    gross=c.execute("SELECT COALESCE(SUM(pnl),0) FROM trades WHERE side='SELL'").fetchone()[0]
     # Display-only freshness: cash and order budgets never include open marks.
     now=time.time();fresh=[];excluded=[]
     for p in positions:
@@ -79,7 +90,7 @@ def summary(c):
         excluded_principal=sum(p['size'] for p in excluded),complete=not excluded,
         fresh_open_mark=marked,fresh_subtotal_before_exit_cost=net+marked,
         note='Доступно для входов только available: деньги минус резерв. Открытые позиции не являются доступными средствами. Полная оценка неизвестна при устаревшей/неизвестной цене; свежая цена также не гарантирует продажу.')
-    return {'status':'ERROR' if errors else 'OK','errors':errors,'settings':s,'net_cash':net,'reserved':pending,'available':net-pending,'open_principal':principal,'total_cost':total,'pool_cost':sum(r['pool_fee'] for r in rows),'route_cost':sum(r['route_fee'] for r in rows),'fixed_cost':sum(r['fixed_cost'] for r in rows),'closed_net':gross-closed_cost,'open_entry_cost':total-closed_cost,'marked_equity_before_exit_cost':net+marked if not excluded else None,'valuation':valuation,'cash_if_open_value_zero':net,'missing_exit_rate_count':sum(r['rate_source'] not in ('provider','AMM_VERIFIED_ISOLATED','CURVE_VERIFIED_ISOLATED') for r in rows),'note':'PAPER-$ scenario only. Pool fee from unverified feed; service .25% + .005 per fill are fixed assumptions. Cash excludes spent entry costs; open marks are not guaranteed proceeds and exclude future exit fees. No rent, impact, SOL/USD conversion or failed-network-transaction costs.'}
+    return {'status':'ERROR' if errors else 'OK','errors':errors,'settings':s,'net_cash':net,'reserved':pending,'available':net-pending,'open_principal':principal,'total_cost':total,'pool_cost':pool_total,'route_cost':route_total,'fixed_cost':fixed_total,'closed_net':gross-closed_cost,'open_entry_cost':total-closed_cost,'marked_equity_before_exit_cost':net+marked if not excluded else None,'valuation':valuation,'cash_if_open_value_zero':net,'missing_exit_rate_count':missing_rate,'note':'PAPER-$ scenario only. Pool fee from unverified feed; service .25% + .005 per fill are fixed assumptions. Cash excludes spent entry costs; open marks are not guaranteed proceeds and exclude future exit fees. No rent, impact, SOL/USD conversion or failed-network-transaction costs.'}
 
 def check(path):
     with sqlite3.connect(Path(path).resolve().as_uri()+'?mode=ro',uri=True) as c:

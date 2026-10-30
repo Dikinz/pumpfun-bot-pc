@@ -17,6 +17,15 @@ def main():
     command=sys.argv[1] if len(sys.argv)>1 else 'help'
     if command=='verify-release':
         print('CLEAN RELEASE VERIFIED:',ROOT);return 0
+    if command=='spawn-diagnostics':
+        import spawn_report_v89
+        return spawn_report_v89.main(sys.argv[2:])
+    if command=='network-check':
+        import network_check_v88
+        return network_check_v88.main(sys.argv[2:])
+    if command=='perf-check':
+        import perf_check_v87
+        return perf_check_v87.main()
     if command=='recovery-check':
         import recovery_selftest
         return recovery_selftest.main()
@@ -37,6 +46,8 @@ def main():
         print('CLEAN RELEASE:',config.VERSION,flush=True)
         print('FOLDER:',ROOT,flush=True)
         print('DASHBOARD: http://127.0.0.1:'+str(config.PORT),flush=True)
+    if command=='test-amm-stop':
+        print(__import__('branch_isolation').inject_stop(config.DB),flush=True);return 0
     if command=='amm-check':return launcher.call('target_amm_check.py')
     return launcher.main()
 

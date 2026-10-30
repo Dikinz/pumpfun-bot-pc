@@ -1,0 +1,477 @@
+{
+  "compared_to": "v0.7.94",
+  "production_differences": [
+    "app/config.py",
+    "app/network_check_v88.py",
+    "app/recovery_selftest.py",
+    "app/release_guard.py"
+  ],
+  "version_only": [
+    "config.py",
+    "release_guard.py",
+    "network_check_v88.py"
+  ],
+  "recovery_change": "9 required cleanup-owner cases including slow-setup regression; no skip/label relaxation",
+  "modules": {
+    "app/aggregate_export.py": {
+      "identical": true,
+      "sha256": "e79e00190cc6d7a560b86c78a9bd31a67a8f1d3142c98c59be6c83e921c146a9"
+    },
+    "app/amm_exit_scenario.py": {
+      "identical": true,
+      "sha256": "ed9b855c31d46d0ea7ab205be43641dd0370f8e33fdf91ded356c5b303601657"
+    },
+    "app/amm_simulation.py": {
+      "identical": true,
+      "sha256": "b169c6aecc061fe5488cddb0e43ee5b4e74c52838eccce275d2f1ebe9ffa6f78"
+    },
+    "app/auto_simulation.py": {
+      "identical": true,
+      "sha256": "d3efc1f3171183b403efebd0fb2eef92df375315a69a71e71c2c34dbf741012f"
+    },
+    "app/bootstrap.py": {
+      "identical": true,
+      "sha256": "ea0d0484514909df59a6b18f99ddbf966c8df299a8d810a19766649b6ad54866"
+    },
+    "app/branch_isolation.py": {
+      "identical": true,
+      "sha256": "d8c844dbfed1222877dca070113edfebf3e2f35defdec6dfd40a7ee2834e3795"
+    },
+    "app/branch_transport.py": {
+      "identical": true,
+      "sha256": "ef93dbf6c839a9c832ca181fa12fa587cedef3c87f652fd411a45fcca86d4af6"
+    },
+    "app/campaign_view.py": {
+      "identical": true,
+      "sha256": "ff6148354ceec3446f120c88cccd95ad74570518facc18c6a978d22c30393e2d"
+    },
+    "app/candidate_features.py": {
+      "identical": true,
+      "sha256": "9ff4e01e8938ad87e928e8f8e7c005060af3335b8abaeef959203aaa4a8e97ed"
+    },
+    "app/candidate_lab.py": {
+      "identical": true,
+      "sha256": "58044bd3fe854098aa6c1bab2df6116c1359dcb08363178dd3667fd41dda6b6d"
+    },
+    "app/check_entry_selection.py": {
+      "identical": true,
+      "sha256": "db4ceaa5637c88bdc33c008fe14c81129c246659063d9c57324a4067f770a706"
+    },
+    "app/child_diagnostics.py": {
+      "identical": true,
+      "sha256": "2cda0498f199ef6130ed6e0a0f89a91b6fd83fc727fbbfe728d793e515e011d5"
+    },
+    "app/clean_campaign.py": {
+      "identical": true,
+      "sha256": "358fd7ba822416e4af0e53860d7d707037c7b96e797b4e3d5396c069f5f88eb6"
+    },
+    "app/clock_lab.py": {
+      "identical": true,
+      "sha256": "fac280c6a41921de20a260eda5894fce28036c51a360ec073eb5134a0935db74"
+    },
+    "app/cohort_report.py": {
+      "identical": true,
+      "sha256": "53110c9b2f76e707a228abdf13bebab01067ec2ec80897de507519ea0f52e3e6"
+    },
+    "app/config.py": {
+      "identical": false,
+      "sha256": "93595d83ffe69130fd8c9e773b6c502acf6d6bdbdb47ddbe508fb9c04dc0bd8d"
+    },
+    "app/connection_audit.py": {
+      "identical": true,
+      "sha256": "462df08e445cbf76b2b8ffaf420408755706b4d6d0bbd4c277216830179f13d0"
+    },
+    "app/cost_evidence.py": {
+      "identical": true,
+      "sha256": "fe7ef32635b7eda693c93b133247cd4708752db9b8cc1129696de1d776b6f3be"
+    },
+    "app/cost_model_audit_v89.py": {
+      "identical": true,
+      "sha256": "f85a536ec39dfdc82b5726c9c7cf83a19effb8a8831e97138ced8cf7f1163dae"
+    },
+    "app/cost_price_audit.py": {
+      "identical": true,
+      "sha256": "78028ead1f718106962b827c905d924477b6e26446ddfbb228ea75331e429d11"
+    },
+    "app/counter_writer.py": {
+      "identical": true,
+      "sha256": "cd5c9f1031f62a8a1bf8cc157b8ab0260db67496a830bccc331e313b3fa57e68"
+    },
+    "app/curve_overflow_replay.py": {
+      "identical": true,
+      "sha256": "66e9236d8ad0da39cd77549bed5975555ef3b79bac6df257bebb12b85b55d2ff"
+    },
+    "app/dashboard/cache.py": {
+      "identical": true,
+      "sha256": "8141629a28b135d67ccfc63e7811884e6adf8959eabeae69b5c7e47354eecb7f"
+    },
+    "app/dashboard/server.py": {
+      "identical": true,
+      "sha256": "92e18ab53f172219e318e3c99b752f5f3695bfc01abc8f602a2113eeb164a498"
+    },
+    "app/database.py": {
+      "identical": true,
+      "sha256": "6cd0f07f75e4554a38fe8b4749b6aa2556f7a3d417396c2a976061fd4a65d6b7"
+    },
+    "app/diagnostics.py": {
+      "identical": true,
+      "sha256": "63dae45e454a1a776a77791ac1cdb32dccbf5c35f78be1e38fbdd111efbe82b7"
+    },
+    "app/direct_pump_v2.py": {
+      "identical": true,
+      "sha256": "10961d70d3d0c97bf4a4397a756bf2f19b97ff9f86e2bbbafe36c69d616ecb92"
+    },
+    "app/entry_activity.py": {
+      "identical": true,
+      "sha256": "4945864b249b3ff7d91ed1ad32b74b991c9fb8d32d6def5a55f471a84d0fb0e4"
+    },
+    "app/entry_cost_delta.py": {
+      "identical": true,
+      "sha256": "bfe7a51e78fabaf305e22e4265cda9e3ffeb6f03473c1a78358e1daa41691f86"
+    },
+    "app/entry_diagnostics.py": {
+      "identical": true,
+      "sha256": "3b468ffcee1a66e6328a954a62f1a282ba4e9f1ce56074534d2eed1573adbe45"
+    },
+    "app/entry_pipeline.py": {
+      "identical": true,
+      "sha256": "696c3d6620c36374f439f299fa2b2913237405fa781b09dba723db208f820692"
+    },
+    "app/entry_selection.py": {
+      "identical": true,
+      "sha256": "2cbbb87b30844936f8f9147c2cbccb712e6451b7c82f4ecc120064f7a9ec9c60"
+    },
+    "app/evidence_report.py": {
+      "identical": true,
+      "sha256": "a509c1c0d497cefa79d8af068ec31f5701ba661de2e0c8141aac1938e8c6d9e9"
+    },
+    "app/execution_lab.py": {
+      "identical": true,
+      "sha256": "52c1e5cbd375bf6787ee5b843238a45add81ac990cb26e4273e17eb4440695d1"
+    },
+    "app/execution_model.py": {
+      "identical": true,
+      "sha256": "375d4873078f7ecdb4889b900bce64150dbded8e41a429518bad8382584df9c2"
+    },
+    "app/execution_review_v92.py": {
+      "identical": true,
+      "sha256": "8cc38e7db7d7f5d48135869b555311bd481b90b35f3484be89caf1c634bdf22a"
+    },
+    "app/execution_summary.py": {
+      "identical": true,
+      "sha256": "fa8d1b4c78581bdfafcb69262e080f37e3bacdef39fa187e82627a52a818fdaa"
+    },
+    "app/execution_verification.py": {
+      "identical": true,
+      "sha256": "194927d7bfb08021838b96c15f2645d6d19aa6115841193e2d623a5a29bb187a"
+    },
+    "app/exit_audit.py": {
+      "identical": true,
+      "sha256": "a6f30d7bbf82a95b8fb5405320075d5cca4d4562b80b9f50d02673ff6bc29ac8"
+    },
+    "app/exit_comparison.py": {
+      "identical": true,
+      "sha256": "babd45ca5e525ee05ee30471c1c0e870c0ba2519bdb1e10b8822e3773abab0e9"
+    },
+    "app/exit_cost_review.py": {
+      "identical": true,
+      "sha256": "8d59152213faa05170fe7f0c27d9d7470a24583ecf411f003c8c8dd7a786cf02"
+    },
+    "app/exit_quotes.py": {
+      "identical": true,
+      "sha256": "982654802e3a54b6e299b8f6d43fb0ec1153b3cad7d58879569ca5e2e60e9125"
+    },
+    "app/exit_rules_v33.py": {
+      "identical": true,
+      "sha256": "d805966688094695067efd3652a31c9b644ba4711e70ec391b935b48dfe9fdc2"
+    },
+    "app/exit_timeline.py": {
+      "identical": true,
+      "sha256": "c2a51847f11325626885eea57ea9f1aa61008755420f985e4260ff773657e3e6"
+    },
+    "app/exit_wait_v65.py": {
+      "identical": true,
+      "sha256": "e72f4cf9ef6a2b5d6a85cd99c8753c998eca40cfe6859793ce27949bbb4c6361"
+    },
+    "app/export_data.py": {
+      "identical": true,
+      "sha256": "ced34efcb36f2378e85cf30e199887eb65e1bd265224c3344557daa8d3514c0c"
+    },
+    "app/failure_cause.py": {
+      "identical": true,
+      "sha256": "25cfa8758a352a2aa6bcba958eaaf5e01cfca23f71966f44cff0432381b88c86"
+    },
+    "app/fresh_retry.py": {
+      "identical": true,
+      "sha256": "b85379190fb54f9f9802ba6b4c9baff0bcdaecef28c3d167290d145ff7c2425c"
+    },
+    "app/jito_execution.py": {
+      "identical": true,
+      "sha256": "c3cd49bee7b380ed3f48d081126479e4251d5b03457c4f6df08a6d1dfddcc397"
+    },
+    "app/json_arrays.py": {
+      "identical": true,
+      "sha256": "937241987b599b9e6e295b67296c592f2503b4c703f8c87af501976f65ae69d2"
+    },
+    "app/late_spawn.py": {
+      "identical": true,
+      "sha256": "ab728543ac1f565a71f747cb560d54cb569e1bf484b3711016b7a316adaf57a5"
+    },
+    "app/launcher.py": {
+      "identical": true,
+      "sha256": "42b213302f0e2130aa0dfc1030833f29ad82b3644a2323c9592093567105e183"
+    },
+    "app/live_execution.py": {
+      "identical": true,
+      "sha256": "772e237f9ce7c49ca15392accaa32a21803ebf279bcbf4053cd9684d64be53bd"
+    },
+    "app/local_simulation.py": {
+      "identical": true,
+      "sha256": "75b90f7d36e61e58a438bd04c1f2174475b66cc0c5cc9fed47603fac2bad2a4a"
+    },
+    "app/main.py": {
+      "identical": true,
+      "sha256": "35f20c231286fcca7e8dc7459da30bc1415759e6e2047604c4c8e484ba57a029"
+    },
+    "app/market_watchdog.py": {
+      "identical": true,
+      "sha256": "6a87cc41f088763488099950019f7e92ef58d735445fb8c4d46db8f8091062b8"
+    },
+    "app/model_gate.py": {
+      "identical": true,
+      "sha256": "f8883c013c6d203ee00cadc3a9d3e21b59352b1a6bdfd81bf95cbd41ff17b51f"
+    },
+    "app/monitor_artifacts.py": {
+      "identical": true,
+      "sha256": "94671a733970cc8726ee2c57699f791c7163401d2508b6fec0088826896f7a81"
+    },
+    "app/monitor_file_reader.py": {
+      "identical": true,
+      "sha256": "380cdc5c79160e041561226957327ac29e2d45c9cf2c465f94017afd21411430"
+    },
+    "app/monitor_history.py": {
+      "identical": true,
+      "sha256": "3cc243d82435fb7d83558198cd3941b440d3a4ff2fa9fa04ba6e0de884e62366"
+    },
+    "app/monitor_lifetime.py": {
+      "identical": true,
+      "sha256": "823172b92dd71814c40e1bc1b8d1ac66a3bca7834346b541aa958aed821399ff"
+    },
+    "app/monitor_selftest.py": {
+      "identical": true,
+      "sha256": "89382030975735f3f238016571fb8edf77838456c0080b9f1163e96c5ecdd43c"
+    },
+    "app/monitor_service.py": {
+      "identical": true,
+      "sha256": "2af7b2da1a7d6270a0800484740ae074c51a1e184150f2a421924b941358f7d1"
+    },
+    "app/monitor_state.py": {
+      "identical": true,
+      "sha256": "6061f60f356ecd957943ad79d1221288bd621b1e6ecf1a21375218f6dcea1136"
+    },
+    "app/network_check_v88.py": {
+      "identical": false,
+      "sha256": "b63f3713df540fcd2548d7fb23c0948b0d649c3e963f6e874f4b660666ef537c"
+    },
+    "app/observation_lab.py": {
+      "identical": true,
+      "sha256": "4d6f98c8f68e809643982f6170aa1650cdad846ede8632c8dd9a8120ea1a7bcc"
+    },
+    "app/paper_branch.py": {
+      "identical": true,
+      "sha256": "dce989f2125f4cf5a208440e6e5fc38ab20f34e0ea6a875d5dbf6d8d6b698147"
+    },
+    "app/paper_capital.py": {
+      "identical": true,
+      "sha256": "0eba316b935ea1af3b8cb92b696081141b05561d1de6583c9bbc28573cfe4e1c"
+    },
+    "app/perf_check_v87.py": {
+      "identical": true,
+      "sha256": "d2f651a148486d3f321aadbd5a9b93184bad5521a42f123fd44d90f512161809"
+    },
+    "app/position_monitor.py": {
+      "identical": true,
+      "sha256": "b4712dcb1ae173f333b7cbee4a00831bd803215cc05fd3f24e7e31226c47b335"
+    },
+    "app/preentry.py": {
+      "identical": true,
+      "sha256": "fb148197b9e883fd84500a9750a55383b4bef080abeb9643c40e725522e99cf7"
+    },
+    "app/price_exit_trial.py": {
+      "identical": true,
+      "sha256": "448736e2f283281b5732329f3aa612709f9410de825f491d7054d6c8177a0623"
+    },
+    "app/primary_integrity.py": {
+      "identical": true,
+      "sha256": "182b80008cd6dd2abf4e34b28d3eb88480dcbcd2ee1202092a0e10ca723fe95e"
+    },
+    "app/priority_exit.py": {
+      "identical": true,
+      "sha256": "e71238872c8ec78098c67851bb9b9f74a6c09044e6ba32736bf1d67f15d700c5"
+    },
+    "app/program_cache.py": {
+      "identical": true,
+      "sha256": "4303ec1b1975d8bae1653d5079a463da880632075d40b246fe58f7fa4bb635c9"
+    },
+    "app/recovery_evidence.py": {
+      "identical": true,
+      "sha256": "01764f30b2913cd7fd5239a7c3552cc253d0df6df3ccfe6df6dc980b64f5e70c"
+    },
+    "app/recovery_gate.py": {
+      "identical": true,
+      "sha256": "c029bb9f84fe20e91b1a5f979bbdfa704f61dd047d7b35e53d08a376a4fcd2f4"
+    },
+    "app/recovery_progress.py": {
+      "identical": true,
+      "sha256": "13d16f51bff2833fe7988559acd72edb7f9ba743d15f0ae4330bd06be828e283"
+    },
+    "app/recovery_selftest.py": {
+      "identical": false,
+      "sha256": "c91713f14ec442ca4a5b3629ef08cf282a2cf632052ebb2c881897fcd0dd45a7"
+    },
+    "app/release_guard.py": {
+      "identical": false,
+      "sha256": "fba47fa5c887d1d0de150b09ca8f9820f2a7a2198d1b99be1249122350c306f3"
+    },
+    "app/replay_existing_db.py": {
+      "identical": true,
+      "sha256": "e48ea8aa55ea0d685acbcec08e5816e19359092cfc7e9182ceb9c1084c177c4f"
+    },
+    "app/replay_log.py": {
+      "identical": true,
+      "sha256": "cb700882e9ae7850a9b7a848508cb8fc3cc56f327c89afd16a75ebba1c815742"
+    },
+    "app/replay_research.py": {
+      "identical": true,
+      "sha256": "e22b5068ce99bd38f042f6beffc620a32048dfe7ebc7145034eb5470f133efb4"
+    },
+    "app/roadmap_progress.py": {
+      "identical": true,
+      "sha256": "6c8c193ca2d02c3651b20f82aca1ab01af9b522cfadd10089913d1ffc66f46f5"
+    },
+    "app/roundtrip_simulation.py": {
+      "identical": true,
+      "sha256": "75d281ab7e80c135e9918855b04fa3216feda8d1b22b980041ab45f01b3eb0d5"
+    },
+    "app/route_branch.py": {
+      "identical": true,
+      "sha256": "a1526e0824c8b89da4d331f04c09baa9086ee6f91eec1dd1c70dd5b08b0e4ad5"
+    },
+    "app/rpc_budget.py": {
+      "identical": true,
+      "sha256": "a7078b4e944161eb5139f71300062af8f6dc33206a5fdee70b1a32c92e00181d"
+    },
+    "app/rpc_client.py": {
+      "identical": true,
+      "sha256": "e08a19175f92a02a9b987d9dcfeef1d4cdedcfe30f4a9ee4a8565248f3d6cf62"
+    },
+    "app/rpc_evidence_v892.py": {
+      "identical": true,
+      "sha256": "f73a11ef55706c713d51d694b0b53bbd150df19d024cfaeb73dd91ef12bddb90"
+    },
+    "app/rpc_priority.py": {
+      "identical": true,
+      "sha256": "191373195d58a3f7e263330e0618d83cf2f88c53146f9540c89b3d6c6dbe2df9"
+    },
+    "app/rpc_timing.py": {
+      "identical": true,
+      "sha256": "6ff3d76bce436569f726b7f6e2f51e8d2956c0b41d6676ec5cb5392119020e4b"
+    },
+    "app/run_audit.py": {
+      "identical": true,
+      "sha256": "9284a3c168019e9b9907f6a4aae96f525909c9b10a26ac6679207971e4778a50"
+    },
+    "app/runtime_benchmark.py": {
+      "identical": true,
+      "sha256": "9a279a1908fa5f65f1aa352d01ef8b878c7131710c907b802c143c6919a39699"
+    },
+    "app/runtime_control.py": {
+      "identical": true,
+      "sha256": "4a388c6a37c5512b6aa862b466cab1c11673815675adfa19f1fcf578e9b83e28"
+    },
+    "app/runtime_status.py": {
+      "identical": true,
+      "sha256": "a62f5469de8e24107681dade6b86577dbe5edc5d66be7dec3eb4f2309672fa82"
+    },
+    "app/setup_quotes.py": {
+      "identical": true,
+      "sha256": "06d7cc1dedd2a6f35ff2948516fc8200744cc62a7c019fc1a574affd21a61ad7"
+    },
+    "app/shadow_preflight.py": {
+      "identical": true,
+      "sha256": "6967c76b810217af937a70ba2f3e608c96ea613fa1c527cdb8ee1e49dbd56062"
+    },
+    "app/shared_lots.py": {
+      "identical": true,
+      "sha256": "c5c619ea24d11cdac7963011a300783dc649a688284272854cd32b23cb92feba"
+    },
+    "app/shutdown_audit.py": {
+      "identical": true,
+      "sha256": "750067294ed2f325757a862f5a4477e95c88b0935baeec32bea4abd9dfddd25f"
+    },
+    "app/signal_exit.py": {
+      "identical": true,
+      "sha256": "b49223ce3bb9d73e49e2205550eec0939e94e7ae05cf0129b6bd212b8dbd990a"
+    },
+    "app/spawn_report_v89.py": {
+      "identical": true,
+      "sha256": "435bfa83b74e123cc29fd5032d5c8aff2f4dc4c395011496c41ec0bd9c6a9a58"
+    },
+    "app/sqlite_diagnostics.py": {
+      "identical": true,
+      "sha256": "14a4c5d71f3a2f0c170554b8bcdfefdf1fccee5c15aeb8eba80249bf40befc0f"
+    },
+    "app/sqlite_preserve.py": {
+      "identical": true,
+      "sha256": "dedd35035673494b3b04df2f9a0c326cd458415b2d1183ff27ac2d54f8afc635"
+    },
+    "app/state_io.py": {
+      "identical": true,
+      "sha256": "6c36ea9873bb2f7dc301ddc49d15f088aaab2ff006ca0034129a7757fb4bd75a"
+    },
+    "app/strategy_diagnostics.py": {
+      "identical": true,
+      "sha256": "c59766b857af40e4144ec6e6f0321cbc94de9b69578e940597a0c4996686cab3"
+    },
+    "app/stream_diagnostics.py": {
+      "identical": true,
+      "sha256": "caeb4afc047867cdbef2e39c7138d543b235d23f42b1b46109e1d7c986796e72"
+    },
+    "app/system_health.py": {
+      "identical": true,
+      "sha256": "3239b77bca29057a7461a275961757443bb479a764628bf3d652e36b4444ff78"
+    },
+    "app/target_amm_check.py": {
+      "identical": true,
+      "sha256": "3b2a55c80962ba369dcc175d8a9fbbc62ac7159f79ea15567e73d6acc2df28a2"
+    },
+    "app/threshold_lab.py": {
+      "identical": true,
+      "sha256": "852af9e4664650de964e9e888ae400ca7b390966b468e1e6d1ef6017ac5fbbc7"
+    },
+    "app/time_check.py": {
+      "identical": true,
+      "sha256": "631a287d18838bace89c7f7c90986c598c78741cfca1ffa0822b97c506712f9e"
+    },
+    "app/time_order_audit.py": {
+      "identical": true,
+      "sha256": "1462289929e84e297760e4a45f9696930c590826187e9ff8eaf9ffa05440317a"
+    },
+    "app/wallet_costs.py": {
+      "identical": true,
+      "sha256": "6cd1551fc0e7b37f39730550dc5532170b24a61f80ffd1957d5ba9de0005637d"
+    },
+    "app/wallet_manager.py": {
+      "identical": true,
+      "sha256": "e91e23142ca1d3d8ce61b42b8b94317e9a0ac76c70a0fa037aca30e62df91654"
+    },
+    "app/wallet_signer.py": {
+      "identical": true,
+      "sha256": "cc4d2fd8df5d578eb35faf5ed43d87f20452378a98c167a55ca31aaf70cfe9a8"
+    },
+    "app/windows_child.py": {
+      "identical": true,
+      "sha256": "18fb6f161a62e1b96a6a8dd073f0ae19c0b0a316ccc03f81e920d4478ede641c"
+    }
+  }
+}

@@ -20,23 +20,37 @@ def local_components(row, inventory, entry_cost):
         out.update(snapshot_ts=r.get('snapshot_received_ts'),snapshot_slot=sale.get('snapshot_slot'),
                    snapshot_started_ts=r.get('snapshot_started_ts'),
                    raw_amount=sale.get('raw_amount'))
-        if (r.get('status')!='CHECKED' or sale.get('status')!='LOCAL_SWAP_EXECUTED'
-                or r.get('zero_token_control_ok') is not True):return out
-        if not inventory or inv.get('mint')!=row['mint'] or sale.get('mint')!=row['mint']:
+        amm=(r.get('status')=='AMM_SALE_EXECUTED' and sale.get('status')=='AMM_SALE_EXECUTED' and r.get('route')=='PUMP_AMM' and job.get('route')=='PUMP_AMM')
+        curve=r.get('status')=='CHECKED' and sale.get('status')=='LOCAL_SWAP_EXECUTED'
+        if not (amm or curve) or r.get('zero_token_control_ok') is not True:return out
+        if not inventory or inv.get('mint')!=row['mint'] or (job.get('mint')!=row['mint'] if amm else sale.get('mint')!=row['mint']):
             out['accounting_status']='INVENTORY_MISMATCH';return out
         for k in ('size_usdc','sol_usdc','token_units','entry_sol_price'):
             a,b=Decimal(str(inv[k])),Decimal(str(inventory[k]))
             if not a.is_finite() or a<=0 or a!=b:raise ValueError('inventory')
         raw=str(inventory['raw_amount'])
         if raw!=str(sale['raw_amount']) or raw!=str(sale['tokens_debited']) or int(raw)<=0:raise ValueError('amount')
-        fields=['seller_net_sol_delta_lamports','pool_sol_delta_lamports',
+        topup=0
+        if amm:
+            if (str(sale.get('pool_tokens_credited'))!=raw or sale.get('err') is not None or
+                any(x.get('broadcast') is not False or x.get('paper_mutated') is not False for x in (r,sale))):raise ValueError('isolated effects')
+            fields=['quote_received_lamports','wallet_sol_delta_lamports','base_account_rent_lamports','quote_account_rent_lamports',
+                    'local_fee_lamports','volume_rent_delta_lamports','pool_rent_topup_lamports','net_after_setup_lamports']
+            if any(type(sale.get(k))!=int for k in fields):
+                out['accounting_status']='MISSING_COST_COMPONENT';return out
+            gross,wallet,base,quote,fee,volume,topup,after=[sale[k] for k in fields]
+            token=base+quote;net=gross+wallet
+            if min(base,quote,fee,volume,topup)<0 or after!=net-token:raise ValueError('AMM balance decomposition')
+        else:
+            fields=['seller_net_sol_delta_lamports','pool_sol_delta_lamports',
                 'local_fee_from_balance_diff_lamports','synthetic_token_rent_lamports',
                 'volume_account_rent_delta_lamports']
-        if any(type(sale.get(k))!=int for k in fields):
-            out['accounting_status']='MISSING_COST_COMPONENT';return out
-        net,pool,fee,token,volume=[sale[k] for k in fields]
-        gross=-pool;residual=gross-net-fee-volume
+            if any(type(sale.get(k))!=int for k in fields):
+                out['accounting_status']='MISSING_COST_COMPONENT';return out
+            net,pool,fee,token,volume=[sale[k] for k in fields];gross=-pool
+        residual=gross-net-fee-volume
         if gross<=0 or min(fee,token,volume,residual)<0:raise ValueError('balance decomposition')
+        if residual<topup:raise ValueError('unreconciled topup')
         fx=Decimal(str(inv['sol_usdc']));size=float(inv['size_usdc'])
         cv=lambda n:float(Decimal(n)*fx/10**9)
         receipt=cv(net-token)
@@ -48,11 +62,13 @@ def local_components(row, inventory, entry_cost):
             trading_component=trading,entry_cost=entry_cost,
             exit_fee_balance_residual=cv(residual),local_transaction_fee=cv(fee),
             token_account_setup=cv(token),volume_account_setup=cv(volume),
+            gross_basis='SELLER_QUOTE_RECEIPT_BEFORE_ACCOUNT_SETUP' if amm else 'POOL_SOL_DEBIT',
+            pool_rent_topup_subset_of_residual=cv(topup),
             receipt_units=receipt,pnl_units=pnl,pnl_without_setup=pnl+cv(token+volume),
             fx=float(fx),amount_matches=True,
             pool_debit_price_sol=float(Decimal(gross)/10**9/Decimal(inv['token_units'])),
             unknown_costs=['fees_retained_inside_pool','priority_and_landing','failed_network_transactions'],
-            note='Pool debit minus size is not a fee-free market return. Residual groups balance differences; individual protocol fees not inferred. Net already includes local fee and volume setup; token setup subtracted once. Setup-excluded result is sensitivity only, not a REPEAT-wallet replay.')
+            note=('AMM gross is seller quote receipt, not a fee-free pool debit. ' if amm else '')+'Pool debit minus size is not a fee-free market return. Residual groups balance differences, including reported pool topup; individual protocol fees not inferred. Net already includes local fee and volume setup; token setup subtracted once. Setup-excluded result is sensitivity only, not a REPEAT-wallet replay.')
     except (ValueError,TypeError,KeyError,AttributeError,ArithmeticError):
         out['accounting_status']='INVALID_OR_INCOMPLETE_PAYLOAD'
     return out
@@ -99,7 +115,7 @@ def summary(c, signal_report=None):
             choice=selected.get(tid)
             if choice:
                 a=by_id.get(choice['check_id']);item['selected_signal_exit']=a
-                if a and a.get('accounting_status')=='RECONCILED':
+                if a and a.get('accounting_status')=='RECONCILED' and a.get('gross_basis')=='POOL_SOL_DEBIT':
                     # Replace all exit costs with the same explicit PAPER scenario.
                     # Start from pool debit, never charge again on seller net.
                     rate=s['pool_rate']+settings['route_rate'];fixed=settings['fixed_per_fill']
@@ -108,6 +124,8 @@ def summary(c, signal_report=None):
                         paper_pnl=item['paper']['pnl_units'],local_pnl=normalized,
                         delta=normalized-item['paper']['pnl_units'],setup_excluded_both=True,
                         note='Diagnostic same-cost scenario, not wallet proceeds. Uses PAPER tick exit fee rate on both price bases. Pool debit may retain embedded fees; time, impact and source differences remain.')
+                elif a and a.get('gross_basis')=='SELLER_QUOTE_RECEIPT_BEFORE_ACCOUNT_SETUP':
+                    item['common_exit_cost_status']='UNKNOWN_AMM_GROSS_IS_ALREADY_SELLER_QUOTE_RECEIPT'
         rows.append(item)
     paired=[r['common_exit_cost_scenario'] for r in rows if 'common_exit_cost_scenario' in r]
     return dict(version='COST_PRICE_AUDIT_V1',rows=rows,closed_count=len(rows),

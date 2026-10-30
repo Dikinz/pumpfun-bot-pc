@@ -1,0 +1,65 @@
+{
+  "scope": "LINUX_OFFLINE_COORDINATION_ONLY",
+  "actual_http": false,
+  "production_limit_changed": false,
+  "test_rate": 1000,
+  "requests_per_trial": 50,
+  "trials": {
+    "v941": [
+      {
+        "opens": 150,
+        "closes": 150,
+        "explicit_commits": 100,
+        "gc_autocommits": 50,
+        "elapsed_s": 0.280106620999959,
+        "requests": 50
+      },
+      {
+        "opens": 150,
+        "closes": 150,
+        "explicit_commits": 100,
+        "gc_autocommits": 50,
+        "elapsed_s": 0.3142097110001032,
+        "requests": 50
+      },
+      {
+        "opens": 150,
+        "closes": 150,
+        "explicit_commits": 100,
+        "gc_autocommits": 50,
+        "elapsed_s": 0.30534370500004115,
+        "requests": 50
+      }
+    ],
+    "v95": [
+      {
+        "opens": 0,
+        "closes": 0,
+        "explicit_commits": 100,
+        "gc_autocommits": 0,
+        "elapsed_s": 0.08877944999994725,
+        "requests": 50
+      },
+      {
+        "opens": 0,
+        "closes": 0,
+        "explicit_commits": 100,
+        "gc_autocommits": 0,
+        "elapsed_s": 0.0775310819999504,
+        "requests": 50
+      },
+      {
+        "opens": 0,
+        "closes": 0,
+        "explicit_commits": 100,
+        "gc_autocommits": 0,
+        "elapsed_s": 0.10164102699991417,
+        "requests": 50
+      }
+    ]
+  },
+  "median_elapsed_s": {
+    "v941": 0.30534370500004115,
+    "v95": 0.08877944999994725
+  }
+}

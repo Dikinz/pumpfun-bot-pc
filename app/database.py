@@ -9,12 +9,27 @@ import entry_diagnostics
 import diagnostics,exit_quotes,execution_verification,auto_simulation,exit_comparison,preentry
 import replay_log,cost_evidence,execution_model,paper_capital,entry_activity
 
+class LocalDatabaseFailure(RuntimeError):pass
+
 class Connection(sqlite3.Connection):
+    runtime_busy_timeout_ms=30000
     def logged(self,operation,fn,*args):
+        import runtime_control as rt
+        p=rt.ACTIVE
+        tracked=p is not None and p.main_thread==threading.get_ident()
+        previous=getattr(p,'sql_v91',None) if tracked else None
+        if tracked:
+            statement=args[0] if args and isinstance(args[0],str) else operation
+            target=__import__('re').search(r'(?i)\b(?:INTO|UPDATE|FROM)\s+([a-z_][a-z_0-9]*)',statement)
+            p.sql_v91=dict(operation=operation,database=Path(config.DB).name,started_ts=time.time(),started_mono=time.monotonic(),busy_timeout_ms=self.runtime_busy_timeout_ms,in_transaction=self.in_transaction,
+                table_v94=target.group(1) if target else None,statement_sha256_v94=__import__('hashlib').sha256(statement.encode()).hexdigest())
         try:return fn(*args)
         except sqlite3.Error as exc:
-            __import__('sqlite_diagnostics').record(config.DB,operation,exc,in_transaction=self.in_transaction)
+            callers=[dict(file=Path(f.filename).name,function=f.name,line=f.lineno) for f in __import__('traceback').extract_stack(limit=8)[:-1]]
+            __import__('sqlite_diagnostics').record(config.DB,operation,exc,in_transaction=self.in_transaction,busy_timeout_ms=self.runtime_busy_timeout_ms,callers_v92=callers)
             raise
+        finally:
+            if tracked:p.sql_v91=previous
     def execute(self,sql,parameters=(),/):
         import runtime_control as rt
         op="SQL_"+(sql.lstrip().split(None,1)[0].upper() if sql.strip() else 'EMPTY')
@@ -36,13 +51,27 @@ def atomic():
     c.atomic_depth+=1
     try:
         yield c
-    except BaseException:
-        c.atomic_depth-=1
-        if outer:c.rollback()
-        raise
-    else:
-        c.atomic_depth-=1
         if outer:c.commit()
+    except BaseException:
+        if outer:
+            try:c.rollback()
+            except BaseException as exc:raise LocalDatabaseFailure('SQLITE_ROLLBACK_UNCONFIRMED') from exc
+        raise
+    finally:
+        c.atomic_depth-=1
+
+@contextmanager
+def telemetry_atomic():
+    """Zero lock-wait budget for retryable, nonfinancial receive counters only."""
+    c=con()
+    if c.in_transaction:raise RuntimeError('TELEMETRY_INSIDE_TRANSACTION')
+    previous=c.runtime_busy_timeout_ms
+    c.execute('PRAGMA busy_timeout=0');c.runtime_busy_timeout_ms=0
+    try:
+        with atomic():yield c
+    finally:
+        try:c.execute('PRAGMA busy_timeout='+str(previous));c.runtime_busy_timeout_ms=previous
+        except sqlite3.Error as exc:raise LocalDatabaseFailure('TELEMETRY_TIMEOUT_RESTORE_FAILED') from exc
 
 _LOCAL=threading.local()
 def con():
@@ -63,6 +92,8 @@ def runtime_mode():
     # Runtime lock contention must fail visibly instead of blocking every callback for 30s.
     # Schema migrations/startup keep their original budget; financial atomic rollback unchanged.
     con().execute('PRAGMA busy_timeout=250')
+    con().runtime_busy_timeout_ms=250
+    __import__('sqlite_diagnostics').record(config.DB,'RUNTIME_MODE',busy_timeout=250)
 
 
 def init():

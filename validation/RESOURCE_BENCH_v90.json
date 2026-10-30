@@ -1,0 +1,26 @@
+{
+  "scope": "Linux Python heap microbenchmarks on retained user snapshot/history; not whole-process Windows RSS",
+  "bundle_compaction": {
+    "before": {
+      "median_ms": 163.986,
+      "peak_python_bytes": 48724554
+    },
+    "after": {
+      "median_ms": 90.433,
+      "peak_python_bytes": 31468696
+    },
+    "equivalent": true
+  },
+  "monitor_history": {
+    "rows": 181,
+    "before": {
+      "median_ms": 21.42,
+      "peak_python_bytes": 9899994
+    },
+    "after": {
+      "median_ms": 30.696,
+      "peak_python_bytes": 424592
+    },
+    "equivalent": true
+  }
+}

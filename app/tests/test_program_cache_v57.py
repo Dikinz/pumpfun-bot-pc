@@ -83,7 +83,8 @@ def test_same_slot_code_not_seeded_as_rooted(setup):
     rpc,store=setup;rpc.root=rpc.upgrade
     result=rpc.capture(store)
     assert result['program_cache']['mode']=='FULL_FRESH'
-    with sqlite3.connect(store.path) as c:assert c.execute('SELECT COUNT(*) FROM programs').fetchone()[0]==0
+    if store.path.exists():
+        with sqlite3.connect(store.path) as c:assert c.execute('SELECT COUNT(*) FROM programs').fetchone()[0]==0
 
 def test_disabled_cache_uses_one_full_bank_without_genesis(setup):
     rpc,store=setup;rpc.config.PROGRAM_CACHE_ENABLED=False

@@ -3,7 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().with_name(".env"))
 
-VERSION="v0.7.76"
+VERSION="v0.7.95"
 EXECUTION_MODE=os.getenv("EXECUTION_MODE","paper").strip().lower()
 if EXECUTION_MODE!="paper":raise RuntimeError("Main strategy live adapter is not validated; EXECUTION_MODE must remain paper.")
 DB=os.getenv("DATABASE_PATH","data/clean_0762.db")
@@ -366,3 +366,9 @@ PREFLIGHT_ENABLED=True
 
 # Execution infrastructure only; no strategy or clock threshold.
 PROGRAM_CACHE_ENABLED=os.getenv("PROGRAM_CACHE_ENABLED","1")=="1"
+
+# v0.7.95: common admission for PAPER RPC readers; not a trading threshold.
+RPC_CONTROL_DIR=Path(os.getenv('RPC_CONTROL_DIR',str(Path(__file__).resolve().parent/'data/rpc_control_v89')))
+RPC_MAX_REQUESTS_PER_SECOND=float(os.getenv('RPC_MAX_REQUESTS_PER_SECOND','6'))
+RPC_MAX_INFLIGHT=int(os.getenv('RPC_MAX_INFLIGHT','4'))
+RPC_ADMISSION_WAIT_SECONDS=float(os.getenv('RPC_ADMISSION_WAIT_SECONDS','0.75'))

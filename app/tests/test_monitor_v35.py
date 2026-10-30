@@ -50,6 +50,7 @@ def test_stop_not_counted_as_technical_error(fresh):
 
 def test_real_scheduler_initial_lane_while_regular_busy(fresh,monkeypatch,tmp_path):
     tid=prepare(fresh);stop=threading.Event();started=[]
+    __import__('recovery_gate').Coordinator(__import__('config').DB,'offline-primary')
     with closing(ms.connect()) as c:
         job=pm.next_job(c,time.time());pm.finish(c,job,{'status':'REQUEST_TIMEOUT'})
         c.execute('UPDATE position_checks_v0730 SET started_ts=started_ts-20 WHERE id=?',(job['id'],))

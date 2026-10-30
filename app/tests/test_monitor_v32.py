@@ -51,6 +51,6 @@ def test_real_child_vm_with_parent_stdin_pipe():
 
 def test_timeout_has_progress_and_exportable_diagnostic(tmp_path):
     r=asyncio.run(pm.launch_check({},tmp_path,timeout=.001))
-    assert r['status']=='REQUEST_TIMEOUT'
+    assert r['status']=='WORKER_TIMEOUT'
     assert r['progress']['stage'] in ('SPAWN','CHILD_STARTED','IMPORTS','TOKEN_METADATA','SAVE_RESULT')
     assert (tmp_path/'diagnostic.zip').exists()

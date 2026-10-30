@@ -105,9 +105,17 @@ def distribution(values):
     return dict(n=len(a),p50_ms=a[max(0,math.ceil(len(a)*.5)-1)] if a else None,p95_ms=a[max(0,math.ceil(len(a)*.95)-1)] if a else None,max_ms=max(a) if a else None)
 
 def rpc_summary(reports):
-    groups={};missing=0;stages={};cache=dict(jobs=0,hits=0,downloads=0,bytecode_bytes_reused=0,modes={})
+    groups={};missing=0;stages={};control_values={k:[] for k in ('metadata_hold_ms','sqlite_commit_ms')};control_counts={k:0 for k in ('connections_opened','transactions','outcomes_drained')};contention={}
+    cache=dict(jobs=0,hits=0,downloads=0,bytecode_bytes_reused=0,modes={})
     for report in reports:
         d=report.get('rpc_timing') or {}
+        observed=set()
+        chains=[(report.get('network_error') or {}).get('chain') or []]+[(row.get('error') or {}).get('chain') or [] for row in d.get('requests',[])]
+        for chain in chains:
+            for item in chain:
+                c=item.get('control_v95') or {}
+                if c.get('stage'):observed.add(c['stage'])
+        for stage in observed:contention[stage]=contention.get(stage,0)+1
         if not d:missing+=1
         pc=d.get('program_cache')
         if pc:
@@ -116,6 +124,11 @@ def rpc_summary(reports):
             mode=pc.get('mode','UNKNOWN');cache['modes'][mode]=cache['modes'].get(mode,0)+1
         for interval in d.get('stages',[]):stages.setdefault(interval['stage'],[]).append(interval.get('elapsed_ms'))
         for row in d.get('requests',[]):
+            control=(row.get('rpc_admission_v89') or {}).get('control_v95') or {}
+            for field in control_values:
+                if type(control.get(field)) in (int,float):control_values[field].append(control[field])
+            for field in control_counts:
+                if type(control.get(field)) in (int,float) and math.isfinite(control[field]) and control[field]>=0:control_counts[field]+=control[field]
             key=(row.get('stage'),row.get('method'));g=groups.setdefault(key,dict(stage=key[0],method=key[1],requests=0,errors=0,incomplete=0,http_statuses={},phases={},durations=[]))
             g['requests']+=1;g['errors']+=row.get('status') in ('ERROR','RPC_ERROR');g['incomplete']+=row.get('status')=='STARTED'
             g['durations'].append(row.get('elapsed_ms'))
@@ -125,7 +138,7 @@ def rpc_summary(reports):
             if row.get('http_status') is not None:
                 k=str(row['http_status']);g['http_statuses'][k]=g['http_statuses'].get(k,0)+1
     for g in groups.values():g['elapsed']=distribution(g.pop('durations'));g['phases']={k:distribution(v) for k,v in g['phases'].items()}
-    return dict(program_cache=cache,groups=list(groups.values()),stage_intervals=[dict(stage=k,elapsed=distribution(v)) for k,v in stages.items()],uninstrumented_jobs=missing,note='Current run only. OPEN_HEADERS combines connection and server wait. Missing data is unknown. Durations are monotonic; instrumentation adds checkpoint IO.')
+    return dict(control_v95=dict(timings={k:distribution(v) for k,v in control_values.items()},counts=control_counts,checks_by_contention_stage=contention,note='Local coordination only; nested in worker time, not network latency. Contention counts deduplicated by stage within a check.'),program_cache=cache,groups=list(groups.values()),stage_intervals=[dict(stage=k,elapsed=distribution(v)) for k,v in stages.items()],uninstrumented_jobs=missing,note='Current run only. OPEN_HEADERS combines connection and server wait. Missing data is unknown. Durations are monotonic; instrumentation adds checkpoint IO.')
 
 def run_start(c):
     try:

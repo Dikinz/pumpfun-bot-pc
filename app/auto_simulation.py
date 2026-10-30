@@ -127,21 +127,18 @@ async def run_job(job):
     job['input_json']=json.dumps(data)
     db.con().execute('UPDATE auto_sim_v0727 SET input_json=? WHERE order_id=?',(job['input_json'],oid))
     (out/'input.json').write_text(job['input_json'])
-    proc=None
     try:
-        proc=await asyncio.create_subprocess_exec(sys.executable,str(Path(__file__).resolve()),'--child',str(out),
-                  stdout=asyncio.subprocess.DEVNULL,stderr=asyncio.subprocess.DEVNULL)
-        await asyncio.wait_for(proc.wait(),TIMEOUT)
-        if proc.returncode!=0 or not (out/'result.json').exists():result={'status':'CHILD_ERROR','returncode':proc.returncode}
-        else:result=json.loads((out/'result.json').read_text())
+        import position_monitor as pm
+        payload=json.loads(job['input_json']);payload.setdefault('id',job['order_id'])
+        result=await pm.launch_check(payload,out,timeout=TIMEOUT,child_script=__file__)
+        if result.get('status')=='WORKER_TIMEOUT':result['status']='SIMULATION_TIMEOUT'
         finish(db.con(),oid,result,str(out/'evidence.zip') if (out/'evidence.zip').exists() else None)
     except asyncio.TimeoutError:finish(db.con(),oid,{'status':'SIMULATION_TIMEOUT'})
     except asyncio.CancelledError:
         finish(db.con(),oid,{'status':'INTERRUPTED_STOP'});raise
-    except Exception as e:finish(db.con(),oid,{'status':'WORKER_ERROR_'+type(e).__name__})
-    finally:
-        if proc is not None and proc.returncode is None:
-            proc.kill();await proc.wait()
+    except Exception as e:
+        finish(db.con(),oid,{'status':'WORKER_ERROR_'+type(e).__name__,'error_type':type(e).__name__,'child_diagnostics_v73':getattr(e,'child_diagnostics_v73',{})})
+        if str(e).startswith('SIMULATION_CHILD_CLEANUP_') or getattr(e,'child_diagnostics_v73',{}).get('cleanup_exception'):raise
 
 async def worker():
     import database as db
@@ -167,7 +164,7 @@ def export_evidence(db_path,folder='exports'):
     folder=Path(folder);folder.mkdir(exist_ok=True,parents=True)
     with sqlite3.connect(Path(db_path).resolve().as_uri()+'?mode=ro',uri=True) as c:
         c.row_factory=sqlite3.Row;report=summary(c,limit=-1)
-        archives=list(c.execute('SELECT order_id,archive FROM auto_sim_v0727 WHERE archive IS NOT NULL'))
+        archives=list(c.execute('SELECT order_id,archive FROM auto_sim_v0727 WHERE started_ts IS NOT NULL OR archive IS NOT NULL'))
     target=folder/('auto_simulations_'+time.strftime('%Y%m%d_%H%M%S')+'.zip')
     with zipfile.ZipFile(target,'w',zipfile.ZIP_STORED) as z:
         z.writestr('summary.json',json.dumps(report,ensure_ascii=False,indent=2))
@@ -176,6 +173,9 @@ def export_evidence(db_path,folder='exports'):
             p=ROOT/oid/'evidence.zip'
             if p.is_file():z.write(p,oid+'/evidence.zip')
             else:missing.append(oid)
+            for name in ('diagnostic.zip','child_lifecycle_v73.json'):
+                f=ROOT/oid/name
+                if f.exists():z.write(f,oid+'/'+name)
         z.writestr('missing_evidence.json',json.dumps(missing))
     return target
 

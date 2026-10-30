@@ -1,5 +1,6 @@
 """Export-time verification of checks against actual ZIP members; no runtime writes."""
 import io,json,re,sqlite3,tempfile,zipfile
+from collections import Counter
 from pathlib import Path
 from contextlib import closing
 MANIFEST='artifact_manifest_v74.json'
@@ -29,16 +30,19 @@ def verify(target,copy_errors=()):
     """Read back ZIP and its SQLite backup, rather than trusting source existence."""
     rows=[];errors=list(copy_errors);db_match=False
     with zipfile.ZipFile(target) as z:
-        names=z.namelist();checks=json.loads(z.read('position_checks_v0730.json')) if 'position_checks_v0730.json' in names else []
+        names=z.namelist();member_counts=Counter(names);checks=[]
+        if 'position_checks_v0730.json' in names:
+            for row in __import__('json_arrays').read(z.open('position_checks_v0730.json')):
+                checks.append({k:row.get(k) for k in ('id','status','archive')})
         if 'position_checks_v0730.json' not in names:errors.append(dict(error='CHECK_LIST_MISSING'))
         ids=[r['id'] for r in checks]
         if len(ids)!=len(set(ids)):errors.append(dict(error='DUPLICATE_CHECK_ID'))
         for r in checks:
             cid=r['id'];entry=dict(check_id=cid,check_status=r['status'],files={},errors=[])
-            for name in FILES:entry['files'][name]=names.count(cid+'/'+name)==1
+            for name in FILES:entry['files'][name]=member_counts[cid+'/'+name]==1
             for name in ('diagnostic.zip','child_lifecycle_v73.json'):
                 path=cid+'/'+name
-                if names.count(path)!=1:entry['errors'].append('MISSING_OR_DUPLICATE_'+name);continue
+                if member_counts[path]!=1:entry['errors'].append('MISSING_OR_DUPLICATE_'+name);continue
                 try:
                     if name.endswith('.json'):d=read_json(z,path)
                     else:

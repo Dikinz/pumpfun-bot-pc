@@ -74,6 +74,8 @@ class Recorder:
     def __init__(self, primary):
         self.primary=primary;self.session=uuid.uuid4().hex;self.origin=time.monotonic()
         self.procs={};self.previous=set();self.last_sample=0.;self.last={}
+        self.loop_lag_window=__import__('collections').deque(maxlen=120)
+        self.monitor_observer=__import__('monitor_state').Observer(16.)
         event(primary,'LAUNCHER_START',session=self.session)
     def sample(self, processes, force=False):
         import psutil
@@ -95,7 +97,8 @@ class Recorder:
                     if cached is None:
                         cached=member;self.procs[member.pid]=cached;cached.cpu_percent(None)
                     mem=cached.memory_info().rss/1048576;usage=cached.cpu_percent(None)
-                    rows.append(dict(role=role if member.pid==p.pid else role+'_child',pid=member.pid,rss_mb=round(mem,2),cpu_pct=usage))
+                    handles=cached.num_handles() if hasattr(cached,'num_handles') else cached.num_fds() if hasattr(cached,'num_fds') else None
+                    rows.append(dict(role=role if member.pid==p.pid else role+'_child',pid=member.pid,rss_mb=round(mem,2),cpu_pct=usage,handles=handles,handles_kind='HANDLES' if hasattr(cached,'num_handles') else 'FD'))
                     rss+=mem;cpu+=usage
             except psutil.Error:
                 if not any(row['pid']==child.pid for row in rows):rows.append(dict(role=role,pid=child.pid,sample_status='UNAVAILABLE'))
@@ -112,22 +115,32 @@ class Recorder:
             data['open_positions']=opened
             data['event_loop_lag_ms']=float(meta.get('event_loop_lag_ms',0))
             if mono-self.origin>30 and (age>15 or age < -2):alerts.append('PRIMARY_HEARTBEAT_INVALID')
+            if __import__('math').isfinite(data['event_loop_lag_ms']):self.loop_lag_window.append(data['event_loop_lag_ms'])
+            window=sorted(self.loop_lag_window)
+            data['loop_lag_samples_v87']=dict(n=len(window),p50_ms=window[len(window)//2] if window else None,p95_ms=window[min(len(window)-1,int(len(window)*.95))] if window else None,scope='LAST_120_FIVE_SECOND_SAMPLES_NOT_EVERY_TICK')
             if data['event_loop_lag_ms']>500:alerts.append('EVENT_LOOP_LAG')
             data['database_bytes']=primary.stat().st_size
             wal=Path(str(primary)+'-wal');data['wal_bytes']=wal.stat().st_size if wal.exists() else 0
             data['disk_free_bytes']=shutil.disk_usage(primary.parent).free
             if data['disk_free_bytes']<512*1048576:alerts.append('LOW_DISK_SPACE')
             import monitor_service
-            monitor=monitor_service.service_status(self.primary,now)
-            data['monitor_status']=monitor.get('status')
-            if mono-self.origin>15 and monitor.get('status')!='RUNNING':alerts.append('MONITOR_NOT_RUNNING')
-            if monitor.get('overdue'):alerts.append('MONITOR_OVERDUE')
+            raw_monitor=monitor_service.read_state(self.primary)
+            monitor=self.monitor_observer.observe(raw_monitor,time.monotonic())
+            data['monitor_status']=monitor['status'];data['monitor_supervision_v86']=monitor
+            if mono-self.origin>15:
+                if monitor['status']!='RUNNING':alerts.append(monitor['status'])
+                if monitor['state_read_error_v86']:alerts.append('MONITOR_STATE_READ_ERROR')
+            if raw_monitor.get('overdue'):alerts.append('MONITOR_OVERDUE')
         except (OSError,sqlite3.Error,ValueError):alerts.append('SYSTEM_SAMPLE_UNAVAILABLE')
         if rss>1000:alerts.append('PROCESS_TREE_MEMORY_HIGH')
         data['resource_sample_complete']=not any('SAMPLE_UNAVAILABLE' in x for x in alerts)
         data['alerts']=sorted(set(alerts));current=set(alerts)
-        for code in current-self.previous:event(self.primary,'ALERT_OPEN',code=code,session=self.session)
-        for code in self.previous-current:event(self.primary,'ALERT_CLEARED',code=code,session=self.session)
+        for code in current-self.previous:
+            details=dict(supervision=data.get('monitor_supervision_v86')) if code.startswith('MONITOR_') and code not in ('MONITOR_EXITED','MONITOR_SAMPLE_UNAVAILABLE') else {}
+            event(self.primary,'ALERT_OPEN',code=code,session=self.session,**details)
+        for code in self.previous-current:
+            details=dict(supervision=data.get('monitor_supervision_v86')) if code.startswith('MONITOR_') and code not in ('MONITOR_EXITED','MONITOR_SAMPLE_UNAVAILABLE') else {}
+            event(self.primary,'ALERT_CLEARED',code=code,session=self.session,**details)
         self.previous=current
         if not event(self.primary,'SAMPLE',**data):data['alerts'].append('JOURNAL_WRITE_FAILED')
         try:write_state(self.primary,data)

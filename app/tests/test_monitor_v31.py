@@ -88,10 +88,11 @@ def test_deadline_warning_and_heartbeat_staleness(fresh,tmp_path):
         assert not ms.overdue(c,now+11)
         assert ms.overdue(c,now+13)[0]['late_s']==13-pm.INTERVAL
     ms.publish({'status':'RUNNING','heartbeat_ts':now,'pid':123})
-    assert ms.service_status(now=now+6)['status']=='NO_HEARTBEAT'
+    assert ms.service_status(now=now+16)['status']=='NO_HEARTBEAT'
 
 def test_independent_process_runs_with_stale_primary_heartbeat(fresh,tmp_path):
     open_case(fresh);fresh.execute("INSERT OR REPLACE INTO meta VALUES('heartbeat_ts',?)",(str(time.time()-100),))
+    gate=__import__('recovery_gate').Coordinator(config.DB,'offline-primary')
     script=tmp_path/'offline_monitor_process.py'
     script.write_text("""import sys,asyncio,time,threading
 sys.path.insert(0,sys.argv[1])
@@ -100,14 +101,13 @@ async def offline_job(job,connection=None):
     await asyncio.sleep(.1)
     pm.finish(connection,job,{'status':'OFFLINE_PROCESS_TEST'})
 pm.run_job=offline_job
-stop=threading.Event()
-threading.Thread(target=lambda:(sys.stdin.buffer.read(1),stop.set()),daemon=True).start()
-asyncio.run(ms.run(sys.argv[2],0,stop_event=stop))
+asyncio.run(ms.run_with_stdin(sys.argv[2],0))
 """)
     proc=subprocess.Popen([sys.executable,str(script),str(Path.cwd()),config.DB],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     try:
         deadline=time.monotonic()+8;state={}
         while time.monotonic()<deadline:
+            gate.save() # recovery publisher is independent of stale legacy heartbeat
             state=ms.read_state()
             if state.get('primary_stale') and state.get('heartbeat_ts') and ms.paths()['db'].exists():
                 with closing(ms.connect(readonly=True)) as c:

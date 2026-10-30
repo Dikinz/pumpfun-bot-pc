@@ -1,0 +1,29 @@
+{
+  "version": "v0.7.94.1",
+  "build_revision": "CLEANUP_TEST_SYNC_V941",
+  "full_suite": {
+    "passed": 1032,
+    "skipped": 16,
+    "failed": 0,
+    "seconds": 161.543
+  },
+  "controlled_suite": {
+    "passed": true,
+    "counts": {
+      "PASSED": 284,
+      "SKIPPED": 15
+    },
+    "seconds": 111.280766287,
+    "budget_s": 300
+  },
+  "fix": "Test setup awaits spawn_done and published PID/birth before returning the owner; strict ownership source remains PROCESS_HANDLE_CLEANUP_PENDING_V93. Added 200ms creation vs 80ms test-deadline regression.",
+  "native_windows_verified": false,
+  "live_rpc_test_run": false,
+  "production_runtime_code_changed": false,
+  "production_deadlines_changed": false,
+  "production_rpc_limits_changed": false,
+  "financial_thresholds_changed": false,
+  "windows_kernel_hang_cause_fixed": false,
+  "sqlite_hang_cause_fixed": false,
+  "limits": "Offline Linux suite and injected Windows-owner model. Actual Windows delayed-signal case is still mandatory in 04_CHECK; not run on this Linux host."
+}

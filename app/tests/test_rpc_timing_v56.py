@@ -128,12 +128,12 @@ def test_read_body_timeout_distinguished(tmp_path,monkeypatch):
 
 def test_real_child_timeout_preserves_checkpoint(tmp_path,monkeypatch):
     import asyncio,sys,position_monitor as pm
-    original=asyncio.create_subprocess_exec
+    original=pm.create_simulation_process
     code="import sys,time,rpc_timing as t;t.start(sys.argv[1]);t.stage('AMM_PROGRAM_BANK');s=t.request('getMultipleAccounts');s.__enter__();p=s.phase('OPEN_HEADERS');p.__enter__();time.sleep(3)"
-    async def spawn(*args,**kwargs):return await original(sys.executable,'-c',code,str(tmp_path),**kwargs)
-    monkeypatch.setattr(asyncio,'create_subprocess_exec',spawn)
+    async def spawn(args,out,trace):return await original([sys.executable,'-c',code,str(tmp_path)],out,trace)
+    monkeypatch.setattr(__import__('position_monitor'),'create_simulation_process',spawn)
     result=asyncio.run(pm.launch_check({},tmp_path,timeout=.7))
-    assert result['status']=='REQUEST_TIMEOUT'
+    assert result['status']=='WORKER_TIMEOUT'
     assert result['rpc_timing']['active_stage']=='AMM_PROGRAM_BANK'
     assert result['rpc_timing']['requests'][0]['active_phase']=='OPEN_HEADERS'
     import zipfile

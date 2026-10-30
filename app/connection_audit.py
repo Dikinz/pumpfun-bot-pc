@@ -10,7 +10,11 @@ def diagnostic(exc):
         for field in ('errno','winerror'):
             value=getattr(current,field,None)
             if isinstance(value,int):item[field]=value
-        if isinstance(current,urllib.error.HTTPError):
+        if getattr(current,'rpc_budget_reason',None):
+            category='LOCAL_RPC_ADMISSION';item.update(reason=current.rpc_budget_reason,retry_after_s=current.retry_after_s)
+            control=getattr(current,'control_v95',None)
+            if control is not None:item['control_v95']={k:control.get(k) for k in ('stage','error_type','sqlite_errorcode','sqlite_errorname')}
+        elif isinstance(current,urllib.error.HTTPError):
             item['http_status']=current.code;category='HTTP'
             retry=current.headers.get('Retry-After') if current.headers else None
             if retry and retry.isdigit():item['retry_after_s']=int(retry)
@@ -33,6 +37,11 @@ def streak(c,tid=None):
     where='trade_id=? AND ' if tid is not None else ''
     for row in c.execute('SELECT status,finished_ts,result_json,id FROM position_checks_v0730 WHERE '+where+'finished_ts IS NOT NULL ORDER BY finished_ts DESC,id DESC',(tid,) if tid is not None else ()):
         if row['status']=='INTERRUPTED_STOP':continue
+        # Local contention is neither a provider outage nor evidence of a
+        # successful check. Keep it in diagnostics but out of remote backoff.
+        if row['status'] in ('DATA_REJECTED','AMM_DATA_REJECTED','REQUEST_ERROR','AMM_REQUEST_ERROR'):
+            result=json.loads(row['result_json'] or '{}')
+            if (result.get('network_error') or {}).get('category')=='LOCAL_RPC_ADMISSION':continue
         if row['status'] not in pm.TECHNICAL:break
         if last is None:last=row
         n+=1

@@ -509,6 +509,7 @@ def buy(m,p,score=0,s=None,_fill=False,_order_id=None):
 
 @atomic_primary
 def _buy(m,p,score=0,s=None,_fill=False,_order_id=None):
+    if __import__('late_spawn').blocks_entries(config.DB):return False,'CHILD_CREATION_CLEANUP_PENDING'
     db.inc("entry_attempts"); cash=float(db.getm("cash")); reason=None
     enabled=config.EXECUTION_MODEL_ENABLED
     reserved_n,reserved_cash=execution.reserve(db.con(),_order_id) if enabled else (0,0)
@@ -1210,7 +1211,7 @@ async def pumpapi_trades(q):
     global TRADE_GAP_START
     """One PumpApi socket with an application-level traffic watchdog.
     CONNECTED means handshake succeeded; RECEIVING means actual market trade messages are arriving.
-    If no market trade message arrives for PUMPAPI_STALL_SECONDS the socket is force-closed and rebuilt.
+    Soft silence blocks entries; hard silence rebuilds the socket, including during control traffic.
     """
     db.setm("trade_stream_provider","pumpapi_free")
     db.setm("trade_stream_state","CONNECTING"); db.setm("trade_watchdog_state","STARTING")
@@ -1223,9 +1224,24 @@ async def pumpapi_trades(q):
     probe=stream_diagnostics.Probe(db.setm)
     telemetry=runtime_control.MarketTelemetry()
     ws=None
+    from market_watchdog import MarketSilence
+    watch=None
+    def check_market_silence():
+        observed=watch.poll();stall=observed["age_s"]
+        if observed["publish"]:
+            db.setm("trade_max_stall_seconds",max(float(db.getm("trade_max_stall_seconds",0)),stall))
+        if observed["state"]=="HARD_STALE":
+            db.inc("trade_stall_restarts");db.setm("trade_stream_state","STALLED");db.setm("trade_watchdog_state","STALLED")
+            db.setm("trade_stream_error",f"Trade stream hard-stalled: no market message for {stall:.1f}s")
+            db.stream_debug("","WATCHDOG_HARD_STALL",f"no market message {stall:.2f}s; forcing socket restart; open={len(P)}")
+            raise RuntimeError(f"trade stream hard stall {stall:.1f}s")
+        if observed["state"]=="SOFT_STALE" and observed["publish"]:
+            db.setm("trade_stream_state","MARKET_STALE");db.setm("trade_watchdog_state","MARKET_STALE")
+            db.setm("trade_stream_error",f"Market traffic stale for {stall:.1f}s; entries blocked, socket retained")
+            db.inc("trade_soft_stale_ticks")
     try:
         while True:
-            connected_at=0.0; last_market=time.time(); stopping=False
+            connected_at=0.0; stopping=False
             try:
                 ping_interval=None if config.PUMPAPI_PING_INTERVAL <= 0 else config.PUMPAPI_PING_INTERVAL
                 ws=await websockets.connect(config.PUMPAPI_STREAM_URL,ping_interval=ping_interval,
@@ -1234,31 +1250,22 @@ async def pumpapi_trades(q):
                 probe.connected()
                 __import__('recovery_gate').connection()
                 connection_epoch=(__import__('recovery_gate').status() or {}).get('epoch')
-                connected_at=time.time(); last_market=connected_at
+                connected_at=time.time()
+                watch=MarketSilence(config.PUMPAPI_STALL_SECONDS,config.PUMPAPI_HARD_STALL_SECONDS,config.PUMPAPI_WATCHDOG_TICK_SECONDS)
                 db.inc("stream_generation"); db.inc("pumpapi_connects")
                 db.setm("pumpapi_socket_active",1); db.setm("trade_stream_state","CONNECTED"); db.setm("trade_watchdog_state","CONNECTED"); db.setm("trade_stream_error","")
                 db.stream_debug("","WATCHDOG_CONNECTED",f"PumpApi connected; waiting for market traffic; timeout={config.PUMPAPI_STALL_SECONDS:.0f}s")
                 back=max(1.0,config.PUMPAPI_MIN_RECONNECT_DELAY)
                 while True:
                     if (__import__('recovery_gate').status() or {}).get('epoch')!=connection_epoch:raise RuntimeError('RECOVERY_RECONNECT_REQUIRED')
+                    check_market_silence()
                     recv_started=time.monotonic()
                     try:
                         raw=await asyncio.wait_for(ws.recv(),timeout=config.PUMPAPI_WATCHDOG_TICK_SECONDS)
                     except asyncio.TimeoutError:
                         telemetry.flush(db,force=True)
                         probe.flush()
-                        stall=max(0.0,time.time()-last_market)
-                        db.setm("trade_max_stall_seconds",max(float(db.getm("trade_max_stall_seconds",0)),stall))
-                        if stall >= config.PUMPAPI_HARD_STALL_SECONDS:
-                            db.inc("trade_stall_restarts"); db.setm("trade_stream_state","STALLED"); db.setm("trade_watchdog_state","STALLED")
-                            db.setm("trade_stream_error",f"Trade stream hard-stalled: no market message for {stall:.1f}s")
-                            db.stream_debug("","WATCHDOG_HARD_STALL",f"no market message {stall:.2f}s; forcing socket restart; open={len(P)}")
-                            raise RuntimeError(f"trade stream hard stall {stall:.1f}s")
-                        if stall >= config.PUMPAPI_STALL_SECONDS:
-                            # Soft stale state: freeze new entries while preserving the same socket.
-                            db.setm("trade_stream_state","MARKET_STALE"); db.setm("trade_watchdog_state","MARKET_STALE")
-                            db.setm("trade_stream_error",f"Market traffic stale for {stall:.1f}s; entries blocked, socket retained")
-                            db.inc("trade_soft_stale_ticks")
+                        check_market_silence()
                         continue
                     if (__import__('recovery_gate').status() or {}).get('epoch')!=connection_epoch:raise RuntimeError('RECOVERY_RECONNECT_REQUIRED')
                     handler_started=probe.received(ws,recv_started)
@@ -1274,7 +1281,7 @@ async def pumpapi_trades(q):
                             if str(x.get("mint") or "") in P: diagnostics.evidence(db.con(),str(x.get("mint") or ""),("OTHER_POOL" if x.get("pool") else "MISSING_POOL"),str(x.get("pool") or ""),now)
                             continue
                         # Heartbeat is provider-wide market traffic, not only candidate mints.
-                        last_market=now;telemetry.market(now)
+                        watch.market();telemetry.market(now)
                         if TRADE_GAP_START is not None:
                             gap=max(0.0,now-TRADE_GAP_START); db.inc("trade_gap_count"); db.inc("trade_gap_seconds",gap); db.setm("last_trade_gap_seconds",gap)
                             if gap>=config.DATA_GAP_MARK_SECONDS:
@@ -1302,6 +1309,12 @@ async def pumpapi_trades(q):
                         probe.finished(ws,handler_started)
             except asyncio.CancelledError:
                 stopping=True;raise
+            except (__import__('sqlite3').Error,db.LocalDatabaseFailure) as e:
+                # A local database failure is not a provider disconnect. Only telemetry
+                # has a separately proven rollback/retry path; never replay a trade here.
+                stopping=True
+                system_health.failure(config.DB,'TRADE_STREAM_LOCAL_DATABASE',e)
+                raise
             except Exception as e:
                 probe.error();probe.flush(force=True)
                 if TRADE_GAP_START is None: TRADE_GAP_START=time.time(); db.stream_debug("","GAP_START",f"trade feed unavailable; open={len(P)}")
@@ -1309,12 +1322,14 @@ async def pumpapi_trades(q):
                 if str(db.getm("trade_watchdog_state"))!="STALLED": db.setm("trade_stream_state","DEGRADED"); db.setm("trade_watchdog_state","DEGRADED")
                 if "watchdog stall" not in repr(e): db.setm("trade_stream_error",f"PumpApi stream: {e!r}"[:400])
             finally:
-                telemetry.flush(db,force=True)
-                db.setm("pumpapi_socket_active",0)
-                if ws is not None:
-                    closing_ws,ws=ws,None
-                    await runtime_control.close_market_socket(closing_ws,stopping=stopping)
-                if not stopping:await asyncio.sleep(config.PUMPAPI_CLOSE_GRACE)
+                try:
+                    telemetry.flush(db,force=True)
+                    db.setm("pumpapi_socket_active",0)
+                finally:
+                    if ws is not None:
+                        closing_ws,ws=ws,None
+                        await runtime_control.close_market_socket(closing_ws,stopping=stopping)
+                    if not stopping:await asyncio.sleep(config.PUMPAPI_CLOSE_GRACE)
             db.inc("pumpapi_reconnect_waits")
             err=str(db.getm("trade_stream_error",""))
             # Cool down aggressively after provider single-WS rejection; hard stalls use a shorter controlled delay.
@@ -1432,7 +1447,7 @@ async def run():
     clean_campaign.preflight(config.DB)
     global SINGLETON_SOCKET
     if not config.JUPITER_API_KEY:
-        raise RuntimeError("v0.7.52 quote test requires JUPITER_API_KEY. Run 02_SETTINGS.bat first; do not enter a wallet private key.")
+        raise RuntimeError(f"{config.VERSION}: JUPITER_API_KEY is required. Run 02_SETTINGS.bat first; do not enter a wallet private key.")
     await exit_quotes.refresh_fx()
     if exit_quotes.FX_STATUS!='READY':
         raise RuntimeError("Quote startup check failed: "+exit_quotes.FX_STATUS+". Run 02_SETTINGS.bat and 04_CHECK.bat; no test was started.")
@@ -1457,7 +1472,7 @@ async def run():
     elif provider=="auto":
         provider="pumpapi"
     db.setm('matched_mode_v64',1)
-    publisher=branch_transport.Fanout(config.DB);branch_transport.ACTIVE=publisher
+    publisher=await asyncio.to_thread(branch_transport.Fanout,config.DB);branch_transport.ACTIVE=publisher
     recovery_guard=recovery_gate.Coordinator(config.DB,run_audit.ACTIVE)
     recovery_gate.ACTIVE=recovery_guard
     runtime_probe=runtime_control.Probe(config.DB,extra=lambda:publisher.snapshot()).start()
@@ -1466,6 +1481,8 @@ async def run():
       ('heartbeat',heartbeat()),('observation',observation_timer()),('quotes',exit_quotes.worker()),
       ('auto_simulation',auto_simulation.worker()),('preentry',preentry.worker()),
       ('shadow_preflight',shadow_preflight.worker()),('discovery',pumpportal_discovery(q)),('trade_stream',trade_task)]
+    branch_cleanup=set()
+    monitor_watch=__import__('branch_isolation').MonitorWatch(config.DB)
     async def branch_watch():
         while True:
             if runtime_control.stop_requested(config.DB,run_audit.ACTIVE):
@@ -1476,7 +1493,15 @@ async def run():
                 publisher.begin_stop()
                 raise runtime_control.RequestedStop()
             db.setmany(dict(branch_queue=publisher.pending,branch_dropped=publisher.dropped))
-            if publisher.failed:raise RuntimeError('PAPER_SCENARIO_FAILED: '+getattr(publisher,'failure_reason','UNKNOWN_BRANCH_FAILURE'))
+            for failed_branch in await asyncio.to_thread(publisher.isolate_failures):
+                branch_cleanup.add(asyncio.create_task(asyncio.to_thread(failed_branch.close)))
+            for cleanup in list(branch_cleanup):
+                if cleanup.done():
+                    try:cleanup.result()
+                    except Exception as exc:system_health.failure(config.DB,'isolated_branch_cleanup',exc)
+                    branch_cleanup.remove(cleanup)
+            supervision=await asyncio.to_thread(monitor_watch.sample)
+            db.setm('monitor_supervision_v79',supervision['status'])
             await asyncio.sleep(1)
     tasks.append(('amm_branch_watch',branch_watch()))
     running=[asyncio.create_task(system_health.supervise(name,task,config.DB,allow_return=name=='clock_reference')) for name,task in tasks]
@@ -1492,7 +1517,9 @@ async def run():
                 with db.atomic():execution.cancel_unfilled_buys_on_stop(db.con())
         finally:
             await __import__('counter_writer').stop(counter_sink)
-            try:await asyncio.to_thread(publisher.close)
+            try:
+                await asyncio.to_thread(publisher.close)
+                if branch_cleanup:await asyncio.gather(*branch_cleanup,return_exceptions=True)
             finally:
                 await runtime_probe.close()
                 recovery_guard.close();recovery_gate.ACTIVE=None

@@ -1,0 +1,200 @@
+{
+  "schema": "CURVE_OVERFLOW_REPLAY_V83",
+  "passed": true,
+  "source": {
+    "schema": "CURVE_OVERFLOW_FIXTURE_V83",
+    "archive": "20261026_135248.zip",
+    "role": "ROUTE",
+    "check_id": "99147767c21e4c63b46bb204bbb8c982",
+    "trade_id": "7c5adcc3d2da49aa9cae7ba86b8ad5ac",
+    "snapshot_slot": 461653435,
+    "amount": "987574537154",
+    "snapshot_sha256": "8e9f0a0c8fcc80a15675031035d5ddd3ca0158fa147c62979e112ebea76fd688",
+    "program_sha256": {
+      "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P": "7a19affaa2c6187e04a5fe0ea298cee81fa5eb8c24cfcc30d85f615e89f7b02d",
+      "pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ": "4f2955d0f6b40cc9ff7daa18ccad7d19119ba1249759f4e7e3bb691beee6b35e",
+      "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb": "15a2e615a42e20f31714bbaaee43002ae6f1cda2e8d7118243117ab3c1342e2d",
+      "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA": "8190d3f7ceb6cb7a7a8d8924bff89f9f611e15ce1f806f2b6237f3311a98f697"
+    },
+    "expected_program_error": 6024,
+    "wallet_state": {
+      "volume": null
+    },
+    "scope": "HISTORICAL_SYNTHETIC_SELL_NOT_EXECUTED_POSITION",
+    "note": "Original pool bank and program binaries; PAPER seller tokens are synthetic. Counterfactuals are copies only."
+  },
+  "rows": [
+    {
+      "mode": "original",
+      "status": "LOCAL_SWAP_FAILED",
+      "program_error": 6024,
+      "raw_error": "TransactionErrorInstructionError((0, Tagged(InstructionErrorCustom(6024))))",
+      "amount": "987574537154",
+      "reserves": {
+        "real_sol_lamports": 9876550,
+        "spendable_lamports": 9876550,
+        "rent_lamports": 1493520,
+        "held_fees_lamports": 27968200,
+        "sell_gross_upper_lamports": 27604359,
+        "status": "INSUFFICIENT_REAL_RESERVES"
+      },
+      "program_sha256": {
+        "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P": "7a19affaa2c6187e04a5fe0ea298cee81fa5eb8c24cfcc30d85f615e89f7b02d",
+        "pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ": "4f2955d0f6b40cc9ff7daa18ccad7d19119ba1249759f4e7e3bb691beee6b35e",
+        "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb": "15a2e615a42e20f31714bbaaee43002ae6f1cda2e8d7118243117ab3c1342e2d",
+        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA": "8190d3f7ceb6cb7a7a8d8924bff89f9f611e15ce1f806f2b6237f3311a98f697"
+      },
+      "compute_units": 40661,
+      "elapsed_ms": 92.53377000004548,
+      "seller_net_lamports": null,
+      "pool_sol_delta_lamports": null,
+      "tokens_debited": null,
+      "pool_tokens_credited": null,
+      "counterfactual": false,
+      "scope": "HISTORICAL_DIAGNOSTIC_ONLY",
+      "broadcast": false,
+      "paper_mutated": false
+    },
+    {
+      "mode": "quarter_amount",
+      "status": "LOCAL_SWAP_EXECUTED",
+      "program_error": null,
+      "raw_error": null,
+      "amount": "246893634288",
+      "reserves": {
+        "real_sol_lamports": 9876550,
+        "spendable_lamports": 9876550,
+        "rent_lamports": 1493520,
+        "held_fees_lamports": 27968200,
+        "sell_gross_upper_lamports": 6905854,
+        "status": "RESERVES_COVER_GROSS"
+      },
+      "program_sha256": {
+        "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P": "7a19affaa2c6187e04a5fe0ea298cee81fa5eb8c24cfcc30d85f615e89f7b02d",
+        "pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ": "4f2955d0f6b40cc9ff7daa18ccad7d19119ba1249759f4e7e3bb691beee6b35e",
+        "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb": "15a2e615a42e20f31714bbaaee43002ae6f1cda2e8d7118243117ab3c1342e2d",
+        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA": "8190d3f7ceb6cb7a7a8d8924bff89f9f611e15ce1f806f2b6237f3311a98f697"
+      },
+      "compute_units": 56367,
+      "elapsed_ms": 89.42005900007644,
+      "seller_net_lamports": 5468329,
+      "pool_sol_delta_lamports": -6852332,
+      "tokens_debited": "246893634288",
+      "pool_tokens_credited": "246893634288",
+      "counterfactual": true,
+      "scope": "HISTORICAL_DIAGNOSTIC_ONLY",
+      "broadcast": false,
+      "paper_mutated": false
+    },
+    {
+      "mode": "lamports_only",
+      "status": "LOCAL_SWAP_FAILED",
+      "program_error": 6024,
+      "raw_error": "TransactionErrorInstructionError((0, Tagged(InstructionErrorCustom(6024))))",
+      "amount": "987574537154",
+      "reserves": {
+        "real_sol_lamports": 9876550,
+        "spendable_lamports": 39876550,
+        "rent_lamports": 1493520,
+        "held_fees_lamports": 27968200,
+        "sell_gross_upper_lamports": 27604359,
+        "status": "INSUFFICIENT_REAL_RESERVES"
+      },
+      "program_sha256": {
+        "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P": "7a19affaa2c6187e04a5fe0ea298cee81fa5eb8c24cfcc30d85f615e89f7b02d",
+        "pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ": "4f2955d0f6b40cc9ff7daa18ccad7d19119ba1249759f4e7e3bb691beee6b35e",
+        "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb": "15a2e615a42e20f31714bbaaee43002ae6f1cda2e8d7118243117ab3c1342e2d",
+        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA": "8190d3f7ceb6cb7a7a8d8924bff89f9f611e15ce1f806f2b6237f3311a98f697"
+      },
+      "compute_units": 40661,
+      "elapsed_ms": 91.4527579998321,
+      "seller_net_lamports": null,
+      "pool_sol_delta_lamports": null,
+      "tokens_debited": null,
+      "pool_tokens_credited": null,
+      "counterfactual": true,
+      "scope": "HISTORICAL_DIAGNOSTIC_ONLY",
+      "broadcast": false,
+      "paper_mutated": false
+    },
+    {
+      "mode": "reserve_field_only",
+      "status": "LOCAL_SWAP_EXECUTED",
+      "program_error": null,
+      "raw_error": null,
+      "amount": "987574537154",
+      "reserves": {
+        "real_sol_lamports": 39876550,
+        "spendable_lamports": 9876550,
+        "rent_lamports": 1493520,
+        "held_fees_lamports": 27968200,
+        "sell_gross_upper_lamports": 27604359,
+        "status": "INSUFFICIENT_REAL_RESERVES"
+      },
+      "program_sha256": {
+        "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P": "7a19affaa2c6187e04a5fe0ea298cee81fa5eb8c24cfcc30d85f615e89f7b02d",
+        "pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ": "4f2955d0f6b40cc9ff7daa18ccad7d19119ba1249759f4e7e3bb691beee6b35e",
+        "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb": "15a2e615a42e20f31714bbaaee43002ae6f1cda2e8d7118243117ab3c1342e2d",
+        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA": "8190d3f7ceb6cb7a7a8d8924bff89f9f611e15ce1f806f2b6237f3311a98f697"
+      },
+      "compute_units": 58307,
+      "elapsed_ms": 78.73131699989244,
+      "seller_net_lamports": 24414582,
+      "pool_sol_delta_lamports": -25896903,
+      "tokens_debited": "987574537154",
+      "pool_tokens_credited": "987574537154",
+      "counterfactual": true,
+      "scope": "HISTORICAL_DIAGNOSTIC_ONLY",
+      "broadcast": false,
+      "paper_mutated": false
+    },
+    {
+      "mode": "both",
+      "status": "LOCAL_SWAP_EXECUTED",
+      "program_error": null,
+      "raw_error": null,
+      "amount": "987574537154",
+      "reserves": {
+        "real_sol_lamports": 39876550,
+        "spendable_lamports": 39876550,
+        "rent_lamports": 1493520,
+        "held_fees_lamports": 27968200,
+        "sell_gross_upper_lamports": 27604359,
+        "status": "RESERVES_COVER_GROSS"
+      },
+      "program_sha256": {
+        "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P": "7a19affaa2c6187e04a5fe0ea298cee81fa5eb8c24cfcc30d85f615e89f7b02d",
+        "pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ": "4f2955d0f6b40cc9ff7daa18ccad7d19119ba1249759f4e7e3bb691beee6b35e",
+        "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb": "15a2e615a42e20f31714bbaaee43002ae6f1cda2e8d7118243117ab3c1342e2d",
+        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA": "8190d3f7ceb6cb7a7a8d8924bff89f9f611e15ce1f806f2b6237f3311a98f697"
+      },
+      "compute_units": 56366,
+      "elapsed_ms": 84.66366800007563,
+      "seller_net_lamports": 25908102,
+      "pool_sol_delta_lamports": -27390423,
+      "tokens_debited": "987574537154",
+      "pool_tokens_credited": "987574537154",
+      "counterfactual": true,
+      "scope": "HISTORICAL_DIAGNOSTIC_ONLY",
+      "broadcast": false,
+      "paper_mutated": false
+    }
+  ],
+  "original_repeated_errors": [
+    6024,
+    6024,
+    6024
+  ],
+  "zero_token_control": 6023,
+  "original_bundle_unchanged": true,
+  "network_used": false,
+  "paper_mutated": false,
+  "live_execution_proven": false,
+  "inference": "For this saved bank, full-size 6024 depends on real reserve: lamports-only funding does not fix it; changing real reserve does. This does not identify the exact Rust operation or all causes of error 6024.",
+  "limitations": [
+    "Synthetic PAPER inventory; no actual BUY is replayed.",
+    "Partial and reserve-modified cases are diagnostic controls, never fills.",
+    "No partial-exit policy, slot release or trading threshold change."
+  ],
+  "paper_ledger_unchanged": true
+}
