@@ -1,0 +1,25 @@
+# Runtime data, keys and local environments: never commit
+.venv/
+app/.env
+*.env
+app/data/
+results/
+__pycache__/
+.pytest_cache/
+
+# Build output
+dist/
+
+# Runtime evidence written by the bot and self-tests
+app/preentry_evidence/
+app/shadow_preflight_evidence/
+app/auto_simulations/
+
+# Interrupted atomic writes (tempfile next to the target)
+app/research/.*.json.*
+
+# Local test logs and live map state from review runs
+validation/run_*/*.xml
+validation/run_*/*_stdout.log
+validation/LIVE_MAP/state.json
+validation/LIVE_MAP/stages/

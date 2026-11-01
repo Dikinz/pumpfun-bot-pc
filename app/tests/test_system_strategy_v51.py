@@ -122,8 +122,10 @@ def test_atomic_telemetry_rollback_and_single_commit(fresh):
     assert db.getm('last_trade_ts')=='123' and db.getm('test_new_key','missing')=='missing'
     fresh.set_trace_callback(None)
 
-def test_dashboard_requires_readiness_and_identity(monkeypatch):
+def test_dashboard_requires_readiness_and_identity(monkeypatch,tmp_path):
     import launcher
+    # The mismatch is journalled next to config.DB: keep it out of the installation's app/data (04_CHECK runs there).
+    monkeypatch.setattr(config,'DB',str(tmp_path/'clean_identity.db'))
     class Child:
         pid=123
         def poll(self):return None
@@ -139,6 +141,7 @@ def test_dashboard_requires_readiness_and_identity(monkeypatch):
         raise OSError('offline');yield
     monkeypatch.setattr('urllib.request.urlopen',failed)
     with pytest.raises(RuntimeError,match='timeout'):launcher.wait_dashboard(Child(),timeout=.001)
+    assert (tmp_path/'clean_identity_system_events.jsonl').exists()
 
 def test_dashboard_dead_process_fails_readiness():
     import launcher

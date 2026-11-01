@@ -9,7 +9,7 @@ if not exist ".venv\Scripts\python.exe" (
   exit /b 1
 )
 "%~dp0.venv\Scripts\python.exe" -I "%~dp0app\bootstrap.py" preserve-data
-if errorlevel 1 goto failed
+if not "%errorlevel%"=="0" goto failed
 pause
 exit /b 0
 :failed

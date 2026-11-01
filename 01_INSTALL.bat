@@ -4,9 +4,9 @@ set "PYTHONPATH="
 set "PYTHONHOME="
 cd /d "%~dp0"
 if not exist ".venv\Scripts\python.exe" python -m venv .venv
-if errorlevel 1 goto failed
+if not "%errorlevel%"=="0" goto failed
 "%~dp0.venv\Scripts\python.exe" -I "%~dp0app\bootstrap.py" install
-if errorlevel 1 goto failed
+if not "%errorlevel%"=="0" goto failed
 pause
 exit /b 0
 :failed
