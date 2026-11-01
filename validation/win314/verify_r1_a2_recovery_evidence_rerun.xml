@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="6" time="1.938" timestamp="2026-11-01T13:12:23.979037+02:00" hostname="DESKTOP-BBAG9V9"><testcase classname="tests.test_recovery_evidence_v861" name="test_timeout_retains_bytes_output_and_partial_evidence" time="0.054" /><testcase classname="tests.test_recovery_evidence_v861" name="test_actual_subprocess_timeout_preserves_flushed_output" time="1.089" /><testcase classname="tests.test_recovery_evidence_v861" name="test_failure_without_junit_still_writes_report" time="0.059" /><testcase classname="tests.test_recovery_evidence_v861" name="test_progress_records_failure_and_teardown" time="0.040" /><testcase classname="tests.test_recovery_evidence_v861" name="test_evidence_export_failure_does_not_mask_test_error" time="0.021" /><testcase classname="tests.test_recovery_evidence_v861" name="test_real_pytest_plugin_records_each_phase_before_and_after" time="0.546"><failure message="AssertionError: &#10;  =================================== ERRORS ====================================&#10;  _______________________ ERROR collecting pytest-of-OMG ________________________&#10;  ..\..\..\venv\Lib\site-packages\_pytest\runner.py:344: in from_call&#10;      result: TResult | None = func()&#10;                               ^^^^^^&#10;  ..\..\..\venv\Lib\site-packages\_pytest\runner.py:389: in collect&#10;      return list(collector.collect())&#10;             ^^^^^^^^^^^^^^^^^^^^^^^^^&#10;  ..\..\..\venv\Lib\site-packages\_pytest\main.py:528: in collect&#10;      for direntry in scandir(self.path):&#10;                      ^^^^^^^^^^^^^^^^^^&#10;  ..\..\..\venv\Lib\site-packages\_pytest\pathlib.py:971: in scandir&#10;      entry.is_file()&#10;  E   PermissionError: [WinError 5] Отказано в доступе: 'C:\\Users\\OMG\\AppData\\Local\\Temp\\pytest-of-OMG\\pytest-current'&#10;  =========================== short test summary info ===========================&#10;  ERROR ..\..\..\..\..\..\..\pytest-of-OMG - PermissionError: [WinError 5] Отка...&#10;  1 error in 0.11s&#10;  ERROR: found no collectors for C:\Users\OMG\AppData\Local\Temp\pytest-of-OMG\pytest-89\test_real_pytest_plugin_record0\test_probe.py&#10;  &#10;  &#10;assert 4 == 0&#10; +  where 4 = CompletedProcess(args=['C:\\Users\\OMG\\AppData\\Local\\Temp\\claude\\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--cl...or C:\\Users\\OMG\\AppData\\Local\\Temp\\pytest-of-OMG\\pytest-89\\test_real_pytest_plugin_record0\\test_probe.py\n\n').returncode">tmp_path = WindowsPath('C:/Users/OMG/AppData/Local/Temp/pytest-of-OMG/pytest-89/test_real_pytest_plugin_record0')
+
+    def test_real_pytest_plugin_records_each_phase_before_and_after(tmp_path):
+        (tmp_path/'test_probe.py').write_text('def test_probe():\n    assert True\n')
+        target=tmp_path/'progress.jsonl'
+        env=dict(os.environ,PYTEST_DISABLE_PLUGIN_AUTOLOAD='1',RECOVERY_PROGRESS_PATH=str(target))
+        result=subprocess.run([sys.executable,'-m','pytest','-q','-p','recovery_progress',str(tmp_path/'test_probe.py')],cwd=Path(evidence.__file__).parent,env=env,capture_output=True,text=True,timeout=15)
+&gt;       assert result.returncode==0,result.stdout+result.stderr
+E       AssertionError: 
+E         =================================== ERRORS ====================================
+E         _______________________ ERROR collecting pytest-of-OMG ________________________
+E         ..\..\..\venv\Lib\site-packages\_pytest\runner.py:344: in from_call
+E             result: TResult | None = func()
+E                                      ^^^^^^
+E         ..\..\..\venv\Lib\site-packages\_pytest\runner.py:389: in collect
+E             return list(collector.collect())
+E                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+E         ..\..\..\venv\Lib\site-packages\_pytest\main.py:528: in collect
+E             for direntry in scandir(self.path):
+E                             ^^^^^^^^^^^^^^^^^^
+E         ..\..\..\venv\Lib\site-packages\_pytest\pathlib.py:971: in scandir
+E             entry.is_file()
+E         E   PermissionError: [WinError 5] Отказано в доступе: 'C:\\Users\\OMG\\AppData\\Local\\Temp\\pytest-of-OMG\\pytest-current'
+E         =========================== short test summary info ===========================
+E         ERROR ..\..\..\..\..\..\..\pytest-of-OMG - PermissionError: [WinError 5] Отка...
+E         1 error in 0.11s
+E         ERROR: found no collectors for C:\Users\OMG\AppData\Local\Temp\pytest-of-OMG\pytest-89\test_real_pytest_plugin_record0\test_probe.py
+E         
+E         
+E       assert 4 == 0
+E        +  where 4 = CompletedProcess(args=['C:\\Users\\OMG\\AppData\\Local\\Temp\\claude\\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--cl...or C:\\Users\\OMG\\AppData\\Local\\Temp\\pytest-of-OMG\\pytest-89\\test_real_pytest_plugin_record0\\test_probe.py\n\n').returncode
+
+tests\test_recovery_evidence_v861.py:84: AssertionError</failure></testcase></testsuite></testsuites>

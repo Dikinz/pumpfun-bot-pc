@@ -2,6 +2,18 @@
 import hashlib,json,socket
 from pathlib import Path
 VERSION='v0.7.101.1'
+TEXT_SUFFIXES=frozenset({'.py','.bat','.json','.md','.txt','.xml','.html','.example'})
+
+def lf_digest(path):
+    # Streamed SHA-256 of the file with CRLF pairs read as LF; bounded memory.
+    h=hashlib.sha256();carry=b''
+    with path.open('rb') as source:
+        while chunk:=source.read(1<<20):
+            data=carry+chunk;carry=b''
+            if data.endswith(b'\r'):data,carry=data[:-1],b'\r'
+            h.update(data.replace(b'\r\n',b'\n'))
+    h.update(carry)
+    return h.hexdigest()
 
 def verify(root):
     root=Path(root).resolve()
@@ -18,6 +30,11 @@ def verify(root):
             # No timestamp/size cache: changed files must still block startup.
             with path.open('rb') as source:actual=hashlib.file_digest(source,'sha256').hexdigest()
         except OSError:raise RuntimeError('CLEAN_RELEASE_FILE_MISSING: '+name)
+        if actual!=digest and path.suffix.lower() in TEXT_SUFFIXES:
+            # A Windows git checkout (core.autocrlf) stores the same text with CRLF.
+            # Only CRLF->LF differs; any other byte change still blocks startup.
+            try:actual=lf_digest(path)
+            except OSError:raise RuntimeError('CLEAN_RELEASE_FILE_MISSING: '+name)
         if actual!=digest:raise RuntimeError('CLEAN_RELEASE_FILE_CHANGED: '+name+'; extract a fresh full ZIP')
     for path in (root/'app').rglob('*.py'):
         rel=path.relative_to(root)

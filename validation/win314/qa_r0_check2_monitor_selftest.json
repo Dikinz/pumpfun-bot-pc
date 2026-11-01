@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "amm": {
+    "passed": true,
+    "status": "AMM_SALE_EXECUTED",
+    "progress": {
+      "stage": "SAVE_RESULT",
+      "ts": 1793526214.8225815
+    },
+    "error": ""
+  },
+  "status": "CHECKED",
+  "progress": {
+    "stage": "SAVE_RESULT",
+    "ts": 1793526214.0722961
+  },
+  "elapsed_s": 1.5664734840393066,
+  "child_returncode": 0,
+  "error": "",
+  "note": "Offline historical fixture; current RPC and Windows live execution are not proven."
+}

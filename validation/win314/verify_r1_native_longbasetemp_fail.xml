@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="3" skipped="0" tests="3" time="11.308" timestamp="2026-11-01T12:40:49.060318+02:00" hostname="DESKTOP-BBAG9V9"><testcase classname="tests.test_cleanup_owner_v93" name="test_native_known_launcher_owner_survives_delayed_signal" time="8.302"><failure message="AssertionError: condition not observed&#10;assert 498672.8107083 &lt; 498672.806323&#10; +  where 498672.8107083 = &lt;built-in function monotonic&gt;()&#10; +    where &lt;built-in function monotonic&gt; = time.monotonic">fresh = &lt;database.Connection object at 0x0000023F6FD8E870&gt;
+tmp_path = WindowsPath('C:/Users/OMG/AppData/Local/Temp/claude/C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-tes...egy-agents-116a19/2d2ec8e9-cc3b-4850-b454-4c718c85a186/scratchpad/runs/vr1_bt/native1/test_native_known_launcher_own0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x0000023F73EDAFD0&gt;
+
+    @pytest.mark.skipif(os.name!='nt',reason='Native Windows job/process handles require Windows')
+    def test_native_known_launcher_owner_survives_delayed_signal(fresh,tmp_path,monkeypatch):
+&gt;       scenario(fresh,tmp_path,monkeypatch,native=True)
+
+tests\test_cleanup_owner_v93.py:124: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_cleanup_owner_v93.py:107: in scenario
+    asyncio.run(run())
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\asyncio\runners.py:205: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\asyncio\runners.py:128: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\asyncio\base_events.py:720: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests\test_cleanup_owner_v93.py:63: in run
+    await until(lambda:owners[0].cleanup_pending.is_set())
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+predicate = &lt;function scenario.&lt;locals&gt;.run.&lt;locals&gt;.&lt;lambda&gt; at 0x0000023F73EB07D0&gt;
+seconds = 8
+
+    async def until(predicate,seconds=8):
+        end=time.monotonic()+seconds
+        while not predicate():
+&gt;           assert time.monotonic()&lt;end,'condition not observed'
+E           AssertionError: condition not observed
+E           assert 498672.8107083 &lt; 498672.806323
+E            +  where 498672.8107083 = &lt;built-in function monotonic&gt;()
+E            +    where &lt;built-in function monotonic&gt; = time.monotonic
+
+tests\test_cleanup_owner_v93.py:13: AssertionError</failure></testcase><testcase classname="tests.test_late_spawn_ownership_v85" name="test_native_late_owner_survives_stop_and_reaps_tree" time="1.848"><failure message="AssertionError: assert 'SPAWN_FAILED_NO_PROCESS' == 'LATE_PROCESS_CLEANED'&#10;  &#10;  - LATE_PROCESS_CLEANED&#10;  + SPAWN_FAILED_NO_PROCESS">fresh = &lt;database.Connection object at 0x0000023F6F9E7940&gt;
+tmp_path = WindowsPath('C:/Users/OMG/AppData/Local/Temp/claude/C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-tes...egy-agents-116a19/2d2ec8e9-cc3b-4850-b454-4c718c85a186/scratchpad/runs/vr1_bt/native1/test_native_late_owner_survive0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x0000023F73EDAD70&gt;
+
+    @pytest.mark.skipif(os.name!='nt',reason='Native Windows job/process tree verification requires Windows')
+    def test_native_late_owner_survives_stop_and_reaps_tree(fresh,tmp_path,monkeypatch):
+&gt;       scenario(fresh,tmp_path,monkeypatch,backend='native_windows')
+
+tests\test_late_spawn_ownership_v85.py:163: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_late_spawn_ownership_v85.py:149: in scenario
+    asyncio.run(run())
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\asyncio\runners.py:205: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\asyncio\runners.py:128: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\asyncio\base_events.py:720: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    async def run():
+        monitor=asyncio.create_task(ms.run(config.DB,0,stop_event=stop));guard=None
+        try:
+            await until(entered.is_set)
+            if cause=='cancel':
+                with closing(ms.connect()) as c:job=dict(c.execute("SELECT * FROM position_checks_v0730 WHERE status='RUNNING' ORDER BY started_ts LIMIT 1").fetchone())
+                fresh.execute("INSERT INTO paper_orders_v0720(order_id,mint,side,status,signal_ts,signal_price,size,reason,trade_id) VALUES('late-sell',?,'SELL','PENDING',?,1,3,'TP2',?)",(job['mint'],time.time(),job['trade_id']))
+            await until(lambda:late.path(config.DB).exists() and json.loads(late.path(config.DB).read_text()).get('pending'))
+            await until(lambda:ms.read_state(config.DB).get('status')=='CLEANUP_PENDING')
+            pending=json.loads(late.path(config.DB).read_text());check_id=pending['owners'][0]['check_id']
+            assert pending['owners'][0]['child_pid'] is None and not monitor.done()
+            assert main._buy('blocked-v85',1)==(False,'CHILD_CREATION_CLEANUP_PENDING')
+            count=len(dispatches);await asyncio.sleep(.25)
+            assert len(dispatches)==count # No replacement/native-owner growth while ownership is unresolved.
+            with closing(ms.connect()) as c:
+                row=dict(c.execute('SELECT * FROM position_checks_v0730 WHERE id=?',(check_id,)).fetchone())
+                assert row['status']=='CLEANUP_FAILED'
+            if stop_while_pending:
+                stop.set()
+                await until(lambda:ms.read_state(config.DB).get('status')=='STOP_WAITING_CHILD_CLEANUP')
+                guard=asyncio.create_task(asyncio.to_thread(late.wait_before_force,SimpleNamespace(pid=os.getpid()),(),Path(config.DB).resolve().parent))
+                await asyncio.sleep(.15);assert not guard.done() and not monitor.done()
+            release.set()
+            await until(lambda:not json.loads(late.path(config.DB).read_text()).get('pending'))
+            if not stop_while_pending:
+                await until(lambda:len(dispatches)&gt;count)
+                assert not monitor.done();stop.set()
+            await asyncio.wait_for(monitor,8)
+            if guard:assert await asyncio.wait_for(guard,3) is True
+            assert owners[0].done.is_set();await asyncio.to_thread(owners[0].thread.join,1)
+            assert not owners[0].thread.is_alive()
+            final=json.loads(late.path(config.DB).read_text());resolved=next(x for x in final['history'] if x['check_id']==check_id)
+            assert resolved['state']=='CONFIRMED' and resolved['original_result_ineligible'] is True
+&gt;           assert resolved['outcome']==('SPAWN_FAILED_NO_PROCESS' if fail_create else 'LATE_PROCESS_CLEANED')
+E           AssertionError: assert 'SPAWN_FAILED_NO_PROCESS' == 'LATE_PROCESS_CLEANED'
+E             
+E             - LATE_PROCESS_CLEANED
+E             + SPAWN_FAILED_NO_PROCESS
+
+tests\test_late_spawn_ownership_v85.py:129: AssertionError</failure></testcase><testcase classname="tests.test_spawn_boundaries_v82" name="test_native_late_spawn_after_timeout_cleans_tree" time="0.463"><failure message="RuntimeError: coroutine raised StopIteration">async def run():
+        try:
+            with pytest.raises(RuntimeError,match='SIMULATION_CHILD_CLEANUP_UNCONFIRMED'):await pm.run_job(job,c)
+            assert entered.is_set() and owners[0].pid is None
+        finally:
+            release.set()
+            if owners:await asyncio.to_thread(owners[0].thread.join,8)
+        assert owners[0].done.is_set() and not owners[0].thread.is_alive()
+        trace=json.loads((folder/'child_lifecycle_v73.json').read_text())
+&gt;       event=next(r for r in trace['events'] if r['phase']=='CLEANUP_CONFIRMED')
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       StopIteration
+
+tests\test_spawn_boundaries_v82.py:131: StopIteration
+
+The above exception was the direct cause of the following exception:
+
+fresh = &lt;database.Connection object at 0x0000023F73D5BC50&gt;
+tmp_path = WindowsPath('C:/Users/OMG/AppData/Local/Temp/claude/C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-tes...egy-agents-116a19/2d2ec8e9-cc3b-4850-b454-4c718c85a186/scratchpad/runs/vr1_bt/native1/test_native_late_spawn_after_t0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x0000023F740B7BF0&gt;
+
+    @pytest.mark.skipif(os.name!='nt',reason='Late real Windows Job Object creation requires Windows')
+    def test_native_late_spawn_after_timeout_cleans_tree(fresh,tmp_path,monkeypatch):
+        release=threading.Event();bound=threading.Event();entered=threading.Event();owners=[]
+        monkeypatch.setattr(wc.BackgroundChild,'STOP_WAIT_SECONDS',.05);monkeypatch.setattr(pm,'CHECK_DEADLINE',.03);monkeypatch.setattr(pm,'ROOT',tmp_path/'native')
+        code="import sys,time;from pathlib import Path;Path(sys.argv[1]).write_text('ready');time.sleep(60)"
+        wrapper="import subprocess,sys,time;subprocess.Popen([sys.executable,'-c',sys.argv[1],sys.argv[2]]);time.sleep(60)"
+        async def create(args,folder,trace):
+            ready=folder/'worker.ready'
+            def factory(*a):
+                assert bound.wait(1);entered.set();assert release.wait(3)
+                group=wc.NativeGroup([sys.executable,'-c',wrapper,code,str(ready)],folder,folder/'child.log',trace,identity_callback=owners[0].observe_identity)
+                try:
+                    deadline=time.monotonic()+4
+                    while not ready.exists() and time.monotonic()&lt;deadline:time.sleep(.02)
+                    assert ready.exists(),'late worker readiness'
+                    return group
+                except BaseException:group.close();raise
+            owner=wc.BackgroundChild([],folder,folder/'child.log',trace,factory);owners.append(owner);bound.set();return owner
+        monkeypatch.setattr(pm,'create_simulation_process',create)
+        with closing(ms.connect()) as c:
+            job=pm.next_job(c,time.time());folder=pm.ROOT/job['id']
+            async def run():
+                try:
+                    with pytest.raises(RuntimeError,match='SIMULATION_CHILD_CLEANUP_UNCONFIRMED'):await pm.run_job(job,c)
+                    assert entered.is_set() and owners[0].pid is None
+                finally:
+                    release.set()
+                    if owners:await asyncio.to_thread(owners[0].thread.join,8)
+                assert owners[0].done.is_set() and not owners[0].thread.is_alive()
+                trace=json.loads((folder/'child_lifecycle_v73.json').read_text())
+                event=next(r for r in trace['events'] if r['phase']=='CLEANUP_CONFIRMED')
+                assert event['proof']=='WINDOWS_JOB_ACCOUNTING' and event['active_processes']==0
+                assert next(e for e in trace['events'] if e['phase']=='SPAWN_RETURNED_V78')['stop_already_requested'] is True
+                assert trace['child_pid'] is not None and all(r['state']=='RETURNED' for r in trace['native_calls_v82'])
+                assert c.execute('SELECT status FROM position_checks_v0730 WHERE id=?',(job['id'],)).fetchone()[0]=='CLEANUP_FAILED'
+                record(dict(backend='WINDOWS_JOB_OBJECT',delay_injected_before_api=True,late_cleanup_confirmed=True,failed_result_not_promoted=True,trace=trace))
+&gt;           asyncio.run(run())
+
+tests\test_spawn_boundaries_v82.py:137: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\asyncio\runners.py:205: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\asyncio\runners.py:128: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;ProactorEventLoop running=False closed=True debug=False&gt;
+future = &lt;Task finished name='Task-13' coro=&lt;test_native_late_spawn_after_timeout_cleans_tree.&lt;locals&gt;.run() done, defined at C...runs\verify_r1_a1\app\tests\test_spawn_boundaries_v82.py:122&gt; exception=RuntimeError('coroutine raised StopIteration')&gt;
+
+    def run_until_complete(self, future):
+        """Run until the Future is done.
+    
+        If the argument is a coroutine, it is wrapped in a Task.
+    
+        WARNING: It would be disastrous to call run_until_complete()
+        with the same coroutine twice -- it would wrap it in two
+        different Tasks and that can't be good.
+    
+        Return the Future's result, or raise its exception.
+        """
+        self._check_closed()
+        self._check_running()
+    
+        new_task = not futures.isfuture(future)
+        future = tasks.ensure_future(future, loop=self)
+        if new_task:
+            # An exception is raised if the future didn't complete, so there
+            # is no need to log the "destroy pending task" message
+            future._log_destroy_pending = False
+    
+        future.add_done_callback(_run_until_complete_cb)
+        try:
+            self.run_forever()
+        except:
+            if new_task and future.done() and not future.cancelled():
+                # The coroutine raised a BaseException. Consume the exception
+                # to not log a warning, the caller doesn't have access to the
+                # local task.
+                future.exception()
+            raise
+        finally:
+            future.remove_done_callback(_run_until_complete_cb)
+        if not future.done():
+            raise RuntimeError('Event loop stopped before Future completed.')
+    
+&gt;       return future.result()
+               ^^^^^^^^^^^^^^^
+E       RuntimeError: coroutine raised StopIteration
+
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\asyncio\base_events.py:720: RuntimeError</failure></testcase></testsuite></testsuites>

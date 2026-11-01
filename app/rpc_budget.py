@@ -137,7 +137,7 @@ CREATE TABLE IF NOT EXISTS endpoints(
  max_wait_ms REAL NOT NULL DEFAULT 0,streak_429 INTEGER NOT NULL DEFAULT 0);'''
 
 class Budget:
-    RECOVER_AFTER_SECONDS=2.;STALE_TMP_SECONDS=10.
+    RECOVER_AFTER_SECONDS=2.
     CLEANUP_LIMIT=128 # Retained committed files; capacity deferral, never lost cooldown.
     RECORD_WAIT_SECONDS=.25 # Control-state contention only; no HTTP retries or worker deadline increase.
     def __init__(self,root,rate=6.,slots=4,wait=.75):
@@ -146,6 +146,7 @@ class Budget:
         self.root=Path(root);self.rate=rate;self.slots=slots;self.wait=wait
         self.path=self.root/'control.db';self.failed=self.root/'control_failed.json';self._local=threading.local()
         self._gc_lock=threading.Lock();self._gc_paths=set();self._gc_thread=None;self._control_identity=None;self._unpersisted_failure=False
+        self._failure_lock=threading.RLock();self._pending_failure=None
     def connect(self):
         self.root.mkdir(parents=True,exist_ok=True)
         c=sqlite3.connect(self.path,timeout=.025,isolation_level=None);c.row_factory=sqlite3.Row
@@ -233,10 +234,22 @@ class Budget:
             ts=time.time(),failure_chain=failure_details(exc),transient=bool(proof))
         if proof:value['recovery_evidence_v97']=dict(outcome_id=identifier,database_identity=list(self._control_identity))
         # A failed marker write must never leave the old recovery proof authoritative locally.
-        self._unpersisted_failure=True
+        # The unwritten marker is retried by blocked() so other processes also stop.
+        with self._failure_lock:
+            self._unpersisted_failure=True;self._pending_failure=value
+            self._persist_failure_locked()
+    def _persist_failure_locked(self):
         with self.failed.open('w',encoding='utf-8') as f:
-            json.dump(value,f);f.flush();os.fsync(f.fileno())
-        self._unpersisted_failure=False
+            json.dump(self._pending_failure,f);f.flush();os.fsync(f.fileno())
+        self._pending_failure=None;self._unpersisted_failure=False
+    def _retry_unpersisted_failure(self):
+        # Never clears the local block without a durable marker on disk.
+        with self._failure_lock:
+            if not self._unpersisted_failure:return True
+            if self._pending_failure is None:return False
+            try:self._persist_failure_locked()
+            except OSError:return False
+            return True
     def _marker_bytes(self):
         if self.failed.stat().st_size>65536:raise ValueError('MARKER_OVERSIZE')
         return self.failed.read_bytes()
@@ -252,7 +265,7 @@ class Budget:
                 proof.get('database_identity')==[st.st_dev,st.st_ino])
         except (OSError,ValueError,TypeError):return False
     def blocked(self):
-        if self._unpersisted_failure:return True
+        if self._unpersisted_failure and not self._retry_unpersisted_failure():return True
         try:self.failed.stat()
         except FileNotFoundError:return False
         except OSError:return True
@@ -381,7 +394,9 @@ class Budget:
         self._local.stage='OUTCOME_PUBLICATION'
         owner=None
         try:
-            if time.time()-path.stat().st_mtime<self.STALE_TMP_SECONDS:raise MetadataBusy('RPC_OUTCOME_PUBLICATION_BUSY: database is locked')
+            # No age gate: the publisher holds its slot lock from before creating the
+            # .tmp until os.replace succeeds or fails. An acquirable slot lock proves
+            # that publication ended; a sub-second scanner hold must not cost 10 s.
             event=self._event(path);slot=event.get('publisher_slot_v97')
             if type(slot)!=int or not 0<=slot<8:raise ValueError('owner unknown')
             lock=self.root/('publisher_v97_'+str(slot)+'.lock')

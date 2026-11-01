@@ -1,0 +1,16 @@
+........................................................................ [ 21%]
+........................................................................ [ 42%]
+........................................................................ [ 64%]
+........................................................................ [ 85%]
+...............................................                          [100%]
+- generated xml file: C:\Users\OMG\AppData\Local\Temp\claude\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-testing-strategy-agents-116a19\2d2ec8e9-cc3b-4850-b454-4c718c85a186\scratchpad\runs\verify_r1_a2_related_utf8.xml -
+335 passed in 76.64s (0:01:16)
+Exception ignored in atexit callback <function cleanup_numbered_dir at 0x000001CF7F8C8F60>:
+Traceback (most recent call last):
+  File "C:\Users\OMG\AppData\Local\Temp\claude\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-testing-strategy-agents-116a19\2d2ec8e9-cc3b-4850-b454-4c718c85a186\scratchpad\venv\Lib\site-packages\_pytest\pathlib.py", line 374, in cleanup_numbered_dir
+    cleanup_dead_symlinks(root)
+  File "C:\Users\OMG\AppData\Local\Temp\claude\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-testing-strategy-agents-116a19\2d2ec8e9-cc3b-4850-b454-4c718c85a186\scratchpad\venv\Lib\site-packages\_pytest\pathlib.py", line 360, in cleanup_dead_symlinks
+    left_dir.unlink()
+  File "C:\Users\OMG\AppData\Local\Python\pythoncore-3.14-64\Lib\pathlib\__init__.py", line 1042, in unlink
+    os.unlink(self)
+PermissionError: [WinError 5] Отказано в доступе: 'C:\\Users\\OMG\\AppData\\Local\\Temp\\pytest-of-OMG\\pytest-current'

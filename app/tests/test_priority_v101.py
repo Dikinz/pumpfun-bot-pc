@@ -91,7 +91,11 @@ def test_priority101_unknown_priority_corruption_stays_fatal(tmp_path):
  b.close()
 
 
-def test_priority101_retry_after_capacity_rate_still_enforced(tmp_path):
+def test_priority101_retry_after_capacity_rate_still_enforced(tmp_path,monkeypatch):
+ # Controlled rpc_budget clock: fsync/scheduler latency on a loaded Windows host
+ # must not expire the 1/6 s window between the admitted and the next request.
+ from test_rpc_outcomes_v892 import RateClock
+ clock=RateClock();monkeypatch.setattr(rpc,'time',clock);time=clock
  b=rpc.Budget(tmp_path,rate=6,slots=1,wait=.02)
  with b.request(URL,priority=True):
   with pytest.raises(rpc.Deferred) as caught:

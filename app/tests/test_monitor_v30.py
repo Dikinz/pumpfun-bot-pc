@@ -6,7 +6,7 @@ from test_primary_integrity import fresh
 
 @pytest.fixture
 def bundle():
-    b=json.loads(Path('research/local_snapshot_v26.json').read_text());b['minimum']='1';return b
+    b=json.loads(Path('research/local_snapshot_v26.json').read_text(encoding='utf-8'));b['minimum']='1';return b
 
 def checked(now,**changes):
     r=dict(status='CHECKED',scheduled_ts=now-2,snapshot_received_ts=now-1,reserves={'real_sol_lamports':100,'status':'RESERVES_COVER_GROSS'},sale={'status':'LOCAL_SWAP_EXECUTED'},zero_token_control_ok=True,net_status='NET_MEETS_FLOOR')
@@ -153,7 +153,7 @@ def test_result_package_has_dashboard_database_and_all_evidence(fresh,tmp_path,m
     assert launcher.results()==0
     folder=next((tmp_path/'results').glob('*/review_bundle_manifest.json')).parent
     assert (folder/'dashboard.html').exists() and (folder/'summary.json').exists()
-    assert 'window.REPORT_DATA=' in (folder/'dashboard.html').read_text()
+    assert 'window.REPORT_DATA=' in (folder/'dashboard.html').read_text(encoding='utf-8')
     names=[p.name for p in folder.iterdir()]
     assert all(any(n.startswith(prefix) for n in names) for prefix in ['test_data_','auto_simulations_','preentry_','position_monitor_'])
     volumes=list(folder.glob('review_bundle_*.zip'));assert volumes

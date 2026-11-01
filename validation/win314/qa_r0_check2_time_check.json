@@ -1,0 +1,118 @@
+{
+  "schema": "device_time_check_v0744",
+  "id": "435f5e854cdd4d268ad46f3122e96ad4",
+  "created_ts": 1793526143.8507931,
+  "local_time": "2026-11-01T11:42:23.850798+02:00",
+  "version": "v0.7.101.1",
+  "windows": {
+    "status": "PARTIAL_OR_UNAVAILABLE",
+    "service": {
+      "status": "Running",
+      "start_type": "Automatic"
+    },
+    "service_query": {
+      "status": "OK",
+      "returncode": 0,
+      "stdout": "{\"status\":\"Running\",\"start_type\":\"Automatic\"}",
+      "stderr": ""
+    },
+    "w32tm_status": {
+      "status": "OK",
+      "returncode": 0,
+      "stdout": "Индикатор помех: 0(предупреждений нет)\nСтрата: 5 (вторичная ссылка - синхронизирована с помощью (S)NTP)\nТочность: -23 (119.209ns за такт времени)\nЗадержка корня: 0.0548736s\nДисперсия корня: 0.0257392s\nИдентификатор опорного времени: 0x3389896F (IP-адрес источника:  51.137.137.111)\nВремя последней успешной синхронизации: 01.11.2026 11:42:13\nИсточник: time.windows.com,0x8 \nИнтервал опроса: 6 (64s)\n\nСмещение фазы: 0.0000001s\nТактовая частота: 0.0156250s\nКонечный автомат: 2 (Синхронизовать)\nФлаги источника времени: 0 (Нет)\nРоль сервера: 0 (Нет)\nПоследняя ошибка синхронизации: 0 (Команда выполнена успешно.)\nВремя, прошедшее с момента последней удачной синхронизации: 8.3143658s",
+      "stderr": ""
+    },
+    "source": null,
+    "source_query": {
+      "status": "COMMAND_FAILED",
+      "returncode": 2147942405,
+      "stdout": "Обнаружена следующая ошибка: Отказано в доступе. (0x80070005)",
+      "stderr": ""
+    },
+    "last_successful_sync_text": "01.11.2026 11:42:13",
+    "last_sync_note": "Original localized date text, not parsed. Unknown labels remain in raw w32tm output. A previous sync does not prove present millisecond accuracy."
+  },
+  "reference": {
+    "status": "PASS",
+    "label": "Проверка часов пройдена в пределах диагностических ±50 мс",
+    "usable": 3,
+    "requested": 3,
+    "offset_median_ms": 11.738181114196777,
+    "uncertainty_max_ms": 27.37945510307327,
+    "diagnostic_offset_ms": 50.0,
+    "uncertainty_limit_ms": 50.0,
+    "local_step_ms": -0.006442947778850794,
+    "offset_envelope_low_ms": -15.586914552841336,
+    "offset_envelope_high_ms": 39.1719956533052
+  },
+  "samples": [
+    {
+      "status": "MEASURED",
+      "offset_ms": 11.738181114196777,
+      "uncertainty_ms": 26.36002580402419,
+      "offset_low_ms": -14.621844689827412,
+      "offset_high_ms": 38.09820691822097,
+      "rtt_ms": 28.32315000705421,
+      "network_delay_ms": 28.24256452731788,
+      "root_delay_ms": 23.98681640625,
+      "root_dispersion_ms": 0.244140625,
+      "wall_step_ms": -0.00021490268409252167,
+      "stratum": 3,
+      "t1": 1793526141.7369967,
+      "t2": 1793526141.762856,
+      "t3": 1793526141.7629366,
+      "t4": 1793526141.7653196,
+      "host": "time.cloudflare.com",
+      "authenticated": false,
+      "clock_modified": false,
+      "measured_ts": 1793526141.765425
+    },
+    {
+      "status": "MEASURED",
+      "offset_ms": 11.792540550231934,
+      "uncertainty_ms": 27.37945510307327,
+      "offset_low_ms": -15.586914552841336,
+      "offset_high_ms": 39.1719956533052,
+      "rtt_ms": 30.113249958958477,
+      "network_delay_ms": 30.017882527317852,
+      "root_delay_ms": 24.2462158203125,
+      "root_dispersion_ms": 0.244140625,
+      "wall_step_ms": 0.0006855116225779057,
+      "stratum": 3,
+      "t1": 1793526142.7807987,
+      "t2": 1793526142.8076005,
+      "t3": 1793526142.8076959,
+      "t4": 1793526142.8109126,
+      "host": "time.cloudflare.com",
+      "authenticated": false,
+      "clock_modified": false,
+      "measured_ts": 1793526142.8112366
+    },
+    {
+      "status": "MEASURED",
+      "offset_ms": 10.451793670654297,
+      "uncertainty_ms": 24.415308667812496,
+      "offset_low_ms": -13.9635149971582,
+      "offset_high_ms": 34.86710233846679,
+      "rtt_ms": 26.71864995500073,
+      "network_delay_ms": 26.516470999922603,
+      "root_delay_ms": 21.697998046875,
+      "root_dispersion_ms": 0.30517578125,
+      "wall_step_ms": -3.346940502524376e-05,
+      "stratum": 3,
+      "t1": 1793526143.823651,
+      "t2": 1793526143.847361,
+      "t3": 1793526143.8475633,
+      "t4": 1793526143.8503697,
+      "host": "time.cloudflare.com",
+      "authenticated": false,
+      "clock_modified": false,
+      "measured_ts": 1793526143.8505867
+    }
+  ],
+  "source": "time.cloudflare.com",
+  "clock_modified": false,
+  "active_tolerance_ms": 0,
+  "market_stream_checked": false,
+  "note": "Diagnostic ±50 ms only; does not change trading tolerance. SNTP uncertainty is an estimate, not a guaranteed bound; one unauthenticated source. PASS does not prove provider timestamps are valid. Market event freshness is checked separately after connection."
+}

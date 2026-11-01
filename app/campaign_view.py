@@ -78,8 +78,15 @@ def branch(c,primary,role,now):
     if monitor.get('status') in ('CLEANUP_PENDING','STOP_WAITING_CHILD_CLEANUP') and (monitor.get('late_creation_v85') or {}).get('pending'):
         blocks.insert(0,'Ожидается подтверждение завершения дочернего процесса; новые проверки и входы заблокированы')
     observed_wall=time.time();heartbeat=monitor.get('heartbeat_ts');oldest=monitor.get('oldest_active_started_ts');active_ids=monitor.get('active_check_ids');ownership=(monitor.get('late_creation_v85') or {}).get('pending')
-    age=observed_wall-float(meta['trade_last_market_ts']) if meta.get('trade_last_market_ts') else None
-    live=dict(loop_heartbeat_age_s=runtime.get('heartbeat_age_s'),market_data_age_s=age,monitor_status=monitor.get('status'),
+    # Default meta value '0' means no market data yet, not data from 1970.
+    last_market=float(meta.get('trade_last_market_ts') or 0)
+    age=observed_wall-last_market if last_market>0 else None
+    monitor_status=monitor.get('status')
+    # A missing state file before the first start is not a read failure; the raw
+    # diagnostic stays in state_read_error. After any start it remains an error.
+    if (monitor_status=='STATE_READ_ERROR' and runtime_status.summary(c,now)['state']=='NOT_STARTED' and
+            (monitor.get('state_read_error_v86') or {}).get('reason')=='MONITOR_STATE_MISSING'):monitor_status='NOT_STARTED'
+    live=dict(loop_heartbeat_age_s=runtime.get('heartbeat_age_s'),market_data_age_s=age,monitor_status=monitor_status,
         monitor_heartbeat_age_s=observed_wall-heartbeat if isinstance(heartbeat,(int,float)) else None,
         active_checks=len(active_ids) if isinstance(active_ids,list) else None,worker_limit=2,
         oldest_check_age_s=observed_wall-oldest if isinstance(oldest,(int,float)) else None,
@@ -95,7 +102,7 @@ def branch(c,primary,role,now):
         new_closed=new_closed,carried_closed=carried_closed,entries=entries,closed=closed,wins=wins,net=None if missing else net_total,gross=gross,costs=None if missing else fees,
         accounting_missing=missing,closed_drawdown=None if missing else drawdown,positions=positions,trades=list(reversed(trades)),preentry=pending,timing=timing,
         matched_entry_counts=matched,verified_exits=settlements,verified_routes=route_counts,curve_exits=route_counts.get('PUMP_CURVE',0),amm_exits=route_counts.get('PUMP_AMM',0),unknown_route_exits=sum(n for route,n in route_counts.items() if route not in ('PUMP_CURVE','PUMP_AMM')),stop=stop,transport=transport,input_gap=meta.get('branch_input_gap')=='1' or transport_gap,
-        stream=dict(state=meta.get('trade_stream_state'),age_s=max(0,at-float(meta.get('trade_last_market_ts',0))) if meta.get('trade_last_market_ts') else None))
+        stream=dict(state=meta.get('trade_stream_state'),age_s=max(0,at-last_market) if last_market>0 else None))
 
 def roadmap(primary,amm,route=None):
     a=amm if amm and amm.get('role')=='amm' else {};baseline=primary or a;closed=baseline.get('new_closed',baseline.get('closed',0))

@@ -1,0 +1,257 @@
+........................................................................ [  5%]
+........................................................................ [ 10%]
+........................................................................ [ 15%]
+........................................................................ [ 21%]
+........................................................................ [ 26%]
+........................................................................ [ 31%]
+........................................................................ [ 37%]
+...............................................F........................ [ 42%]
+........................................................................ [ 47%]
+........................................................................ [ 53%]
+.............F.......................................................... [ 58%]
+........................................................................ [ 63%]
+........................................................................ [ 69%]
+........................................................................ [ 74%]
+........................................................................ [ 79%]
+..............................F..F.F...F....F........................... [ 85%]
+........................................................................ [ 90%]
+.....................................................s.................. [ 95%]
+........................................................                 [100%]
+================================== FAILURES ===================================
+_________ test_result_package_has_dashboard_database_and_all_evidence _________
+
+fresh = <database.Connection object at 0x0000014A00ACBD10>
+tmp_path = WindowsPath('C:/Users/OMG/AppData/Local/Temp/pytest-of-OMG/pytest-83/test_result_package_has_dashbo0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000014A00B28670>
+
+    def test_result_package_has_dashboard_database_and_all_evidence(fresh,tmp_path,monkeypatch):
+        import launcher,zipfile
+        monkeypatch.setattr(launcher,'ROOT',tmp_path)
+        assert launcher.results()==0
+        folder=next((tmp_path/'results').glob('*/review_bundle_manifest.json')).parent
+        assert (folder/'dashboard.html').exists() and (folder/'summary.json').exists()
+>       assert 'window.REPORT_DATA=' in (folder/'dashboard.html').read_text()
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_monitor_v30.py:156: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\pathlib\__init__.py:788: in read_text
+    return f.read()
+           ^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <encodings.cp1251.IncrementalDecoder object at 0x0000014A00BFC1E0>
+input = b'<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial...dow.REPORT_DATA.overview||window.REPORT_DATA);}else{poll();setInterval(poll,5000);}\r\r\n</script></body></html>\r\r\n'
+final = True
+
+    def decode(self, input, final=False):
+>       return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       UnicodeDecodeError: 'charmap' codec can't decode byte 0x98 in position 6349: character maps to <undefined>
+
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\encodings\cp1251.py:23: UnicodeDecodeError
+---------------------------- Captured stdout call -----------------------------
+PRESERVED EVIDENCE: C:\Users\OMG\AppData\Local\Temp\pytest-of-OMG\pytest-83\test_result_package_has_dashbo0\results\preservation_20261101_122624_1289c8.zip
+RAW DATABASE VOLUMES: C:\Users\OMG\AppData\Local\Temp\pytest-of-OMG\pytest-83\test_result_package_has_dashbo0\results\preservation_20261101_122624_1289c8\raw_database_volumes
+MONITOR EXPORT PARTIAL: position_monitor_20261101_122625.zip inspect artifact_manifest_v74.json
+REVIEW BUNDLE: C:\Users\OMG\AppData\Local\Temp\pytest-of-OMG\pytest-83\test_result_package_has_dashbo0\results\20261101_122625\review_bundle_001.zip
+FULL EVIDENCE FOLDER: C:\Users\OMG\AppData\Local\Temp\pytest-of-OMG\pytest-83\test_result_package_has_dashbo0\results\20261101_122625
+_________ test_real_pytest_plugin_records_each_phase_before_and_after _________
+
+tmp_path = WindowsPath('C:/Users/OMG/AppData/Local/Temp/pytest-of-OMG/pytest-83/test_real_pytest_plugin_record0')
+
+    def test_real_pytest_plugin_records_each_phase_before_and_after(tmp_path):
+        (tmp_path/'test_probe.py').write_text('def test_probe():\n    assert True\n')
+        target=tmp_path/'progress.jsonl'
+        env=dict(os.environ,PYTEST_DISABLE_PLUGIN_AUTOLOAD='1',RECOVERY_PROGRESS_PATH=str(target))
+        result=subprocess.run([sys.executable,'-m','pytest','-q','-p','recovery_progress',str(tmp_path/'test_probe.py')],cwd=Path(evidence.__file__).parent,env=env,capture_output=True,text=True,timeout=15)
+>       assert result.returncode==0,result.stdout+result.stderr
+E       AssertionError: 
+E         =================================== ERRORS ====================================
+E         _______________________ ERROR collecting pytest-of-OMG ________________________
+E         ..\..\..\venv\Lib\site-packages\_pytest\runner.py:344: in from_call
+E             result: TResult | None = func()
+E                                      ^^^^^^
+E         ..\..\..\venv\Lib\site-packages\_pytest\runner.py:389: in collect
+E             return list(collector.collect())
+E                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+E         ..\..\..\venv\Lib\site-packages\_pytest\main.py:528: in collect
+E             for direntry in scandir(self.path):
+E                             ^^^^^^^^^^^^^^^^^^
+E         ..\..\..\venv\Lib\site-packages\_pytest\pathlib.py:971: in scandir
+E             entry.is_file()
+E         E   PermissionError: [WinError 5] Отказано в доступе: 'C:\\Users\\OMG\\AppData\\Local\\Temp\\pytest-of-OMG\\pytest-current'
+E         =========================== short test summary info ===========================
+E         ERROR ..\..\..\..\..\..\..\pytest-of-OMG - PermissionError: [WinError 5] Отка...
+E         1 error in 0.11s
+E         ERROR: found no collectors for C:\Users\OMG\AppData\Local\Temp\pytest-of-OMG\pytest-83\test_real_pytest_plugin_record0\test_probe.py
+E         
+E         
+E       assert 4 == 0
+E        +  where 4 = CompletedProcess(args=['C:\\Users\\OMG\\AppData\\Local\\Temp\\claude\\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--cl...or C:\\Users\\OMG\\AppData\\Local\\Temp\\pytest-of-OMG\\pytest-83\\test_real_pytest_plugin_record0\\test_probe.py\n\n').returncode
+
+tests\test_recovery_evidence_v861.py:84: AssertionError
+_______________________ test_v0691_dashboard_port_label _______________________
+
+    def test_v0691_dashboard_port_label():
+     import pathlib
+>    assert "v0.7.101.1" in pathlib.Path("dashboard/details.html").read_text()
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_smoke.py:77: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\pathlib\__init__.py:788: in read_text
+    return f.read()
+           ^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <encodings.cp1251.IncrementalDecoder object at 0x0000014A030F7890>
+input = b'<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial...nif(window.REPORT_DATA)render(window.REPORT_DATA);else{poll();setInterval(poll,15000);}\r\n</script></body></html>\r\n'
+final = True
+
+    def decode(self, input, final=False):
+>       return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       UnicodeDecodeError: 'charmap' codec can't decode byte 0x98 in position 4821: character maps to <undefined>
+
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\encodings\cp1251.py:23: UnicodeDecodeError
+______________________ test_v0694_cost_edge_shadow_only _______________________
+
+    def test_v0694_cost_edge_shadow_only():
+     import config, pathlib
+     assert not config.COST_EDGE_LAB_ENABLED
+     assert config.COST_EDGE_MODEL_THRESHOLDS==()
+     assert config.COST_EDGE_SWEET_THRESHOLDS==(65,)
+     assert config.COST_EDGE_TARGET_BE_PER_TRADE==0.20
+>    text=pathlib.Path("dashboard/details.html").read_text()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_smoke.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\pathlib\__init__.py:788: in read_text
+    return f.read()
+           ^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <encodings.cp1251.IncrementalDecoder object at 0x0000014A02FF67B0>
+input = b'<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial...nif(window.REPORT_DATA)render(window.REPORT_DATA);else{poll();setInterval(poll,15000);}\r\n</script></body></html>\r\n'
+final = True
+
+    def decode(self, input, final=False):
+>       return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       UnicodeDecodeError: 'charmap' codec can't decode byte 0x98 in position 4821: character maps to <undefined>
+
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\encodings\cp1251.py:23: UnicodeDecodeError
+_____________________ test_v079_fast_recovery_signal_lab ______________________
+
+    def test_v079_fast_recovery_signal_lab():
+     import config, pathlib, database as db
+     assert config.VERSION == "v0.7.101.1"
+     assert config.PORT == 8188
+     assert config.DB == "data/clean_0762.db"
+     assert config.PRESSURE_GATE_ENABLED is False
+     assert config.FAST_SHADOW_V3 is False
+     assert config.FAST_RECOVERY30_ENABLED is False
+     assert config.FAST_RECOVERY_SIGNAL_ENABLED is True
+     assert config.FAST_RECOVERY_SIGNAL_MAX_SECONDS == 30.0
+     assert config.FAST_RECOVERY_SIGNAL_TARGET_SAMPLES == 300
+     assert config.FAST_RECOVERY_SIGNAL_HARD_ABORT_PCT == -0.06
+     assert config.FAST_RECOVERY_SIGNAL_ARM_PCT == 0.05
+     assert config.FAST_RECOVERY_SIGNAL_TRAIL_PCT == 0.03
+     assert config.FAST_RECOVERY_SIGNAL_MIN_BASE_DELTA_PER_FAST == 0.05
+     assert config.FAST_RECOVERY_SIGNAL_BIG_WORSE_USD == 0.30
+>    page=pathlib.Path("dashboard/details.html").read_text()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_smoke.py:130: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\pathlib\__init__.py:788: in read_text
+    return f.read()
+           ^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <encodings.cp1251.IncrementalDecoder object at 0x0000014A02FF5680>
+input = b'<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial...nif(window.REPORT_DATA)render(window.REPORT_DATA);else{poll();setInterval(poll,15000);}\r\n</script></body></html>\r\n'
+final = True
+
+    def decode(self, input, final=False):
+>       return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       UnicodeDecodeError: 'charmap' codec can't decode byte 0x98 in position 4821: character maps to <undefined>
+
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\encodings\cp1251.py:23: UnicodeDecodeError
+________________ test_dashboard_socket_and_html_polling_hotfix ________________
+
+    def test_dashboard_socket_and_html_polling_hotfix():
+     import pathlib
+     server=pathlib.Path("dashboard/server.py").read_text()
+>    page=pathlib.Path("dashboard/details.html").read_text()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_smoke.py:169: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\pathlib\__init__.py:788: in read_text
+    return f.read()
+           ^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <encodings.cp1251.IncrementalDecoder object at 0x0000014A02FF4B90>
+input = b'<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial...nif(window.REPORT_DATA)render(window.REPORT_DATA);else{poll();setInterval(poll,15000);}\r\n</script></body></html>\r\n'
+final = True
+
+    def decode(self, input, final=False):
+>       return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       UnicodeDecodeError: 'charmap' codec can't decode byte 0x98 in position 4821: character maps to <undefined>
+
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\encodings\cp1251.py:23: UnicodeDecodeError
+_________________________ test_v0712_false_bounce_lab _________________________
+
+    def test_v0712_false_bounce_lab():
+     import pathlib,database as db,config
+     db.init()
+     import sqlite3
+     con=sqlite3.connect(config.DB)
+     assert con.execute("SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'false_bounce_v0712\'").fetchone()
+     con.close()
+>    page=pathlib.Path("dashboard/details.html").read_text()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_smoke.py:236: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\pathlib\__init__.py:788: in read_text
+    return f.read()
+           ^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <encodings.cp1251.IncrementalDecoder object at 0x0000014A02F8EEE0>
+input = b'<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial...nif(window.REPORT_DATA)render(window.REPORT_DATA);else{poll();setInterval(poll,15000);}\r\n</script></body></html>\r\n'
+final = True
+
+    def decode(self, input, final=False):
+>       return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       UnicodeDecodeError: 'charmap' codec can't decode byte 0x98 in position 4821: character maps to <undefined>
+
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\encodings\cp1251.py:23: UnicodeDecodeError
+- generated xml file: C:\Users\OMG\AppData\Local\Temp\claude\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-testing-strategy-agents-116a19\2d2ec8e9-cc3b-4850-b454-4c718c85a186\scratchpad\runs\verify_r1_a1_full.xml -
+=========================== short test summary info ===========================
+FAILED tests/test_monitor_v30.py::test_result_package_has_dashboard_database_and_all_evidence
+FAILED tests/test_recovery_evidence_v861.py::test_real_pytest_plugin_records_each_phase_before_and_after
+FAILED tests/test_smoke.py::test_v0691_dashboard_port_label - UnicodeDecodeEr...
+FAILED tests/test_smoke.py::test_v0694_cost_edge_shadow_only - UnicodeDecodeE...
+FAILED tests/test_smoke.py::test_v079_fast_recovery_signal_lab - UnicodeDecod...
+FAILED tests/test_smoke.py::test_dashboard_socket_and_html_polling_hotfix - U...
+FAILED tests/test_smoke.py::test_v0712_false_bounce_lab - UnicodeDecodeError:...
+7 failed, 1344 passed, 1 skipped in 335.60s (0:05:35)
+Exception ignored in atexit callback <function cleanup_numbered_dir at 0x0000014A7B2292D0>:
+Traceback (most recent call last):
+  File "C:\Users\OMG\AppData\Local\Temp\claude\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-testing-strategy-agents-116a19\2d2ec8e9-cc3b-4850-b454-4c718c85a186\scratchpad\venv\Lib\site-packages\_pytest\pathlib.py", line 374, in cleanup_numbered_dir
+    cleanup_dead_symlinks(root)
+  File "C:\Users\OMG\AppData\Local\Temp\claude\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-testing-strategy-agents-116a19\2d2ec8e9-cc3b-4850-b454-4c718c85a186\scratchpad\venv\Lib\site-packages\_pytest\pathlib.py", line 360, in cleanup_dead_symlinks
+    left_dir.unlink()
+  File "C:\Users\OMG\AppData\Local\Python\pythoncore-3.14-64\Lib\pathlib\__init__.py", line 1042, in unlink
+    os.unlink(self)
+PermissionError: [WinError 5] Отказано в доступе: 'C:\\Users\\OMG\\AppData\\Local\\Temp\\pytest-of-OMG\\pytest-current'
+EXIT=1 SECONDS=337

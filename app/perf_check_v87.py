@@ -7,7 +7,8 @@ REPORT=APP.parent/'results/performance_v87.json'
 def reference(name):
     module=types.ModuleType(name+'_v864')
     source=APP/'benchmarks'/(name+'_v864.txt')
-    exec(compile(source.read_text(),str(source),'exec'),module.__dict__)
+    # UTF-8 source; never the Windows ANSI code page (cp1251 cannot decode it).
+    exec(compile(source.read_text(encoding='utf-8'),str(source),'exec'),module.__dict__)
     return module
 
 def sample(fn,c):

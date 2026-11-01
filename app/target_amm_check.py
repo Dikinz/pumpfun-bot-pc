@@ -48,14 +48,22 @@ async def run(mint,raw,decimals):
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--mint');parser.add_argument('--raw-amount',type=int);parser.add_argument('--decimals',type=int)
     args=parser.parse_args()
-    mint=args.mint or input('Canonical Pump AMM token mint: ').strip()
-    raw=args.raw_amount if args.raw_amount is not None else int(input('Synthetic token amount in RAW integer units: '))
-    decimals=args.decimals if args.decimals is not None else int(input('Token decimals: '))
     target=Path(__file__).parent/'data/target_amm_check_v59.json';target.parent.mkdir(exist_ok=True)
+    status=None
+    try:
+        mint=args.mint or input('Canonical Pump AMM token mint: ').strip()
+        raw=args.raw_amount if args.raw_amount is not None else int(input('Synthetic token amount in RAW integer units: '))
+        decimals=args.decimals if args.decimals is not None else int(input('Token decimals: '))
+    except EOFError:
+        status='INPUT_UNAVAILABLE';print('\nAMM check needs interactive input or --mint/--raw-amount/--decimals.',flush=True)
+    except ValueError:
+        status='INPUT_INVALID';print('\nAMM check input must be whole numbers for amount and decimals.',flush=True)
     (target.parent/'target_amm_evidence_v59.zip').unlink(missing_ok=True)
     # Replace an old PASS even when this attempt fails. Never retain stale readiness.
-    try:report=asyncio.run(run(mint,raw,decimals))
-    except Exception as exc:report=dict(schema='TARGET_AMM_CHECK_V59',created_ts=time.time(),passed=False,scope='CURRENT_RPC_ISOLATED_SIMULATION',status='CHECK_FAILED',error_type=type(exc).__name__,broadcast=False,paper_mutated=False,mainnet_execution_proven=False)
+    if status:report=dict(schema='TARGET_AMM_CHECK_V59',created_ts=time.time(),passed=False,scope='CURRENT_RPC_ISOLATED_SIMULATION',status=status,broadcast=False,paper_mutated=False,mainnet_execution_proven=False)
+    else:
+        try:report=asyncio.run(run(mint,raw,decimals))
+        except Exception as exc:report=dict(schema='TARGET_AMM_CHECK_V59',created_ts=time.time(),passed=False,scope='CURRENT_RPC_ISOLATED_SIMULATION',status='CHECK_FAILED',error_type=type(exc).__name__,broadcast=False,paper_mutated=False,mainnet_execution_proven=False)
     tmp=target.with_suffix('.tmp');tmp.write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8');tmp.replace(target)
     print(json.dumps(report,ensure_ascii=False));return 0 if report['passed'] else 1
 if __name__=='__main__':raise SystemExit(main())

@@ -1,0 +1,68 @@
+........................................................................ [  5%]
+........................................................................ [ 10%]
+........................................................................ [ 15%]
+........................................................................ [ 21%]
+........................................................................ [ 26%]
+........................................................................ [ 31%]
+........................................................................ [ 37%]
+........................................................................ [ 42%]
+........................................................................ [ 47%]
+........................................................................ [ 53%]
+.............F.......................................................... [ 58%]
+........................................................................ [ 63%]
+........................................................................ [ 69%]
+........................................................................ [ 74%]
+........................................................................ [ 79%]
+........................................................................ [ 85%]
+........................................................................ [ 90%]
+.....................................................s.................. [ 95%]
+..........................................................               [100%]
+================================== FAILURES ===================================
+_________ test_real_pytest_plugin_records_each_phase_before_and_after _________
+
+tmp_path = WindowsPath('C:/Users/OMG/AppData/Local/Temp/pytest-of-OMG/pytest-90/test_real_pytest_plugin_record0')
+
+    def test_real_pytest_plugin_records_each_phase_before_and_after(tmp_path):
+        (tmp_path/'test_probe.py').write_text('def test_probe():\n    assert True\n')
+        target=tmp_path/'progress.jsonl'
+        env=dict(os.environ,PYTEST_DISABLE_PLUGIN_AUTOLOAD='1',RECOVERY_PROGRESS_PATH=str(target))
+        result=subprocess.run([sys.executable,'-m','pytest','-q','-p','recovery_progress',str(tmp_path/'test_probe.py')],cwd=Path(evidence.__file__).parent,env=env,capture_output=True,text=True,timeout=15)
+>       assert result.returncode==0,result.stdout+result.stderr
+E       AssertionError: 
+E         =================================== ERRORS ====================================
+E         _______________________ ERROR collecting pytest-of-OMG ________________________
+E         ..\..\..\venv\Lib\site-packages\_pytest\runner.py:344: in from_call
+E             result: TResult | None = func()
+E                                      ^^^^^^
+E         ..\..\..\venv\Lib\site-packages\_pytest\runner.py:389: in collect
+E             return list(collector.collect())
+E                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+E         ..\..\..\venv\Lib\site-packages\_pytest\main.py:528: in collect
+E             for direntry in scandir(self.path):
+E                             ^^^^^^^^^^^^^^^^^^
+E         ..\..\..\venv\Lib\site-packages\_pytest\pathlib.py:971: in scandir
+E             entry.is_file()
+E         E   PermissionError: [WinError 5] Отказано в доступе: 'C:\\Users\\OMG\\AppData\\Local\\Temp\\pytest-of-OMG\\pytest-current'
+E         =========================== short test summary info ===========================
+E         ERROR ..\..\..\..\..\..\..\pytest-of-OMG - PermissionError: [WinError 5] Отка...
+E         1 error in 0.10s
+E         ERROR: found no collectors for C:\Users\OMG\AppData\Local\Temp\pytest-of-OMG\pytest-90\test_real_pytest_plugin_record0\test_probe.py
+E         
+E         
+E       assert 4 == 0
+E        +  where 4 = CompletedProcess(args=['C:\\Users\\OMG\\AppData\\Local\\Temp\\claude\\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--cl...or C:\\Users\\OMG\\AppData\\Local\\Temp\\pytest-of-OMG\\pytest-90\\test_real_pytest_plugin_record0\\test_probe.py\n\n').returncode
+
+tests\test_recovery_evidence_v861.py:84: AssertionError
+- generated xml file: C:\Users\OMG\AppData\Local\Temp\claude\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-testing-strategy-agents-116a19\2d2ec8e9-cc3b-4850-b454-4c718c85a186\scratchpad\runs\verify_r1_a2_full_utf8.xml -
+=========================== short test summary info ===========================
+FAILED tests/test_recovery_evidence_v861.py::test_real_pytest_plugin_records_each_phase_before_and_after
+1 failed, 1352 passed, 1 skipped in 363.24s (0:06:03)
+Exception ignored in atexit callback <function cleanup_numbered_dir at 0x000001CF82784F60>:
+Traceback (most recent call last):
+  File "C:\Users\OMG\AppData\Local\Temp\claude\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-testing-strategy-agents-116a19\2d2ec8e9-cc3b-4850-b454-4c718c85a186\scratchpad\venv\Lib\site-packages\_pytest\pathlib.py", line 374, in cleanup_numbered_dir
+    cleanup_dead_symlinks(root)
+  File "C:\Users\OMG\AppData\Local\Temp\claude\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-testing-strategy-agents-116a19\2d2ec8e9-cc3b-4850-b454-4c718c85a186\scratchpad\venv\Lib\site-packages\_pytest\pathlib.py", line 360, in cleanup_dead_symlinks
+    left_dir.unlink()
+  File "C:\Users\OMG\AppData\Local\Python\pythoncore-3.14-64\Lib\pathlib\__init__.py", line 1042, in unlink
+    os.unlink(self)
+PermissionError: [WinError 5] Отказано в доступе: 'C:\\Users\\OMG\\AppData\\Local\\Temp\\pytest-of-OMG\\pytest-current'

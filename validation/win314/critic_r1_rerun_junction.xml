@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="4" skipped="1" tests="23" time="12.242" timestamp="2026-11-01T13:40:36.186125+02:00" hostname="DESKTOP-BBAG9V9"><testcase classname="tests.test_execution_safety_v52" name="test_aes_gcm_vault_password_tamper_and_no_overwrite" time="0.072"><failure message="ImportError: DLL load failed while importing _cffi_backend: Имя файла или его расширение имеет слишком большую длину.">plan = (Keypair(
+    Keypair(
+        SigningKey {
+            verifying_key: VerifyingKey(CompressedEdwardsY: [73, 71, 33, 3...H67zfhrMXfiWsjRDxVTk4oA85GUGRpump'], 'enabled': True, 'max_compute_units': 200000, 'max_order_lamports': 1000000, ...})
+tmp_path = WindowsPath('C:/Users/OMG/AppData/Local/Temp/cr1bt/re5/test_aes_gcm_vault_password_ta0')
+
+    def test_aes_gcm_vault_password_tamper_and_no_overwrite(plan,tmp_path):
+        path=tmp_path/'vault.json';password='long test password 123'
+&gt;       signer.create_vault(path,plan[0],password)
+
+tests\test_execution_safety_v52.py:182: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+wallet_signer.py:23: in create_vault
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+..\.venv\Lib\site-packages\cryptography\hazmat\primitives\ciphers\__init__.py:11: in &lt;module&gt;
+    from cryptography.hazmat.primitives.ciphers.base import (
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    # This file is dual licensed under the terms of the Apache License, Version
+    # 2.0, and the BSD License. See the LICENSE file in the root of this repository
+    # for complete details.
+    
+    from __future__ import annotations
+    
+    import abc
+    import typing
+    
+&gt;   from cryptography.hazmat.bindings._rust import openssl as rust_openssl
+E   ImportError: DLL load failed while importing _cffi_backend: Имя файла или его расширение имеет слишком большую длину.
+
+..\.venv\Lib\site-packages\cryptography\hazmat\primitives\ciphers\base.py:10: ImportError</failure></testcase><testcase classname="tests.test_execution_safety_v52" name="test_isolated_signer_real_signature" time="0.053"><failure message="ImportError: DLL load failed while importing _cffi_backend: Имя файла или его расширение имеет слишком большую длину.">plan = (Keypair(
+    Keypair(
+        SigningKey {
+            verifying_key: VerifyingKey(CompressedEdwardsY: [131, 129, 22,...H67zfhrMXfiWsjRDxVTk4oA85GUGRpump'], 'enabled': True, 'max_compute_units': 200000, 'max_order_lamports': 1000000, ...})
+tmp_path = WindowsPath('C:/Users/OMG/AppData/Local/Temp/cr1bt/re5/test_isolated_signer_real_sign0')
+
+    def test_isolated_signer_real_signature(plan,tmp_path):
+        vault=tmp_path/'wallet.json';policy=tmp_path/'policy.json';password='long offline test password'
+&gt;       signer.create_vault(vault,plan[0],password);policy.write_text(json.dumps(plan[2]));__import__('wallet_manager').restrict_access(policy)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_execution_safety_v52.py:192: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+wallet_signer.py:23: in create_vault
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+..\.venv\Lib\site-packages\cryptography\hazmat\primitives\ciphers\__init__.py:11: in &lt;module&gt;
+    from cryptography.hazmat.primitives.ciphers.base import (
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    # This file is dual licensed under the terms of the Apache License, Version
+    # 2.0, and the BSD License. See the LICENSE file in the root of this repository
+    # for complete details.
+    
+    from __future__ import annotations
+    
+    import abc
+    import typing
+    
+&gt;   from cryptography.hazmat.bindings._rust import openssl as rust_openssl
+E   ImportError: DLL load failed while importing _cffi_backend: Имя файла или его расширение имеет слишком большую длину.
+
+..\.venv\Lib\site-packages\cryptography\hazmat\primitives\ciphers\base.py:10: ImportError</failure></testcase><testcase classname="tests.test_late_spawn_ownership_v85" name="test_deadline_retains_owner_and_stop_waits_for_late_cleanup" time="1.868" /><testcase classname="tests.test_late_spawn_ownership_v85" name="test_sell_cancel_retains_owner_then_resumes_fresh_scheduling" time="1.738" /><testcase classname="tests.test_late_spawn_ownership_v85" name="test_late_creation_error_is_proven_no_process" time="1.815" /><testcase classname="tests.test_late_spawn_ownership_v85" name="test_native_late_owner_survives_stop_and_reaps_tree" time="2.352" /><testcase classname="tests.test_late_spawn_ownership_v85" name="test_stale_or_reused_monitor_identity_does_not_hold_stop" time="0.174" /><testcase classname="tests.test_late_spawn_ownership_v85" name="test_unknown_pending_state_fails_closed" time="0.140" /><testcase classname="tests.test_late_spawn_ownership_v85" name="test_actual_shutdown_does_not_kill_retained_monitor" time="2.278" /><testcase classname="tests.test_late_spawn_ownership_v85" name="test_failed_late_cleanup_remains_fatal_at_stop" time="0.202" /><testcase classname="tests.test_wallet_rpc_phase1" name="test_read_retry_fallback_chain_and_redacted_stats" time="0.157" /><testcase classname="tests.test_wallet_rpc_phase1" name="test_wrong_chain_never_sends" time="0.026" /><testcase classname="tests.test_wallet_rpc_phase1" name="test_send_timeout_has_no_retry_or_fallback" time="0.026" /><testcase classname="tests.test_wallet_rpc_phase1" name="test_send_disabled_and_invalid_params_no_retry" time="0.028" /><testcase classname="tests.test_wallet_rpc_phase1" name="test_malformed_envelope_and_retry_budget" time="0.141" /><testcase classname="tests.test_wallet_rpc_phase1" name="test_pooled_session_closed_once" time="0.029" /><testcase classname="tests.test_wallet_rpc_phase1" name="test_cancelled_rpc_not_retried" time="0.028" /><testcase classname="tests.test_wallet_rpc_phase1" name="test_rpc_endpoint_and_chain_validation" time="0.024" /><testcase classname="tests.test_wallet_rpc_phase1" name="test_loose_permissions_and_symlink_rejected" time="0.001"><skipped type="pytest.skip" message="POSIX permission semantics">C:\Users\OMG\AppData\Local\Temp\claude\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-testing-strategy-agents-116a19\2d2ec8e9-cc3b-4850-b454-4c718c85a186\scratchpad\runs\critic_r1\app\tests\test_wallet_rpc_phase1.py:86: POSIX permission semantics</skipped></testcase><testcase classname="tests.test_wallet_rpc_phase1" name="test_secure_wallet_keeps_key_only_in_worker" time="0.080"><failure message="ImportError: DLL load failed while importing _cffi_backend: Имя файла или его расширение имеет слишком большую длину.">plan = (Keypair(
+    Keypair(
+        SigningKey {
+            verifying_key: VerifyingKey(CompressedEdwardsY: [6, 199, 55, 1...H67zfhrMXfiWsjRDxVTk4oA85GUGRpump'], 'enabled': True, 'max_compute_units': 200000, 'max_order_lamports': 1000000, ...})
+tmp_path = WindowsPath('C:/Users/OMG/AppData/Local/Temp/cr1bt/re5/test_secure_wallet_keeps_key_o0')
+
+    def test_secure_wallet_keeps_key_only_in_worker(plan,tmp_path):
+        vault=tmp_path/'wallet.json';policy=tmp_path/'policy.json';password='long offline test password'
+&gt;       signer.create_vault(vault,plan[0],password);policy.write_text(json.dumps(plan[2]));wallet.restrict_access(policy)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_wallet_rpc_phase1.py:97: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+wallet_signer.py:23: in create_vault
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+..\.venv\Lib\site-packages\cryptography\hazmat\primitives\ciphers\__init__.py:11: in &lt;module&gt;
+    from cryptography.hazmat.primitives.ciphers.base import (
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    # This file is dual licensed under the terms of the Apache License, Version
+    # 2.0, and the BSD License. See the LICENSE file in the root of this repository
+    # for complete details.
+    
+    from __future__ import annotations
+    
+    import abc
+    import typing
+    
+&gt;   from cryptography.hazmat.bindings._rust import openssl as rust_openssl
+E   ImportError: DLL load failed while importing _cffi_backend: Имя файла или его расширение имеет слишком большую длину.
+
+..\.venv\Lib\site-packages\cryptography\hazmat\primitives\ciphers\base.py:10: ImportError</failure></testcase><testcase classname="tests.test_wallet_rpc_phase1" name="test_windows_acl_failure_is_closed" time="0.026" /><testcase classname="tests.test_wallet_rpc_phase1" name="test_signer_has_no_private_key_env_loading" time="0.032" /><testcase classname="tests.test_wallet_rpc_phase1" name="test_offline_wallet_signature_does_not_need_enabled_policy" time="0.090"><failure message="ImportError: DLL load failed while importing _cffi_backend: Имя файла или его расширение имеет слишком большую длину.">plan = (Keypair(
+    Keypair(
+        SigningKey {
+            verifying_key: VerifyingKey(CompressedEdwardsY: [220, 174, 126...H67zfhrMXfiWsjRDxVTk4oA85GUGRpump'], 'enabled': True, 'max_compute_units': 200000, 'max_order_lamports': 1000000, ...})
+tmp_path = WindowsPath('C:/Users/OMG/AppData/Local/Temp/cr1bt/re5/test_offline_wallet_signature_0')
+
+    def test_offline_wallet_signature_does_not_need_enabled_policy(plan,tmp_path):
+        vault=tmp_path/'wallet.json';password='long offline test password'
+&gt;       signer.create_vault(vault,plan[0],password)
+
+tests\test_wallet_rpc_phase1.py:123: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+wallet_signer.py:23: in create_vault
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+..\.venv\Lib\site-packages\cryptography\hazmat\primitives\ciphers\__init__.py:11: in &lt;module&gt;
+    from cryptography.hazmat.primitives.ciphers.base import (
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    # This file is dual licensed under the terms of the Apache License, Version
+    # 2.0, and the BSD License. See the LICENSE file in the root of this repository
+    # for complete details.
+    
+    from __future__ import annotations
+    
+    import abc
+    import typing
+    
+&gt;   from cryptography.hazmat.bindings._rust import openssl as rust_openssl
+E   ImportError: DLL load failed while importing _cffi_backend: Имя файла или его расширение имеет слишком большую длину.
+
+..\.venv\Lib\site-packages\cryptography\hazmat\primitives\ciphers\base.py:10: ImportError</failure></testcase></testsuite></testsuites>

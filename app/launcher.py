@@ -56,9 +56,17 @@ def results():
         try:return legacy_results()
         except Exception as exc:
             sqlite_diagnostics.record(database,'RESULTS_REPORT_FAILED',exc)
-            (folder/'REPORT_ERROR.json').write_text(json.dumps(sqlite_diagnostics.error(exc),indent=2),encoding='utf-8')
+            details=sqlite_diagnostics.error(exc)
+            # Only the launcher's own fixed operator guidance; never arbitrary exception text.
+            reason=str(exc) if type(exc) is RuntimeError and str(exc) in RESULTS_GUIDANCE else None
+            if reason:details['message']=reason
+            (folder/'REPORT_ERROR.json').write_text(json.dumps(details,ensure_ascii=False,indent=2),encoding='utf-8')
             with zipfile.ZipFile(target,'a',zipfile.ZIP_DEFLATED) as z:z.write(folder/'REPORT_ERROR.json','REPORT_ERROR.json')
+            if reason:print('REPORT FAILED:',reason,flush=True)
             print('REPORT FAILED; preserved databases remain available:',target);return 1
+
+RESULTS_GUIDANCE=('No test database. Start the bot first.','Stop the bot with Ctrl+C before collecting results.',
+    'Monitor is still running. Wait for shutdown before collecting results.')
 
 def legacy_results():
     import shadow_preflight
@@ -113,9 +121,9 @@ def legacy_results():
         (folder/'time_order_audit.json').write_text(json.dumps(time_order_audit.summary(c,-1),ensure_ascii=False,indent=2),encoding='utf-8')
     payload=json.dumps(snapshot,ensure_ascii=False).replace('<','\\u003c')
     html=PAGE.decode().replace('<script>','<script>window.REPORT_DATA='+payload+';</script><script>',1)
-    (folder/'dashboard.html').write_text(html,encoding='utf-8')
+    (folder/'dashboard.html').write_text(html,encoding='utf-8',newline='') # template bytes already carry their line endings
     detail_html=DETAILS.decode().replace('<script>','<script>window.REPORT_DATA='+payload+';</script><script>',1).replace('href="/"','href="dashboard.html"')
-    (folder/'dashboard_details.html').write_text(detail_html,encoding='utf-8')
+    (folder/'dashboard_details.html').write_text(detail_html,encoding='utf-8',newline='')
     (folder/'campaign_overview.json').write_text(json.dumps(snapshot['overview'],ensure_ascii=False,indent=2),encoding='utf-8')
     import system_health,primary_integrity
     (folder/'amm_signal_exit.json').write_text(json.dumps(snapshot.get('monitor',{}).get('amm_signal_exit',{}),ensure_ascii=False,indent=2),encoding='utf-8')

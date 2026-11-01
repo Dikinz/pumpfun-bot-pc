@@ -1,0 +1,229 @@
+........................................................................ [  5%]
+........................................................................ [ 10%]
+........................................................................ [ 15%]
+.............................................FF......................... [ 21%]
+........................................................................ [ 26%]
+....................................................F................... [ 31%]
+........................................................................ [ 37%]
+........................................................................ [ 42%]
+........................................................................ [ 47%]
+........................................................................ [ 53%]
+........................................................................ [ 58%]
+........................................................................ [ 63%]
+........................................................................ [ 69%]
+........................................................................ [ 74%]
+........................................................................ [ 79%]
+........................................................................ [ 85%]
+........................................................................ [ 90%]
+.....................................................sF..F.............. [ 95%]
+..........................................................               [100%]
+================================== FAILURES ===================================
+_____________ test_aes_gcm_vault_password_tamper_and_no_overwrite _____________
+
+plan = (Keypair(
+    Keypair(
+        SigningKey {
+            verifying_key: VerifyingKey(CompressedEdwardsY: [207, 27, 192,...H67zfhrMXfiWsjRDxVTk4oA85GUGRpump'], 'enabled': True, 'max_compute_units': 200000, 'max_order_lamports': 1000000, ...})
+tmp_path = WindowsPath('C:/Users/OMG/AppData/Local/Temp/cr1bt/full/test_aes_gcm_vault_password_ta0')
+
+    def test_aes_gcm_vault_password_tamper_and_no_overwrite(plan,tmp_path):
+        path=tmp_path/'vault.json';password='long test password 123'
+>       signer.create_vault(path,plan[0],password)
+
+tests\test_execution_safety_v52.py:182: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+wallet_signer.py:23: in create_vault
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+..\.venv\Lib\site-packages\cryptography\hazmat\primitives\ciphers\__init__.py:11: in <module>
+    from cryptography.hazmat.primitives.ciphers.base import (
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    # This file is dual licensed under the terms of the Apache License, Version
+    # 2.0, and the BSD License. See the LICENSE file in the root of this repository
+    # for complete details.
+    
+    from __future__ import annotations
+    
+    import abc
+    import typing
+    
+>   from cryptography.hazmat.bindings._rust import openssl as rust_openssl
+E   ImportError: DLL load failed while importing _cffi_backend: Имя файла или его расширение имеет слишком большую длину.
+
+..\.venv\Lib\site-packages\cryptography\hazmat\primitives\ciphers\base.py:10: ImportError
+_____________________ test_isolated_signer_real_signature _____________________
+
+plan = (Keypair(
+    Keypair(
+        SigningKey {
+            verifying_key: VerifyingKey(CompressedEdwardsY: [101, 81, 140,...H67zfhrMXfiWsjRDxVTk4oA85GUGRpump'], 'enabled': True, 'max_compute_units': 200000, 'max_order_lamports': 1000000, ...})
+tmp_path = WindowsPath('C:/Users/OMG/AppData/Local/Temp/cr1bt/full/test_isolated_signer_real_sign0')
+
+    def test_isolated_signer_real_signature(plan,tmp_path):
+        vault=tmp_path/'wallet.json';policy=tmp_path/'policy.json';password='long offline test password'
+>       signer.create_vault(vault,plan[0],password);policy.write_text(json.dumps(plan[2]));__import__('wallet_manager').restrict_access(policy)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_execution_safety_v52.py:192: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+wallet_signer.py:23: in create_vault
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+..\.venv\Lib\site-packages\cryptography\hazmat\primitives\ciphers\__init__.py:11: in <module>
+    from cryptography.hazmat.primitives.ciphers.base import (
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    # This file is dual licensed under the terms of the Apache License, Version
+    # 2.0, and the BSD License. See the LICENSE file in the root of this repository
+    # for complete details.
+    
+    from __future__ import annotations
+    
+    import abc
+    import typing
+    
+>   from cryptography.hazmat.bindings._rust import openssl as rust_openssl
+E   ImportError: DLL load failed while importing _cffi_backend: Имя файла или его расширение имеет слишком большую длину.
+
+..\.venv\Lib\site-packages\cryptography\hazmat\primitives\ciphers\base.py:10: ImportError
+_____________ test_native_late_owner_survives_stop_and_reaps_tree _____________
+
+fresh = <database.Connection object at 0x000001FC4A634A70>
+tmp_path = WindowsPath('C:/Users/OMG/AppData/Local/Temp/cr1bt/full/test_native_late_owner_survive0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001FC4A7680C0>
+
+    @pytest.mark.skipif(os.name!='nt',reason='Native Windows job/process tree verification requires Windows')
+    def test_native_late_owner_survives_stop_and_reaps_tree(fresh,tmp_path,monkeypatch):
+>       scenario(fresh,tmp_path,monkeypatch,backend='native_windows')
+
+tests\test_late_spawn_ownership_v85.py:163: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_late_spawn_ownership_v85.py:149: in scenario
+    asyncio.run(run())
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\asyncio\runners.py:205: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\asyncio\runners.py:128: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\..\..\..\..\..\..\Python\pythoncore-3.14-64\Lib\asyncio\base_events.py:720: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    async def run():
+        monitor=asyncio.create_task(ms.run(config.DB,0,stop_event=stop));guard=None
+        try:
+            await until(entered.is_set)
+            if cause=='cancel':
+                with closing(ms.connect()) as c:job=dict(c.execute("SELECT * FROM position_checks_v0730 WHERE status='RUNNING' ORDER BY started_ts LIMIT 1").fetchone())
+                fresh.execute("INSERT INTO paper_orders_v0720(order_id,mint,side,status,signal_ts,signal_price,size,reason,trade_id) VALUES('late-sell',?,'SELL','PENDING',?,1,3,'TP2',?)",(job['mint'],time.time(),job['trade_id']))
+            await until(lambda:late.path(config.DB).exists() and json.loads(late.path(config.DB).read_text()).get('pending'))
+            await until(lambda:ms.read_state(config.DB).get('status')=='CLEANUP_PENDING')
+            pending=json.loads(late.path(config.DB).read_text());check_id=pending['owners'][0]['check_id']
+            assert pending['owners'][0]['child_pid'] is None and not monitor.done()
+            assert main._buy('blocked-v85',1)==(False,'CHILD_CREATION_CLEANUP_PENDING')
+            count=len(dispatches);await asyncio.sleep(.25)
+            assert len(dispatches)==count # No replacement/native-owner growth while ownership is unresolved.
+            with closing(ms.connect()) as c:
+                row=dict(c.execute('SELECT * FROM position_checks_v0730 WHERE id=?',(check_id,)).fetchone())
+                assert row['status']=='CLEANUP_FAILED'
+            if stop_while_pending:
+                stop.set()
+                await until(lambda:ms.read_state(config.DB).get('status')=='STOP_WAITING_CHILD_CLEANUP')
+                guard=asyncio.create_task(asyncio.to_thread(late.wait_before_force,SimpleNamespace(pid=os.getpid()),(),Path(config.DB).resolve().parent))
+                await asyncio.sleep(.15);assert not guard.done() and not monitor.done()
+            release.set()
+            await until(lambda:not json.loads(late.path(config.DB).read_text()).get('pending'))
+            if not stop_while_pending:
+                await until(lambda:len(dispatches)>count)
+                assert not monitor.done();stop.set()
+            await asyncio.wait_for(monitor,8)
+            if guard:assert await asyncio.wait_for(guard,3) is True
+            assert owners[0].done.is_set();await asyncio.to_thread(owners[0].thread.join,1)
+            assert not owners[0].thread.is_alive()
+            final=json.loads(late.path(config.DB).read_text());resolved=next(x for x in final['history'] if x['check_id']==check_id)
+            assert resolved['state']=='CONFIRMED' and resolved['original_result_ineligible'] is True
+>           assert resolved['outcome']==('SPAWN_FAILED_NO_PROCESS' if fail_create else 'LATE_PROCESS_CLEANED')
+E           AssertionError: assert 'DELAYED_CLEANUP_CONFIRMED' == 'LATE_PROCESS_CLEANED'
+E             
+E             - LATE_PROCESS_CLEANED
+E             + DELAYED_CLEANUP_CONFIRMED
+
+tests\test_late_spawn_ownership_v85.py:129: AssertionError
+---------------------------- Captured stdout call -----------------------------
+STOP WAITING: retained simulation owner; process/job cleanup is not yet confirmed.
+_________________ test_secure_wallet_keeps_key_only_in_worker _________________
+
+plan = (Keypair(
+    Keypair(
+        SigningKey {
+            verifying_key: VerifyingKey(CompressedEdwardsY: [184, 77, 2, 1...H67zfhrMXfiWsjRDxVTk4oA85GUGRpump'], 'enabled': True, 'max_compute_units': 200000, 'max_order_lamports': 1000000, ...})
+tmp_path = WindowsPath('C:/Users/OMG/AppData/Local/Temp/cr1bt/full/test_secure_wallet_keeps_key_o0')
+
+    def test_secure_wallet_keeps_key_only_in_worker(plan,tmp_path):
+        vault=tmp_path/'wallet.json';policy=tmp_path/'policy.json';password='long offline test password'
+>       signer.create_vault(vault,plan[0],password);policy.write_text(json.dumps(plan[2]));wallet.restrict_access(policy)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_wallet_rpc_phase1.py:97: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+wallet_signer.py:23: in create_vault
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+..\.venv\Lib\site-packages\cryptography\hazmat\primitives\ciphers\__init__.py:11: in <module>
+    from cryptography.hazmat.primitives.ciphers.base import (
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    # This file is dual licensed under the terms of the Apache License, Version
+    # 2.0, and the BSD License. See the LICENSE file in the root of this repository
+    # for complete details.
+    
+    from __future__ import annotations
+    
+    import abc
+    import typing
+    
+>   from cryptography.hazmat.bindings._rust import openssl as rust_openssl
+E   ImportError: DLL load failed while importing _cffi_backend: Имя файла или его расширение имеет слишком большую длину.
+
+..\.venv\Lib\site-packages\cryptography\hazmat\primitives\ciphers\base.py:10: ImportError
+_________ test_offline_wallet_signature_does_not_need_enabled_policy __________
+
+plan = (Keypair(
+    Keypair(
+        SigningKey {
+            verifying_key: VerifyingKey(CompressedEdwardsY: [76, 22, 72, 1...H67zfhrMXfiWsjRDxVTk4oA85GUGRpump'], 'enabled': True, 'max_compute_units': 200000, 'max_order_lamports': 1000000, ...})
+tmp_path = WindowsPath('C:/Users/OMG/AppData/Local/Temp/cr1bt/full/test_offline_wallet_signature_0')
+
+    def test_offline_wallet_signature_does_not_need_enabled_policy(plan,tmp_path):
+        vault=tmp_path/'wallet.json';password='long offline test password'
+>       signer.create_vault(vault,plan[0],password)
+
+tests\test_wallet_rpc_phase1.py:123: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+wallet_signer.py:23: in create_vault
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+..\.venv\Lib\site-packages\cryptography\hazmat\primitives\ciphers\__init__.py:11: in <module>
+    from cryptography.hazmat.primitives.ciphers.base import (
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    # This file is dual licensed under the terms of the Apache License, Version
+    # 2.0, and the BSD License. See the LICENSE file in the root of this repository
+    # for complete details.
+    
+    from __future__ import annotations
+    
+    import abc
+    import typing
+    
+>   from cryptography.hazmat.bindings._rust import openssl as rust_openssl
+E   ImportError: DLL load failed while importing _cffi_backend: Имя файла или его расширение имеет слишком большую длину.
+
+..\.venv\Lib\site-packages\cryptography\hazmat\primitives\ciphers\base.py:10: ImportError
+- generated xml file: C:\Users\OMG\AppData\Local\Temp\claude\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-testing-strategy-agents-116a19\2d2ec8e9-cc3b-4850-b454-4c718c85a186\scratchpad\runs\critic_r1_out\full_utf8.xml -
+=========================== short test summary info ===========================
+FAILED tests/test_execution_safety_v52.py::test_aes_gcm_vault_password_tamper_and_no_overwrite
+FAILED tests/test_execution_safety_v52.py::test_isolated_signer_real_signature
+FAILED tests/test_late_spawn_ownership_v85.py::test_native_late_owner_survives_stop_and_reaps_tree
+FAILED tests/test_wallet_rpc_phase1.py::test_secure_wallet_keeps_key_only_in_worker
+FAILED tests/test_wallet_rpc_phase1.py::test_offline_wallet_signature_does_not_need_enabled_policy
+5 failed, 1348 passed, 1 skipped in 372.84s (0:06:12)

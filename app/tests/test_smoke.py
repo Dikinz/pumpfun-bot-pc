@@ -68,13 +68,13 @@ def test_v069_model_gate_frozen():
 
 def test_v0691_model_gate_import_before_runtime():
  import pathlib
- text=pathlib.Path("main.py").read_text()
+ text=pathlib.Path("main.py").read_text(encoding='utf-8')
  assert "import model_gate" in text[:500]
  assert text.find("import model_gate") < text.find("def buy(")
 
 def test_v0691_dashboard_port_label():
  import pathlib
- assert "v0.7.101.1" in pathlib.Path("dashboard/details.html").read_text()
+ assert "v0.7.101.1" in pathlib.Path("dashboard/details.html").read_text(encoding='utf-8')
 
 
 def test_final_gate_validation_schema():
@@ -95,7 +95,7 @@ def test_v0694_cost_edge_shadow_only():
  assert config.COST_EDGE_MODEL_THRESHOLDS==()
  assert config.COST_EDGE_SWEET_THRESHOLDS==(65,)
  assert config.COST_EDGE_TARGET_BE_PER_TRADE==0.20
- text=pathlib.Path("dashboard/details.html").read_text()
+ text=pathlib.Path("dashboard/details.html").read_text(encoding='utf-8')
  assert "FAST RECOVERY SIGNAL LAB" not in text
 
 
@@ -105,7 +105,7 @@ def test_v073_feature_lab_broad_entries():
  assert not config.SWEET70_GATE_ENABLED
  assert not config.MODEL_GATE_ENABLED
  assert not config.COST_EDGE_LAB_ENABLED
- text=pathlib.Path("dashboard/server.py").read_text()
+ text=pathlib.Path("dashboard/server.py").read_text(encoding='utf-8')
  for name in ("ACCEL_POS","ACCEL_GE_0_5","LAST1_GE_2","VOL_1_TO_4","PRESSURE_POS","WINNER_CORE","WINNER_BALANCED"):
   assert name not in text
 
@@ -127,10 +127,10 @@ def test_v079_fast_recovery_signal_lab():
  assert config.FAST_RECOVERY_SIGNAL_TRAIL_PCT == 0.03
  assert config.FAST_RECOVERY_SIGNAL_MIN_BASE_DELTA_PER_FAST == 0.05
  assert config.FAST_RECOVERY_SIGNAL_BIG_WORSE_USD == 0.30
- page=pathlib.Path("dashboard/details.html").read_text()
+ page=pathlib.Path("dashboard/details.html").read_text(encoding='utf-8')
  assert "v0.7.101.1" in page and "FAST RECOVERY SIGNAL LAB" not in page
  assert "positionRows" in page and "monitorRows" in page
- main=pathlib.Path("main.py").read_text()
+ main=pathlib.Path("main.py").read_text(encoding='utf-8')
  assert "fast_recovery_signal_start" in main and "fast_recovery_signal_tick" in main
  db.init()
  with db.con() as c:
@@ -139,7 +139,7 @@ def test_v079_fast_recovery_signal_lab():
 
 def test_v079_real_fast_stop_still_unchanged():
  import pathlib
- text=pathlib.Path("main.py").read_text()
+ text=pathlib.Path("main.py").read_text(encoding='utf-8')
  # Shadow watcher is started before the real trade is popped, but does not replace sell accounting.
  assert 'fast_recovery_signal_start(m,q,p,q.get("size",config.POSITION_SIZE)*r)' in text
  assert 'q=P.pop(m,None)' in text
@@ -157,7 +157,7 @@ def test_v0710_risk_control_retired_but_schema_retained():
 
 def test_v0711_reentry_runs_after_real_fast_exit_signal_only():
  import pathlib
- text=pathlib.Path("main.py").read_text()
+ text=pathlib.Path("main.py").read_text(encoding='utf-8')
  assert 'fast_recovery_signal_start(m,q,p,q.get("size",config.POSITION_SIZE)*r)' in text
  assert 'fast_reentry_start(m,q,p,q.get("size",config.POSITION_SIZE)*r)' in text
  assert text.find('fast_reentry_start(m,q,p,q.get("size",config.POSITION_SIZE)*r)') < text.find("q=P.pop(m,None)")
@@ -165,8 +165,8 @@ def test_v0711_reentry_runs_after_real_fast_exit_signal_only():
 
 def test_dashboard_socket_and_html_polling_hotfix():
  import pathlib
- server=pathlib.Path("dashboard/server.py").read_text()
- page=pathlib.Path("dashboard/details.html").read_text()
+ server=pathlib.Path("dashboard/server.py").read_text(encoding='utf-8')
+ page=pathlib.Path("dashboard/details.html").read_text(encoding='utf-8')
  assert "ConnectionAbortedError" in server and "10053" in server and "10054" in server and "10060" in server
  assert "if(busy)return" in page and "AbortSignal.timeout" in page
  assert "Нет связи с панелью" in page
@@ -217,7 +217,7 @@ def test_v0711_shadow_state_can_reenter_and_finalize():
 
 def test_v0711_env_and_launchers():
  import pathlib
- env=pathlib.Path(".env.example").read_text()
+ env=pathlib.Path(".env.example").read_text(encoding='utf-8')
  assert "DATABASE_PATH=data/clean_0762.db" in env and "DASHBOARD_PORT=8188" in env
  assert "FAST_RECOVERY_RISK_ENABLED=false" in env and "FAST_REENTRY_ENABLED=true" in env
  root=pathlib.Path('..')
@@ -233,7 +233,7 @@ def test_v0712_false_bounce_lab():
  con=sqlite3.connect(config.DB)
  assert con.execute("SELECT 1 FROM sqlite_master WHERE type=\'table\' AND name=\'false_bounce_v0712\'").fetchone()
  con.close()
- page=pathlib.Path("dashboard/details.html").read_text()
+ page=pathlib.Path("dashboard/details.html").read_text(encoding='utf-8')
  assert "FALSE-BOUNCE CLASSIFIER LAB" not in page and "positionRows" in page
- main=pathlib.Path("main.py").read_text()
+ main=pathlib.Path("main.py").read_text(encoding='utf-8')
  assert "fb_snaps" in main and "false_bounce_done" in main

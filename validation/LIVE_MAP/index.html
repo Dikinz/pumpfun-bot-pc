@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Карта тестирования</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--fg:#1c1f24;--mut:#6b7280;--line:#d6dae1;
+--pending:#c9ced6;--running:#2f6fdb;--pass:#1f9d55;--fail:#d64545;--changes:#d98b0b}
+@media (prefers-color-scheme:dark){:root{--bg:#14161a;--card:#1d2026;--fg:#e8eaed;--mut:#9aa1ab;--line:#2e333b;--pending:#4a505a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,Segoe UI,sans-serif;padding:16px}
+h1{font-size:20px;margin:0 0 4px}
+.sub{color:var(--mut);margin-bottom:16px}
+.flow{display:flex;flex-direction:column;gap:10px;max-width:980px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.lane{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-top:6px}
+.node{flex:1 1 200px;background:var(--card);border:1px solid var(--line);border-left:6px solid var(--pending);border-radius:8px;padding:10px 12px;min-width:0}
+.node .t{font-weight:600;display:flex;justify-content:space-between;gap:8px}
+.node .s{font-size:12px;font-weight:600;text-transform:uppercase}
+.node .n{color:var(--mut);font-size:13px;margin-top:4px;overflow-wrap:anywhere}
+.node .u{color:var(--mut);font-size:11px;margin-top:4px}
+.pending{border-left-color:var(--pending)} .pending .s{color:var(--mut)}
+.running{border-left-color:var(--running)} .running .s{color:var(--running)}
+.pass{border-left-color:var(--pass)} .pass .s{color:var(--pass)}
+.fail{border-left-color:var(--fail)} .fail .s{color:var(--fail)}
+.changes{border-left-color:var(--changes)} .changes .s{color:var(--changes)}
+.running .s::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--running);margin-right:6px;animation:p 1s infinite alternate}
+@keyframes p{from{opacity:.25}to{opacity:1}}
+.arrow{color:var(--mut);text-align:center;font-size:18px;line-height:1}
+.err{color:var(--fail)}
+</style>
+</head>
+<body>
+<h1>Карта тестирования v0.7.101.1 → Windows / Python 3.14</h1>
+<div class="sub" id="sub">Загрузка…</div>
+<div class="flow" id="flow"></div>
+<script>
+const LABELS={qa_full:'QA: полный pytest (Windows 3.14)',bootstrap_check:'04_CHECK (bootstrap check)',recovery:'Controlled recovery',
+review_rpc:'Ревью надёжности RPC/процессов/STOP',review_product:'Ревью дашборда, учёта, инструкций',
+fix:'Исправления и регрессии',verify:'Связанные + полный набор + recovery',critic:'Независимый критик',final:'Итоговый отчёт и manifest'};
+const ST={pending:'ожидает',running:'идёт',pass:'pass',fail:'fail',changes:'нужны правки'};
+function node(key,s,label){const st=s?s.state:'pending';
+ return `<div class="node ${st}"><div class="t"><span>${label}</span><span class="s">${ST[st]||st}</span></div>`+
+ (s?`<div class="n">${esc(s.note||'')}</div><div class="u">обновлено ${(s.updated||'').slice(11,19)}</div>`:'')+`</div>`}
+function esc(x){return String(x).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+async function tick(){
+ try{const r=await fetch('state.json?'+Date.now(),{cache:'no-store'});const d=await r.json();const S=d.stages||{};
+  let h='<div class="lane">1. Тесты и ревью (параллельно)</div><div class="row">'+
+   ['qa_full','bootstrap_check','recovery','review_rpc','review_product'].map(k=>node(k,S[k],LABELS[k])).join('')+'</div>';
+  const rounds=new Set();Object.keys(S).forEach(k=>{const m=k.match(/_r(\d+)$/);if(m)rounds.add(+m[1])});
+  if(!rounds.size)rounds.add(1);
+  [...rounds].sort((a,b)=>a-b).forEach(n=>{
+   h+=`<div class="arrow">↓</div><div class="lane">Раунд ${n}</div><div class="row">`+
+    ['fix','verify','critic'].map(k=>node(k+'_r'+n,S[k+'_r'+n],LABELS[k])).join('<div class="arrow" style="align-self:center">→</div>')+'</div>'});
+  h+='<div class="arrow">↓</div><div class="row">'+node('final',S.final,LABELS.final)+'</div>';
+  document.getElementById('flow').innerHTML=h;
+  document.getElementById('sub').textContent='Последнее обновление: '+(d.updated||'—')+' · автообновление каждые 3 с · при CHANGES_REQUIRED появляется следующий раунд';
+ }catch(e){document.getElementById('sub').innerHTML='<span class="err">Статус ещё не создан или недоступен: '+esc(e.message)+'</span>'}}
+tick();setInterval(tick,3000);
+</script>
+</body>
+</html>

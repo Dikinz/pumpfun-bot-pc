@@ -1,0 +1,20 @@
+import sys,shutil,pathlib
+root=pathlib.Path(sys.argv[1]);sys.path.insert(0,str(root/'app'))
+import release_guard as r
+def check(label):
+    try:r.verify(root);print(label,'-> ACCEPT')
+    except RuntimeError as e:print(label,'-> BLOCK',str(e)[:80])
+cfg=root/'app/config.py';orig=cfg.read_bytes()
+check('crlf checkout')
+cfg.write_bytes(orig.replace(b'\r\n',b'\n'));check('lf normalized')
+cfg.write_bytes(orig.replace(b'\r\n',b'\r\r\n',1));check('extra CR')
+cfg.write_bytes(orig.replace(b'\r\n',b'\r',1));check('lone CR instead of CRLF')
+cfg.write_bytes(orig+b'\r');check('trailing CR')
+cfg.write_bytes(orig+b'\r\n');check('trailing CRLF line')
+cfg.write_bytes(orig.replace(b'"8188"',b'"8189"'));check('port change kept CRLF')
+cfg.write_bytes(orig.replace(b'\r\n',b'\n',3));check('mixed CRLF/LF')
+cfg.write_bytes(orig)
+z=root/'app/research/monitor_fixture.zip';zb=z.read_bytes();z.write_bytes(zb.replace(b'\n',b'\r\n'));check('zip CRLF-mangled')
+z.write_bytes(zb)
+(root/'app/extra_mod.py').write_text('x=1');check('extra py');(root/'app/extra_mod.py').unlink()
+check('restored')

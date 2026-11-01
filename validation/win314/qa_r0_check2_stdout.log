@@ -1,0 +1,110 @@
+CLEAN RELEASE: v0.7.101.1
+FOLDER: C:\Users\OMG\AppData\Local\Temp\claude\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-testing-strategy-agents-116a19\2d2ec8e9-cc3b-4850-b454-4c718c85a186\scratchpad\runs\qa_r0
+DASHBOARD: http://127.0.0.1:8188
+CHECK PLAN: {"schema": "CHECK_PLAN_V972", "recovery_files": 50, "technical_files": 54, "duplicate_file_runs_removed": 19, "requested_unique_test_files": 104, "planned_unique_test_files": 104}
+CONTROLLED PAPER RECOVERY: PASS
+Offline clock injection; no Windows suspension, clock modification or live RPC.
+Report: C:\Users\OMG\AppData\Local\Temp\claude\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-testing-strategy-agents-116a19\2d2ec8e9-cc3b-4850-b454-4c718c85a186\scratchpad\runs\qa_r0\results\recovery_check_v89.json
+Suite elapsed/budget: 226.74046909995377 / 600 seconds
+Tests: {'PASSED': 605}
+Last test phase: {"event": "TEST_PHASE_END", "wall_ts": 1793526131.214435, "monotonic_ts": 495146.4019615, "pid": 63636, "nodeid": "tests/test_recovery_gate_v75.py::test_current_buy_rejects_still_fresh_tick_from_prior_epoch", "phase": "teardown", "outcome": "passed", "duration_s": 0.01035210001282394}
+TIME CHECK v0.7.101.1
+2026-11-01T11:42:23.850798+02:00
+Проверка часов пройдена в пределах диагностических ±50 мс
+Источник: time.cloudflare.com; пригодных измерений: 3/3
+Медиана смещения: 11.738181114196777 мс; максимальная оценка погрешности: ±27.37945510307327 мс
+Плюс: внешний источник опережает местные часы.
+W32Time: Running; тип запуска: Automatic
+Источник Windows: не удалось получить отдельным запросом; см. исходный статус Windows ниже
+Последняя успешная синхронизация (исходный текст Windows): 01.11.2026 11:42:13
+Замер 1: MEASURED; offset=11.738181114196777 ms; uncertainty=26.36002580402419 ms; RTT=28.32315000705421 ms
+Замер 2: MEASURED; offset=11.792540550231934 ms; uncertainty=27.37945510307327 ms; RTT=30.113249958958477 ms
+Замер 3: MEASURED; offset=10.451793670654297 ms; uncertainty=24.415308667812496 ms; RTT=26.71864995500073 ms
+Данные службы Windows получены не полностью. Ошибка доступа/отсутствие службы не доказывает неверное время.
+w32tm_status: OK
+Индикатор помех: 0(предупреждений нет)
+Страта: 5 (вторичная ссылка - синхронизирована с помощью (S)NTP)
+Точность: -23 (119.209ns за такт времени)
+Задержка корня: 0.0548736s
+Дисперсия корня: 0.0257392s
+Идентификатор опорного времени: 0x3389896F (IP-адрес источника:  51.137.137.111)
+Время последней успешной синхронизации: 01.11.2026 11:42:13
+Источник: time.windows.com,0x8 
+Интервал опроса: 6 (64s)
+
+Смещение фазы: 0.0000001s
+Тактовая частота: 0.0156250s
+Конечный автомат: 2 (Синхронизовать)
+Флаги источника времени: 0 (Нет)
+Роль сервера: 0 (Нет)
+Последняя ошибка синхронизации: 0 (Команда выполнена успешно.)
+Время, прошедшее с момента последней удачной синхронизации: 8.3143658s
+
+source_query: COMMAND_FAILED
+Обнаружена следующая ошибка: Отказано в доступе. (0x80070005)
+
+service_query: OK
+{"status":"Running","start_type":"Automatic"}
+
+Часы не изменялись. Торговый допуск остаётся 0 мс. Поток рынка ещё не проверен.
+PASS — диагностическая оценка момента проверки, не гарантия свежести будущих событий.
+Если результат не PASS: проверьте синхронизацию Windows при остановленном боте, затем повторите 04_CHECK.
+Report: C:\Users\OMG\AppData\Local\Temp\claude\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-testing-strategy-agents-116a19\2d2ec8e9-cc3b-4850-b454-4c718c85a186\scratchpad\runs\qa_r0\app\data\time_check.txt
+{"passed": true, "amm": {"passed": true, "status": "AMM_SALE_EXECUTED", "progress": {"stage": "SAVE_RESULT", "ts": 1793526145.5008688}, "error": ""}, "status": "CHECKED", "progress": {"stage": "SAVE_RESULT", "ts": 1793526144.751953}, "elapsed_s": 1.5614306926727295, "child_returncode": 0, "error": "", "note": "Offline historical fixture; current RPC and Windows live execution are not proven."}
+.....F.................................................................. [ 14%]
+........................................................................ [ 28%]
+........................................................................ [ 42%]
+.........................................s.............................. [ 56%]
+........................................................................ [ 70%]
+........................................................................ [ 84%]
+........................................................................ [ 98%]
+......                                                                   [100%]
+================================== FAILURES ===================================
+_________ test_real_pytest_plugin_records_each_phase_before_and_after _________
+
+tmp_path = WindowsPath('C:/Users/OMG/AppData/Local/Temp/pytest-of-OMG/pytest-81/test_real_pytest_plugin_record0')
+
+    def test_real_pytest_plugin_records_each_phase_before_and_after(tmp_path):
+        (tmp_path/'test_probe.py').write_text('def test_probe():\n    assert True\n')
+        target=tmp_path/'progress.jsonl'
+        env=dict(os.environ,PYTEST_DISABLE_PLUGIN_AUTOLOAD='1',RECOVERY_PROGRESS_PATH=str(target))
+        result=subprocess.run([sys.executable,'-m','pytest','-q','-p','recovery_progress',str(tmp_path/'test_probe.py')],cwd=Path(evidence.__file__).parent,env=env,capture_output=True,text=True,timeout=15)
+>       assert result.returncode==0,result.stdout+result.stderr
+E       AssertionError: 
+E         =================================== ERRORS ====================================
+E         _______________________ ERROR collecting pytest-of-OMG ________________________
+E         ..\..\..\venv\Lib\site-packages\_pytest\runner.py:344: in from_call
+E             result: TResult | None = func()
+E                                      ^^^^^^
+E         ..\..\..\venv\Lib\site-packages\_pytest\runner.py:389: in collect
+E             return list(collector.collect())
+E                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+E         ..\..\..\venv\Lib\site-packages\_pytest\main.py:528: in collect
+E             for direntry in scandir(self.path):
+E                             ^^^^^^^^^^^^^^^^^^
+E         ..\..\..\venv\Lib\site-packages\_pytest\pathlib.py:971: in scandir
+E             entry.is_file()
+E         E   PermissionError: [WinError 5] Отказано в доступе: 'C:\\Users\\OMG\\AppData\\Local\\Temp\\pytest-of-OMG\\pytest-current'
+E         =========================== short test summary info ===========================
+E         ERROR ..\..\..\..\..\..\..\pytest-of-OMG - PermissionError: [WinError 5] Отка...
+E         1 error in 0.11s
+E         ERROR: found no collectors for C:\Users\OMG\AppData\Local\Temp\pytest-of-OMG\pytest-81\test_real_pytest_plugin_record0\test_probe.py
+E         
+E         
+E       assert 4 == 0
+E        +  where 4 = CompletedProcess(args=['C:\\Users\\OMG\\AppData\\Local\\Temp\\claude\\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--cl...or C:\\Users\\OMG\\AppData\\Local\\Temp\\pytest-of-OMG\\pytest-81\\test_real_pytest_plugin_record0\\test_probe.py\n\n').returncode
+
+tests\test_recovery_evidence_v861.py:84: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_recovery_evidence_v861.py::test_real_pytest_plugin_records_each_phase_before_and_after
+1 failed, 508 passed, 1 skipped in 75.46s (0:01:15)
+Exception ignored in atexit callback <function cleanup_numbered_dir at 0x0000027ECB2C0F60>:
+Traceback (most recent call last):
+  File "C:\Users\OMG\AppData\Local\Temp\claude\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-testing-strategy-agents-116a19\2d2ec8e9-cc3b-4850-b454-4c718c85a186\scratchpad\venv\Lib\site-packages\_pytest\pathlib.py", line 374, in cleanup_numbered_dir
+    cleanup_dead_symlinks(root)
+  File "C:\Users\OMG\AppData\Local\Temp\claude\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-testing-strategy-agents-116a19\2d2ec8e9-cc3b-4850-b454-4c718c85a186\scratchpad\venv\Lib\site-packages\_pytest\pathlib.py", line 360, in cleanup_dead_symlinks
+    left_dir.unlink()
+  File "C:\Users\OMG\AppData\Local\Python\pythoncore-3.14-64\Lib\pathlib\__init__.py", line 1042, in unlink
+    os.unlink(self)
+PermissionError: [WinError 5] Отказано в доступе: 'C:\\Users\\OMG\\AppData\\Local\\Temp\\pytest-of-OMG\\pytest-current'
+EXIT=1 SECONDS=318

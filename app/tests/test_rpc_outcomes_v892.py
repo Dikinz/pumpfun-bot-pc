@@ -32,7 +32,14 @@ with b.control_lock():
         assert exc.value.rpc_budget_reason=='COOLDOWN'
         row=b.snapshot()['endpoints'][0]
         assert row['started']==1 and row['server_429']==1 and row['cooldown_remaining_s']>8
-        assert not b._pending() and 'SECRET' not in b.path.read_bytes().decode(errors='ignore')
+        # The applied file is deleted by the asynchronous rpc-outcome-cleanup thread
+        # (never under metadata.lock). Every file still present must already have a
+        # committed receipt, and deletion must converge within a bounded time.
+        with closing(sqlite3.connect(b.path)) as c:receipts={r[0] for r in c.execute('SELECT id FROM outcome_receipts')}
+        assert all(p.suffix=='.json' and p.stem in receipts for p in b._pending())
+        from test_rpc_cleanup_v96 import wait_for
+        wait_for(lambda:not b._pending(),seconds=10)
+        assert 'SECRET' not in b.path.read_bytes().decode(errors='ignore')
     finally:
         if p.poll() is None:p.kill()
         p.wait(timeout=5)

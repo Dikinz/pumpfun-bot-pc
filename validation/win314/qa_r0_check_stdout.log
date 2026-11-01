@@ -1,0 +1,13 @@
+CLEAN RELEASE: v0.7.101.1
+FOLDER: C:\Users\OMG\AppData\Local\Temp\claude\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-testing-strategy-agents-116a19\2d2ec8e9-cc3b-4850-b454-4c718c85a186\scratchpad\runs\qa_r0
+DASHBOARD: http://127.0.0.1:8188
+CHECK PLAN: {"schema": "CHECK_PLAN_V972", "recovery_files": 50, "technical_files": 54, "duplicate_file_runs_removed": 19, "requested_unique_test_files": 104, "planned_unique_test_files": 104}
+CONTROLLED PAPER RECOVERY: FAILED
+Offline clock injection; no Windows suspension, clock modification or live RPC.
+Report: C:\Users\OMG\AppData\Local\Temp\claude\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-testing-strategy-agents-116a19\2d2ec8e9-cc3b-4850-b454-4c718c85a186\scratchpad\runs\qa_r0\results\recovery_check_v89.json
+Suite elapsed/budget: 234.15230659994995 / 600 seconds
+Tests: {'PASSED': 604, 'FAILED': 1}
+Failed tests: test_real_process_metadata_contention_does_not_discard_429
+Last test phase: {"event": "TEST_PHASE_END", "wall_ts": 1793524787.582339, "monotonic_ts": 493802.7689108, "pid": 4816, "nodeid": "tests/test_recovery_gate_v75.py::test_current_buy_rejects_still_fresh_tick_from_prior_epoch", "phase": "teardown", "outcome": "passed", "duration_s": 0.015631899994332343}
+Partial evidence: C:\Users\OMG\AppData\Local\Temp\claude\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-testing-strategy-agents-116a19\2d2ec8e9-cc3b-4850-b454-4c718c85a186\scratchpad\runs\qa_r0\results\recovery_failure_v89_20261101_111948_010aec6b.zip
+EXIT=1 SECONDS=250

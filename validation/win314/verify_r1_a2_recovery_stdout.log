@@ -1,0 +1,6 @@
+CONTROLLED PAPER RECOVERY: PASS
+Offline clock injection; no Windows suspension, clock modification or live RPC.
+Report: C:\Users\OMG\AppData\Local\Temp\claude\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-testing-strategy-agents-116a19\2d2ec8e9-cc3b-4850-b454-4c718c85a186\scratchpad\runs\verify_r1_a2\results\recovery_check_v89.json
+Suite elapsed/budget: 236.81729870004347 / 600 seconds
+Tests: {'PASSED': 605}
+Last test phase: {"event": "TEST_PHASE_END", "wall_ts": 1793532236.0221508, "monotonic_ts": 501251.225052, "pid": 56404, "nodeid": "tests/test_recovery_gate_v75.py::test_current_buy_rejects_still_fresh_tick_from_prior_epoch", "phase": "teardown", "outcome": "passed", "duration_s": 0.016840700001921505}

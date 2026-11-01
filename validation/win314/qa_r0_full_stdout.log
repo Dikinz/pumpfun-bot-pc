@@ -1,0 +1,45 @@
+........................................................................ [  5%]
+........................................................................ [ 10%]
+........................................................................ [ 16%]
+........................................................................ [ 21%]
+........................................................................ [ 27%]
+........................................................................ [ 32%]
+........................................................................ [ 38%]
+........................................................................ [ 43%]
+........................................................................ [ 49%]
+........................................................................ [ 54%]
+........................................................................ [ 60%]
+........................................................................ [ 65%]
+........................................................................ [ 70%]
+........................................................................ [ 76%]
+...........................................................F............ [ 81%]
+........................................................................ [ 87%]
+........................................................................ [ 92%]
+.....................................................s.................. [ 98%]
+.......................                                                  [100%]
+================================== FAILURES ===================================
+________________________ test_actual_subprocess_replay ________________________
+
+queue = <database.Connection object at 0x000001B83D8FF650>
+tmp_path = WindowsPath('C:/Users/OMG/AppData/Local/Temp/qa_r0_bt/full/test_actual_subprocess_replay0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001B83DAD2270>
+
+    def test_actual_subprocess_replay(queue,tmp_path,monkeypatch):
+        b=json.loads(Path('research/local_snapshot_v26.json').read_text());now=time.time();b['snapshot']['received_ts']=now
+        replay=tmp_path/'offline.json';replay.write_text(json.dumps(b));monkeypatch.setattr(q,'FX',{'rate':'100','ts':now});monkeypatch.setattr(sp,'ROOT',tmp_path/'jobs')
+        sp.request(queue,b['mint'],1.,now,{});j,_=sp.next_job(queue,now);original=__import__('position_monitor').create_simulation_process
+        async def spawn(args,out,trace):return await original([*args,'--replay',str(replay)],out,trace)
+        monkeypatch.setattr(__import__('position_monitor'),'create_simulation_process',spawn);asyncio.run(sp.run_job(j));r=job(queue,b['mint'])
+>       assert r['raw_status']=='ROUNDTRIP_EXECUTED' and r['started_ts']<=r['finished_ts'] and r['wait_s']==0
+E       AssertionError: assert ('CHILD_TIMEOUT' == 'ROUNDTRIP_EXECUTED'
+E         
+E         - ROUNDTRIP_EXECUTED
+E         + CHILD_TIMEOUT)
+
+tests\test_shadow_preflight_v43.py:129: AssertionError
+- generated xml file: C:\Users\OMG\AppData\Local\Temp\claude\C--Users-OMG-Documents-GitHub-pumpfun-bot-pc--claude-worktrees-testing-strategy-agents-116a19\2d2ec8e9-cc3b-4850-b454-4c718c85a186\scratchpad\runs\qa_r0_full.xml -
+=========================== short test summary info ===========================
+FAILED tests/test_shadow_preflight_v43.py::test_actual_subprocess_replay - As...
+SKIPPED [1] tests\test_wallet_rpc_phase1.py:86: POSIX permission semantics
+1 failed, 1317 passed, 1 skipped in 428.76s (0:07:08)
+EXIT=1 SECONDS=430
