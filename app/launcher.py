@@ -135,7 +135,7 @@ def legacy_results():
     payload=json.dumps(snapshot,ensure_ascii=False).replace('<','\\u003c')
     html=PAGE.decode().replace('<script>','<script>window.REPORT_DATA='+payload+';</script><script>',1)
     (folder/'dashboard.html').write_text(html,encoding='utf-8',newline='') # template bytes already carry their line endings
-    detail_html=DETAILS.decode().replace('<script>','<script>window.REPORT_DATA='+payload+';</script><script>',1).replace('href="/"','href="dashboard.html"')
+    detail_html=DETAILS.decode().replace('<script>','<script>window.REPORT_DATA='+payload+';</script><script>',1).replace('<a href="/">← Терминал</a> · ','').replace('href="/classic"','href="dashboard.html"').replace('href="/"','href="dashboard.html"')
     (folder/'dashboard_details.html').write_text(detail_html,encoding='utf-8',newline='')
     (folder/'campaign_overview.json').write_text(json.dumps(snapshot['overview'],ensure_ascii=False,indent=2),encoding='utf-8')
     import system_health,primary_integrity

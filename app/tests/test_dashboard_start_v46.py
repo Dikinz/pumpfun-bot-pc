@@ -18,6 +18,6 @@ def test_dashboard_standalone(tmp_path):
                     break
                 except OSError:time.sleep(.1)
             else:raise AssertionError('Dashboard API timeout')
-            assert data['version']=='v0.7.101.2' and 'exit_timeline' in data
+            assert data['version']=='v0.7.101.3' and 'exit_timeline' in data
             with urllib.request.urlopen(f'http://127.0.0.1:{port}/details',timeout=2) as response:assert 'timelinePending' in response.read().decode()
         finally:p.terminate();p.wait(timeout=10)

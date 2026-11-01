@@ -11,7 +11,7 @@ from urllib.parse import urlsplit
 import aiohttp,websockets
 from connection_audit import diagnostic
 
-VERSION='v0.7.101.2'
+VERSION='v0.7.101.3'
 MAINNET_GENESIS='5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d'
 # Full getGenesisHash value, not the truncated CAIP-2 chain identifier.
 GENESIS_REFERENCE='https://solana.com/docs/payments/agentic-payments/x402'

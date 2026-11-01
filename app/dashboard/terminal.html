@@ -115,7 +115,12 @@ main,.top,footer{padding-left:12px;padding-right:12px}.kpi{grid-template-columns
 </main>
 <footer id=foot></footer>
 <script>
-'use strict';
+addEventListener('error',function(e){var el=document.getElementById('st');if(el)el.textContent='ошибка скрипта: '+(e&&e.message||'?')+' — откройте /classic'});
+</script>
+<script>
+// Own function scope: browser extensions may add page variables such as 'wr'; a top-level
+// const with the same name is a SyntaxError and the page would never start.
+(function(){'use strict';
 const D='—',MI='−',$=id=>document.getElementById(id);
 const S={O:null,A:null,H:null,okO:0,okA:0,errO:false,errA:false,everO:false,inf:{},next:{O:0,A:0,H:0},ec:{O:0,A:0,H:0},lastForce:0,pk:{},branch:'primary',tab:0,demo:null,key:'',chartKey:'',tabKey:''};
 const R={RUNNING:'работает',STARTING:'запуск',STOPPED:'остановлен',FAILED:'сбой',UNKNOWN:'нет heartbeat',NOT_STARTED:'не запускался',
@@ -123,7 +128,7 @@ LIVE:'есть данные',RECEIVING:'получает',UNKNOWN_HEARTBEAT:'н�
 READY:'готов',PENDING:'ожидание',BLOCKED:'заблокирован',UNAVAILABLE:'недоступен',OUTCOME_READ_BUSY:'занят',PRIORITY_READ_BUSY:'занят',
 STATE_READ_ERROR:'ошибка чтения состояния',PASS:'пройдена',OFFSET_DETECTED:'смещение',UNCERTAIN:'неуверенно',NOT_CHECKED:'не проверялись',INVALID_REPORT:'отчёт неверен',
 ERROR:'ошибка',WARNING:'внимание',CRITICAL:'критично',INFO:'инфо',
-IN_PROGRESS:'в работе',WAITING:'ожидает',REVIEW:'разбор',NOT_TESTED:'не проверено',INTERRUPTED:'прерван',NO_HEARTBEAT:'нет heartbeat',
+IN_PROGRESS:'в работе',WAITING:'ожидает',REVIEW:'разбор',NOT_TESTED:'не проверено',INTERRUPTED:'прерван',SOURCE_RUN:'копия основного',NO_HEARTBEAT:'нет heartbeat',
 NO_SIGNAL:'Ещё нет сигналов',NO_SLOT:'Нет свободного места',ENTRY_PENDING:'Заявка ожидает исполнения',ENTRY_OK:'Вход выполнен',
 ANTI_FOMO_MOMENTUM_HOT:'Анти-FOMO: импульс перегрет',ANTI_FOMO_TOO_EARLY:'Анти-FOMO: слишком рано',ANTI_FOMO_LAST_JUMP:'Анти-FOMO: резкий последний скачок',
 CASH_AFTER_COSTS:'Мало капитала после расходов',TRADE_STREAM_NOT_RECEIVING:'Поток сделок не получает данные',ALREADY_TRADED:'Токен уже торговался',UNSUPPORTED_OR_STALE_PRICE:'Цена устарела или не поддерживается',
@@ -351,6 +356,7 @@ rows.push('-',['Проверенные выходы',nv(b.verified_exits)+` <spa
 ex=`<div class=split><i style="width:${ce/t*100}%;background:var(--acc)"></i><i style="width:${ae/t*100}%;background:var(--info)"></i><i style="width:${ue/t*100}%;background:var(--warn)"></i></div>`;
 const ed=b.exit_decisions||{};rows.push(['Решения выхода',esc(Object.keys(ed).map(x=>ruT(x)+': '+ed[x]).join(', ')||D)],['Транспорт / стоп',ru(g(b,'transport.status'))+' / '+ru(g(b,'stop.status'))],
 ['Разрыв входных данных',b.input_gap===true?'<span class=dn>да — входы ветки заблокированы</span>':b.input_gap===false?'нет':D],['Причина сбоя',ru(fv.primary_cause)+' / '+ru(fv.transport_cause)],
+['Без разовой ренты',(m=>m?num(m.retain_token_accounts_model_net)+' <span class=sm>с закрытием ATA '+num(m.assumed_ata_close_model_net)+'</span>':D)(b.persistent_wallet_model_v100),'модель: рента volume-аккаунта один раз, ATA возвращается при закрытии; учёт не меняет'],
 ['Верхняя граница, не котировка',num(se.equity_upper_before_exit_cost)])}
 return `<div class=card><h4>${n}</h4>${kv(rows)}${ex}</div>`}
 function tBr(){return '<div class=cards>'+BR.map(([k,n])=>bcard(k,n)).join('')+'</div>'+cap('Итога по всем веткам нет намеренно')}
@@ -369,7 +375,7 @@ function tabIn(t){const b=B(),A=S.A||{},O=S.O||{};return [[b&&b.trades,A.generat
 function rTabs(force){const tn=$('tn');if(!tn.querySelector('button'))tn.innerHTML=TABS.map((n,i)=>`<button type=button role=tab id="tab${i}" aria-controls=tb data-t="${i}" title="клавиша ${i+1}">${n}</button>`).join('');
 tn.querySelectorAll('button[data-t]').forEach(x=>{const on=+x.dataset.t===S.tab;x.classList.toggle('on',on);x.setAttribute('aria-selected',on?'true':'false');x.tabIndex=on?0:-1});$('tb').setAttribute('aria-labelledby','tab'+S.tab);
 const key=S.tab+'|'+S.branch+'|'+JSON.stringify(tabIn(S.tab));if(!force&&key===S.tabKey)return;S.tabKey=key;const tb=$('tb'),st=tb.scrollTop;safe('tb',TF[S.tab]);tb.scrollTop=st}
-function rFoot(){const O=S.O;return esc(O&&O.note||'')+' · Все суммы — PAPER-$ сценария, не реальные средства · <a href="/details">Подробный отчёт →</a> · <a href="/">Обзор</a>'}
+function rFoot(){const O=S.O;return esc(O&&O.note||'')+' · Все суммы — PAPER-$ сценария, не реальные средства · <a href="/details">Подробный отчёт →</a> · <a href="/classic">Классическая панель</a>'}
 function render(){if(S.O&&!enabled(S.branch))S.branch='primary';const c=conn();document.body.classList.toggle('stale',c==='lost');
 try{rTop()}catch(e){}try{rBans()}catch(e){}
 const O=S.O||{},A=S.A||{},b=B(),P=isP(),br=S.branch,ag=A.generated_ts;
@@ -407,4 +413,5 @@ else if(k==='r'||k==='к'){force()}});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)force()});
 try{const b=localStorage.getItem('pfterm.branch');if(b&&BR.some(x=>x[0]===b))S.branch=b;const t=parseInt(localStorage.getItem('pfterm.tab'),10);if(t>=0&&t<6)S.tab=t}catch(e){}
 (function(){const q=new URLSearchParams(location.search).get('demo');render();if(q==='1'||q==='empty')demo(q);else if(location.protocol==='file:')demo('1');else tick();setInterval(tick,1000)})();
+})();
 </script></body></html>

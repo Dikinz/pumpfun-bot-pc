@@ -28,6 +28,14 @@ def _legacy_pair(src,dst):
         return all(r[0] not in buys or buys[r[0]]==r[1:] for r in dst.execute("SELECT trade_id,ts,mint,size,price FROM trades WHERE side='BUY'"))
     except sqlite3.OperationalError:return False
 
+def _relabel_source_runs(src,c):
+    """Repair branches seeded before v0.7.101.3: a copied primary run marked INTERRUPTED by the branch."""
+    try:
+        source=dict(src.execute('SELECT id,status FROM runs_v45'))
+        stale=[r[0] for r in c.execute("SELECT id FROM runs_v45 WHERE status='INTERRUPTED'") if source.get(r[0]) not in (None,'INTERRUPTED')]
+        with c:c.executemany("UPDATE runs_v45 SET status='SOURCE_RUN' WHERE id=?",[(x,) for x in stale])
+    except sqlite3.OperationalError:pass
+
 def seed(primary,target=None):
     import uuid
     primary=Path(primary).resolve();target=Path(target).resolve() if target is not None else path(primary)
@@ -39,10 +47,17 @@ def seed(primary,target=None):
             with src:src.execute("INSERT OR IGNORE INTO meta VALUES('paper_source_identity',?)",(identity,))
             temp=target.with_suffix('.seed.tmp')
             temp.unlink(missing_ok=True)
-            with closing(sqlite3.connect(temp)) as dst:src.backup(dst)
+            with closing(sqlite3.connect(temp)) as dst:
+                src.backup(dst)
+                # A copied RUNNING run belongs to the primary process; run_audit.begin in the branch
+                # would otherwise record it as a false INTERRUPTED branch run.
+                try:
+                    with dst:dst.execute("UPDATE runs_v45 SET status='SOURCE_RUN' WHERE status='RUNNING'")
+                except sqlite3.OperationalError:pass
             temp.replace(target)
         with closing(sqlite3.connect(target)) as c:
             c.executescript(SCHEMA)
+            _relabel_source_runs(src,c)
             info=dict(c.execute('SELECT k,v FROM branch_info'))
             branch_identity=info.get('source_identity') or _source_id(c)
             old=info.get('source')

@@ -8,7 +8,7 @@ APP=Path(__file__).resolve().parents[1]
 DASH=APP/'dashboard'
 TERMINAL=DASH/'terminal.html'
 ENDPOINTS={'/overview','/api','/health'}
-LINKS={'/details','/'}
+LINKS={'/details','/','/classic'}
 # JSON paths the page reads; every one must exist in the empty-database responses.
 OVERVIEW_PATHS=('version','generated_ts','note','alerts','campaign','route','amm','amm_branch_enabled_v100',
     'resources','rpc_control_v89.status','rpc_control_v89.rate_per_origin',
@@ -55,7 +55,11 @@ def test_terminal1011_page_is_self_contained_and_offline():
     assert len(TERMINAL.read_bytes())<=64*1024
     assert not re.search(r'https?://|//cdn|@import|@font-face|url\((?!#)',text)
     assert not re.search(r'<(script|link|img|iframe)\b[^>]*\b(src|href)=',text)
-    assert text.count('<script>')==1 and '<html lang="ru">' in text
+    # Two blocks: a tiny error reporter first, so a failure in the main script is shown
+    # on screen instead of a silent 'загрузка…'.
+    assert text.count('<script>')==2 and '<html lang="ru">' in text
+    first=re.findall(r'<script>(.*?)</script>',text,re.S)[0]
+    assert "addEventListener('error'" in first and len(first)<400
 
 
 def test_terminal1011_uses_only_existing_endpoints():
@@ -119,8 +123,10 @@ def test_terminal1011_route_and_existing_routes_with_empty_database(dashboard):
     status,ctype,body=get(port,'/terminal')
     assert status==200 and ctype.startswith('text/html') and body==TERMINAL.read_bytes() and b'PAPER' in body
     assert get(port,'/terminal?demo=empty')[2]==body
-    assert get(port,'/')[2]==(DASH/'page.html').read_bytes()
-    assert get(port,'/terminalx')[2]==(DASH/'page.html').read_bytes()
+    # v0.7.101.3+: the terminal is the main page; the summary page moved to /classic.
+    assert get(port,'/')[2]==body
+    assert get(port,'/terminalx')[2]==body
+    assert get(port,'/classic')[2]==get(port,'/classic?x=1')[2]==(DASH/'page.html').read_bytes()
     assert get(port,'/details')[2]==(DASH/'details.html').read_bytes()
     health=json.loads(get(port,'/health')[2])
     status,ctype,raw=get(port,'/overview');overview=json.loads(raw)
@@ -194,3 +200,25 @@ def test_terminal1011_critic_final_regressions():
     # An old (not only late) /api snapshot raises the banner and warn status; its current price is hidden.
     assert "if(A&&!S.demo&&aOld())h.push(['a','Снимок /api устарел (" in text and "!S.demo&&aOld()?'warn':''" in text
     assert '${old?D:px(a.current)}' in text and '(S.A&&aOld()))rBans()' in text
+
+
+def test_terminal_main_script_does_not_declare_page_globals():
+    # User's Brave 01.11.2026: a wallet extension defined a global 'wr', so the top-level
+    # `const wr=` raised "Identifier 'wr' has already been declared" and nothing rendered.
+    main=re.findall(r'<script>(.*?)</script>',page(),re.S)[1].strip()
+    assert main.startswith('//') and "(function(){'use strict';" in main.split('\n',3)[2]
+    assert main.endswith('})();')
+
+
+def test_terminal_is_main_page_with_links_to_classic_panel():
+    src=(DASH/'server.py').read_text(encoding='utf-8')
+    tail=src[src.index('elif self.path.startswith("/api"):'):]
+    assert 'self._reply(TERMINAL,"text/html;charset=utf-8")' in tail[:tail.index('except')]
+    assert '<a href="/classic">Классическая панель</a>' in page()
+    details=(DASH/'details.html').read_text(encoding='utf-8')
+    assert '<a href="/">← Терминал</a> · <a href="/classic">Классическая панель</a>' in details
+    classic=(DASH/'page.html').read_text(encoding='utf-8')
+    assert '<a id="terminalLink" href="/">Терминал ↗</a>' in classic and "$('terminalLink').hidden=true" in classic
+    # The offline export has no live server: its details page links only to the exported summary.
+    exported=(APP/'launcher.py').read_text(encoding='utf-8')
+    assert """.replace('<a href="/">← Терминал</a> · ','').replace('href="/classic"','href="dashboard.html"')""" in exported

@@ -50,10 +50,13 @@ def close(c,tid,mint,position,evidence):
       note='Cause not inferred. No reserve or actual execution claim from a price jump. Entry and exit costs are PAPER-model costs.')
     c.execute('INSERT OR REPLACE INTO exit_audit_v45 VALUES(?,?,?,?,?)',(tid,mint,'CLOSED',int(flagged),dump(data)))
     BUFFERS.pop(tid,None);TOTAL.pop(tid,None);ELIGIBILITY_COUNTS.pop(tid,None);__import__('price_path_v100').PATHS.pop(tid,None)
+def latency_basis(order):
+    # A PAPER tick-proxy SELL fills on the next market trade: its latency includes market silence.
+    return 'NEXT_MARKET_TRADE' if str((order or {}).get('note') or '').startswith('tick proxy') else None
 def summary(c,limit=100):
     rows=[]
     for r in c.execute('SELECT trade_id,mint,status,flagged,data_json FROM exit_audit_v45 ORDER BY rowid DESC LIMIT ?', (limit,)):
-        d=json.loads(r['data_json']);t=d.get('fill',{});rows.append(dict(trade_id=r['trade_id'],mint=r['mint'],status=r['status'],flagged=bool(r['flagged']),reason=t.get('reason'),net_pnl=d.get('net_pnl'),signal_price=t.get('stop_trigger_price'),fill_price=t.get('price'),gap_pct=t.get('slippage_gap_pct'),latency_ms=t.get('exit_latency_ms'),events_seen=d.get('events_seen'),events_dropped=d.get('events_dropped')))
+        d=json.loads(r['data_json']);t=d.get('fill',{});rows.append(dict(trade_id=r['trade_id'],mint=r['mint'],status=r['status'],flagged=bool(r['flagged']),reason=t.get('reason'),net_pnl=d.get('net_pnl'),signal_price=t.get('stop_trigger_price'),fill_price=t.get('price'),gap_pct=t.get('slippage_gap_pct'),latency_ms=t.get('exit_latency_ms'),latency_basis=latency_basis(d.get('order')),events_seen=d.get('events_seen'),events_dropped=d.get('events_dropped')))
     return dict(rows=rows,flagged=c.execute('SELECT COUNT(*) FROM exit_audit_v45 WHERE flagged=1').fetchone()[0],diagnostic_only=True)
 
 

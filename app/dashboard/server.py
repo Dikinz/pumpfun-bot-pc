@@ -79,10 +79,13 @@ class H(BaseHTTPRequestHandler):
                 self._reply(DETAILS,"text/html;charset=utf-8")
             elif self.path.split("?",1)[0]=="/terminal":
                 self._reply(TERMINAL,"text/html;charset=utf-8")
+            elif self.path.split("?",1)[0]=="/classic":
+                self._reply(PAGE,"text/html;charset=utf-8")
             elif self.path.startswith("/api"):
                 self._reply(snap_bytes(),"application/json")
             else:
-                self._reply(PAGE,"text/html;charset=utf-8")
+                # The trading terminal is the main page; the summary page stays at /classic.
+                self._reply(TERMINAL,"text/html;charset=utf-8")
         except (BrokenPipeError,ConnectionResetError,ConnectionAbortedError,TimeoutError):
             return
         except OSError as e:
