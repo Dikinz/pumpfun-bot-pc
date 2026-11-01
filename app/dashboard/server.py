@@ -14,6 +14,7 @@ import entry_diagnostics
 import config,database as db,paper_capital,diagnostics,preentry,exit_comparison,position_monitor,wallet_costs,exit_quotes,monitor_service
 PAGE=(Path(__file__).parent/'page.html').read_bytes()
 DETAILS=(Path(__file__).parent/'details.html').read_bytes()
+TERMINAL=(Path(__file__).parent/'terminal.html').read_bytes()
 
 def snap():
     with db.con() as c:
@@ -76,6 +77,8 @@ class H(BaseHTTPRequestHandler):
                 self._reply(overview_bytes(),"application/json")
             elif self.path=="/details":
                 self._reply(DETAILS,"text/html;charset=utf-8")
+            elif self.path.split("?",1)[0]=="/terminal":
+                self._reply(TERMINAL,"text/html;charset=utf-8")
             elif self.path.startswith("/api"):
                 self._reply(snap_bytes(),"application/json")
             else:

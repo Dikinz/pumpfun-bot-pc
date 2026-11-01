@@ -1,0 +1,409 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Терминал · PAPER</title><style>
+:root{--bg:#0b0e11;--panel:#12161c;--panel2:#161b22;--line:#222a35;--line2:#2c3542;--tx:#e6e8eb;--tx2:#aab2bd;--mut:#8a93a0;--acc:#8b9cff;--up:#2ebd85;--dn:#f6465d;--warn:#f0b90b;--info:#4c9aff;--acc-bg:rgba(139,156,255,.12);--up-bg:rgba(46,189,133,.12);--dn-bg:rgba(246,70,93,.12);--warn-bg:rgba(240,185,11,.12);--info-bg:rgba(76,154,255,.12);--sans:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;--mono:"Cascadia Mono",Consolas,"JetBrains Mono",ui-monospace,monospace;--r:6px}
+:root{color-scheme:dark}*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--tx);font:13px/1.4 var(--sans);overflow-x:hidden}
+.m,.v,dd,td.n{font-family:var(--mono);font-variant-numeric:tabular-nums}
+a{color:var(--acc);text-decoration:none}a:hover{text-decoration:underline}
+.up{color:var(--up)}.dn{color:var(--dn)}.warn{color:var(--warn)}.mut{color:var(--mut)}.acc{color:var(--acc)}
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:6px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
+.brand{white-space:nowrap}.brand b{margin-right:4px}
+.paper{background:var(--acc-bg);color:var(--acc);border:1px solid var(--acc);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600;white-space:nowrap}
+.paper.bad{background:var(--dn-bg);color:var(--dn);border-color:var(--dn);animation:bl 1s steps(2) infinite}
+@keyframes bl{50%{opacity:.35}}
+.tick{display:flex;gap:4px;flex:1;min-width:0;overflow:hidden}
+.chip{display:flex;align-items:center;gap:5px;padding:3px 7px;background:var(--panel2);border:1px solid var(--line);border-radius:4px;white-space:nowrap;font-size:11.5px}
+.chip .k{color:var(--mut)}.chip>span+span{overflow:hidden;text-overflow:ellipsis;max-width:190px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--mut);display:inline-block;flex:none}
+.dot.ok{background:var(--up)}.dot.warn{background:var(--warn)}.dot.bad{background:var(--dn)}
+.st{display:flex;gap:8px;align-items:center;font-size:11px;color:var(--tx2)}#st{max-width:230px;line-height:1.25}
+button{font:inherit;color:var(--tx2);background:var(--panel2);border:1px solid var(--line2);border-radius:4px;padding:3px 8px;cursor:pointer}
+button:disabled{opacity:.4}
+button.al.on{color:#0b0e11;font-weight:600;background:var(--dn);border-color:var(--dn)}
+button:focus-visible{outline:2px solid var(--acc);outline-offset:-2px}
+#pAl{scroll-margin-top:90px}.col.C>.p:last-child{flex:1}
+td.tk{white-space:nowrap}
+.ban{padding:5px 14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;border-bottom:1px solid var(--line)}
+.ban.r{background:var(--dn-bg);color:var(--dn)}.ban.a{background:var(--warn-bg);color:var(--warn)}.ban.i{background:var(--acc-bg);color:var(--acc)}
+main{padding:10px 14px;display:flex;flex-direction:column;gap:10px}
+.kpi,.work,.tabs{background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.kpi{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:1px}
+.kc{background:var(--panel);padding:8px 12px;min-width:0}
+.kc .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kc .v{font-size:19px;font-weight:600;margin:2px 0;white-space:nowrap}
+.kc.big .v{font-size:22px}
+.kc .c,.cap{font-size:10.5px;color:var(--mut)}
+.kc.e{grid-column:1/-1;color:var(--dn)}
+.bbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:11.5px;color:var(--mut)}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:5px;overflow:hidden}
+.seg button{border:0;border-radius:0;background:var(--panel);padding:4px 12px}
+.seg button.on,.tn button.on{color:var(--acc);box-shadow:inset 0 -2px var(--acc)}.seg button.on{background:var(--acc-bg)}
+.work{display:grid;grid-template-columns:280px minmax(0,1fr) 320px;gap:1px}
+.col{display:flex;flex-direction:column;gap:1px;min-width:0}
+.p{background:var(--panel);padding:10px 12px;min-width:0}
+#pFeed{flex:1 1 0;min-height:260px;display:flex;flex-direction:column}
+#pFeed .fb{flex:1 1 0;overflow:auto;min-height:0}
+.ph{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.ph h3{margin:0;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--tx2);white-space:nowrap}
+.ph .s{font-size:10.5px;color:var(--mut);margin-left:auto;text-align:right}
+.kv{font-size:12px;margin:0}.kv>div{display:flex;justify-content:space-between;gap:10px;margin:0 0 3px}
+.kv dt{color:var(--mut)}.kv dd{margin:0;text-align:right;overflow-wrap:anywhere}
+hr{border:0;border-top:1px dashed var(--line2);margin:3px 0;width:100%}.bd{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10.5px;font-weight:600;background:var(--panel2);color:var(--tx2);border:1px solid var(--line2);white-space:nowrap}
+.bd.up{background:var(--up-bg);color:var(--up)}.bd.dn{background:var(--dn-bg);color:var(--dn)}
+.bd.warn{background:var(--warn-bg);color:var(--warn)}.bd.info{background:var(--info-bg);color:var(--info)}
+.bd.up,.bd.dn,.bd.warn,.bd.info,.bd.acc{border-color:transparent}.bd.acc{background:var(--acc-bg);color:var(--acc)}
+.tw{overflow-x:auto;max-width:100%}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{font-size:11px;color:var(--mut);text-align:left;padding:4px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:4px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+td.n,th.n{text-align:right;white-space:nowrap}
+tr.od td{background:var(--dn-bg)}
+.sp{height:8px}.sm{font-size:10.5px;color:var(--mut)}
+.ul{margin:0;padding:0;list-style:none;font-size:12px}.ul li{padding:3px 0}
+.ul.w li::before{content:"• ";color:var(--warn)}
+.al li{background:var(--dn-bg);color:#ffb3bd;padding:4px 8px;border-radius:4px;margin-bottom:3px}
+.okm{color:var(--up);font-size:12px}
+.err{color:var(--dn);font-size:12px}
+.rb{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--acc)}
+.bar{height:4px;background:var(--line2);border-radius:2px;overflow:hidden;margin:3px 0 6px}.bar i{display:block;height:100%;background:var(--acc)}
+.bar i.g{background:var(--mut)}.bar i.r{background:var(--dn)}
+.rmr{font-size:12px;display:flex;gap:6px;align-items:center}.rmr span:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cbox{position:relative}.cbox text{font-family:var(--mono)}.cbox svg{display:block;width:100%}
+.tip{position:absolute;top:0;pointer-events:none;background:var(--panel2);border:1px solid var(--line2);border-radius:4px;padding:3px 7px;font:11px var(--mono);white-space:nowrap;z-index:2}
+.empty{color:var(--mut);font-size:12px;padding:16px 0;text-align:center}
+.fr{display:grid;grid-template-columns:56px 46px minmax(0,1fr);grid-template-areas:"t b m" "x x x";gap:1px 6px;font-size:11.5px;padding:3px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.fr .t{grid-area:t}.fr>.bd{grid-area:b}.fr .x{grid-area:x}.fr>.m{grid-area:m;justify-self:end}
+.fr .t{font-family:var(--mono);color:var(--mut)}.fr .x{overflow:hidden;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
+.card .bd.dn{background:rgba(246,70,93,.08)}
+.cg{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 18px}
+.cg h4,.tb h4{margin:0 0 5px;font-size:10.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.4px;font-weight:600}
+.tabs{display:flex;flex-direction:column;gap:1px}
+.tn{display:flex;background:var(--panel);overflow-x:auto}
+.tn button{border:0;border-radius:0;background:none;padding:8px 14px;white-space:nowrap}
+.tb{background:var(--panel);padding:12px;max-height:560px;overflow:auto}
+.hb{display:grid;grid-template-columns:minmax(90px,200px) minmax(0,1fr) auto;gap:4px 8px;font-size:12px;align-items:center;margin-bottom:10px}
+.hb .tr{height:8px;background:var(--line);overflow:hidden}.hb .tr i{display:block;height:100%;background:var(--acc)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:var(--r);padding:10px}
+.split{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--line2);margin:4px 0}.split i{display:block;height:100%}
+footer{padding:10px 14px 18px;font-size:11px;color:var(--mut);display:flex;gap:12px;flex-wrap:wrap}
+body.stale .kpi,body.stale .p{opacity:.5;filter:grayscale(.6)}
+@media(prefers-reduced-motion:reduce){.paper.bad{animation:none}}
+@media(min-width:1181px) and (max-width:1439px){.rmr span:first-child{white-space:normal}}
+@media(max-width:1439px){.kc .v{font-size:17px}.work{grid-template-columns:250px minmax(0,1fr) 280px}.top{flex-wrap:wrap}.tick{flex-wrap:wrap;flex-basis:100%;order:3}}
+@media(max-width:1180px){.kpi{grid-template-columns:repeat(4,minmax(0,1fr))}.work{grid-template-columns:250px minmax(0,1fr)}
+.col.R{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1px}#pFeed{min-height:0}#pFeed .fb{max-height:340px;flex:none}}
+@media(max-width:760px){.top{position:static}.tick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.chip{overflow:hidden}
+main,.top,footer{padding-left:12px;padding-right:12px}.kpi{grid-template-columns:repeat(2,minmax(0,1fr))}.kc .v{font-size:16px}.kc.big .v{font-size:19px}
+.work{display:flex;flex-direction:column}.col,.col.R{display:contents}
+#pAl{order:1}#pPos{order:2}#pChart{order:3}#pCap{order:4}#pSys{order:5}#pEnt{order:6}#pRm{order:7}#pFeed{order:8}#pFeed .fb{max-height:420px}
+.hb{grid-template-columns:90px minmax(0,1fr) auto}.ban{white-space:normal}}
+@media(max-width:1000px){#pPos thead{display:none}#pPos table,#pPos tbody{display:block}#pPos tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px 10px;padding:6px 0;border-bottom:1px solid var(--line)}
+#pPos td{display:block;border:0;padding:0;text-align:left;min-width:0}#pPos td::before{content:attr(data-l);display:block;font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.3px}
+#pPos td.dec{grid-column:1/-1}#pPos tr.od{background:var(--dn-bg)}#pPos tr.od td{background:none}}
+</style></head><body>
+<header class=top><div class=brand><b>pumpfun-bot</b><span class=m id=ver>—</span> <span id=vm></span></div><span class=paper id=paper>PAPER · без реальных денег</span><div class=tick id=tick></div><div class=st><span id=st>загрузка…</span><button class=al id=alc aria-label="Предупреждения">⚠ —</button></div></header>
+<div id=bans></div>
+<main>
+<section class=kpi id=kpi></section>
+<div class=bbar id=bbar></div>
+<div class=work>
+<div class="col L"><section class=p id=pSys></section><section class=p id=pEnt></section><section class=p id=pRm></section></div>
+<div class="col C"><section class=p id=pChart></section><section class=p id=pPos></section><section class=p id=pCap></section></div>
+<div class="col R"><section class=p id=pAl></section><section class=p id=pFeed></section></div>
+</div>
+<section class=tabs><nav class=tn id=tn role=tablist aria-label="Разделы отчёта"></nav><div class=tb id=tb role=tabpanel tabindex=0></div></section>
+</main>
+<footer id=foot></footer>
+<script>
+'use strict';
+const D='—',MI='−',$=id=>document.getElementById(id);
+const S={O:null,A:null,H:null,okO:0,okA:0,errO:false,errA:false,everO:false,inf:{},next:{O:0,A:0,H:0},ec:{O:0,A:0,H:0},lastForce:0,pk:{},branch:'primary',tab:0,demo:null,key:'',chartKey:'',tabKey:''};
+const R={RUNNING:'работает',STARTING:'запуск',STOPPED:'остановлен',FAILED:'сбой',UNKNOWN:'нет heartbeat',NOT_STARTED:'не запускался',
+LIVE:'есть данные',RECEIVING:'получает',UNKNOWN_HEARTBEAT:'нет heartbeat',STALE:'устарел',
+READY:'готов',PENDING:'ожидание',BLOCKED:'заблокирован',UNAVAILABLE:'недоступен',OUTCOME_READ_BUSY:'занят',PRIORITY_READ_BUSY:'занят',
+STATE_READ_ERROR:'ошибка чтения состояния',PASS:'пройдена',OFFSET_DETECTED:'смещение',UNCERTAIN:'неуверенно',NOT_CHECKED:'не проверялись',INVALID_REPORT:'отчёт неверен',
+ERROR:'ошибка',WARNING:'внимание',CRITICAL:'критично',INFO:'инфо',
+IN_PROGRESS:'в работе',WAITING:'ожидает',REVIEW:'разбор',NOT_TESTED:'не проверено',INTERRUPTED:'прерван',NO_HEARTBEAT:'нет heartbeat',
+NO_SIGNAL:'Ещё нет сигналов',NO_SLOT:'Нет свободного места',ENTRY_PENDING:'Заявка ожидает исполнения',ENTRY_OK:'Вход выполнен',
+ANTI_FOMO_MOMENTUM_HOT:'Анти-FOMO: импульс перегрет',ANTI_FOMO_TOO_EARLY:'Анти-FOMO: слишком рано',ANTI_FOMO_LAST_JUMP:'Анти-FOMO: резкий последний скачок',
+CASH_AFTER_COSTS:'Мало капитала после расходов',TRADE_STREAM_NOT_RECEIVING:'Поток сделок не получает данные',ALREADY_TRADED:'Токен уже торговался',UNSUPPORTED_OR_STALE_PRICE:'Цена устарела или не поддерживается',
+NO_EXIT_SIGNAL:'нет сигнала выхода',WAITING_FRESH_TICK:'ждёт свежий тик',WAITING_VERIFIED_AMM_OR_TICK:'ждёт AMM/тик',WAITING_VERIFIED_ROUTE_RESULT:'ждёт проверенный выход',
+INSUFFICIENT_LIQUIDITY_OPEN:'мало ликвидности, открыта',ELIGIBLE:'можно выходить',STALE_OR_PRE_SIGNAL:'устарело / до сигнала',UNKNOWN_ROUTE:'маршрут неизвестен',
+AMOUNT_MISMATCH:'не совпала сумма',MISSING_ACCOUNTING:'нет учёта',EXIT_PENDING:'выход ожидается',OPEN_REMAINDER:'остаток открыт',
+NO_MINT_EVENTS_CAUSE_UNPROVEN:'тишина по токену, причина не доказана',NO_TOKEN_EVENTS_OBSERVED:'нет событий по токену',OTHER_POOL_OBSERVED:'события в другом пуле',
+REJECTED_DATA_OBSERVED:'отклонённые данные',NO_RECENT_TOKEN_EVENTS:'нет свежих событий',CONNECTION_UNAVAILABLE:'нет соединения',WAITING_ELIGIBLE_TICK:'ждёт подходящий тик',
+MONITOR_STATE_MISSING:'файл состояния монитора отсутствует',
+PP_REAL_10_7:'PP 10/7',PP_10_7:'PP 10/7',STOP_LOSS:'стоп-лосс',TP2:'тейк-профит 2',TRAIL:'трейлинг-стоп',MAX_HOLD_WATCHDOG:'макс. удержание (watchdog)',PROFIT_PROTECT_EXIT:'защита прибыли',ALREADY_OPEN:'позиция уже открыта',NO_PRICE:'нет цены',EARLY_FAIL:'ранний провал',FAST_STOP:'быстрый стоп',TIME:'по времени',MAX_HOLD:'макс. удержание',
+CURVE_VERIFIED_EXIT:'Curve ✓',AMM_VERIFIED_EXIT:'AMM ✓',ENTRY:'вход',PROBATION_EXIT:'выход (проба)',PP_REAL_EXIT:'выход PP',
+FILLED:'исполнен',EXPIRED:'истёк',REJECTED:'отклонён',CANCELLED_CAPITAL:'отменён: капитал',CANCELLED_STOP:'отменён: стоп',
+BOUGHT:'куплено',EXPIRED_NO_OBSERVED_EVENT:'истёк: нет событий',
+OPEN_POSITIONS_WITHOUT_MONITOR:'Открытые позиции без подтверждённого монитора',CAPITAL_RECONCILIATION:'Расхождение сверки капитала',MONITOR_TECHNICAL_ERRORS:'Технические ошибки монитора',MONITOR_ERROR_STREAK:'Серия ошибок монитора',MONITOR_COVERAGE_GAPS:'Пробелы покрытия монитора',USER_STOP:'Остановлен пользователем',STOPPED_WITH_OPEN_POSITIONS:'Остановлен с открытыми позициями',PRIMARY_HEARTBEAT_UNKNOWN:'Heartbeat основного бота неизвестен',RECORDER_HEARTBEAT_INVALID:'Heartbeat регистратора неверен',PREVIOUS_LAUNCH_FAILED:'Предыдущий запуск завершился сбоем',MISSING_OR_INVALID_CLOSED_COSTS:'Нет или неверны расходы закрытых',COSTS_ERASE_GROSS:'Расходы съедают брутто',SIGNAL_EXIT_WORSE:'Выход по сигналу хуже',SMALL_SAMPLE:'Малая выборка закрытых сделок (порог 100 — диагностический)',
+TICK_FEE_MODEL_WITHOUT_ACCOUNT_SETUP:'тик + комиссии, без открытия счетов',ISOLATED_SELL_WITH_ACCOUNT_SETUP:'изолированная продажа + открытие счетов',
+BRANCH_REPORT_ERROR:'ошибка отчёта ветки',CAMPAIGN_MISMATCH:'кампания не совпадает'};
+const BR=[['primary','Основной'],['route','ROUTE'],['amm','AMM']];
+const TABS=['Сделки','Отказы и решения','Ордера и запуск','Ветки','Дорожная карта','Диагностика'];
+const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const isN=v=>typeof v==='number'&&isFinite(v);
+const nv=v=>isN(v)?v:D;const p2=n=>String(n).padStart(2,'0');
+const num=(v,d=4)=>isN(v)?(v<0?MI:'')+Math.abs(v).toFixed(d):D;
+const sgn=(v,d=4)=>isN(v)?(v>0?'+':v<0?MI:'')+Math.abs(v).toFixed(d):D;
+const dd=v=>isN(v)?(v!==0?MI:'')+Math.abs(v).toFixed(4):D;
+const cl=v=>isN(v)?(v>0?'up':v<0?'dn':''):'';
+const sv=(v,d=4)=>`<span class="m ${cl(v)}">${sgn(v,d)}</span>`;
+const age=v=>isN(v)?(v<100?v.toFixed(1):String(Math.round(v)))+' с':D;
+const ms=v=>isN(v)?Math.round(v)+' мс':D;
+const dur=s=>{if(!isN(s))return D;s=Math.max(0,Math.floor(s));return Math.floor(s/3600)+':'+p2(Math.floor(s%3600/60))+':'+p2(s%60)};
+const hms=ts=>{if(!isN(ts)||ts<=0)return D;const d=new Date(ts*1000);return p2(d.getHours())+':'+p2(d.getMinutes())+':'+p2(d.getSeconds())};
+const px=v=>isN(v)?v.toExponential(2):D;
+const pct=(v,d=1)=>isN(v)?v.toFixed(d)+'%':D;
+const ruT=c=>c==null||c===''?D:(R[c]||String(c));
+const ru=c=>c==null||c===''?D:`<span title="${esc(c)}">${esc(ruT(c))}</span>`;
+const tok=m=>m?`<span class=m title="${esc(m)}">${esc(m.length>10?m.slice(0,4)+'…'+m.slice(-4):m)}</span>`:D;
+const g=(o,p)=>{for(const k of p.split('.')){if(o==null)return undefined;o=o[k]}return o};
+function labT(c){if(c==null||c==='')return D;if(R[c])return R[c];const l=g(S.A,'entry_audit.labels');if(l&&l[c])return l[c];if(/^ENTRY_QUALITY_/.test(c))return 'Качество входа: '+c.slice(14).toLowerCase().replace(/_/g,' ');return String(c)}
+const lab=c=>c==null||c===''?D:`<span title="${esc(c)}">${esc(labT(c))}</span>`;
+const sevC=s=>s==='CRITICAL'||s==='ERROR'?'dn':s==='WARNING'?'warn':s==='INFO'?'info':'';
+const bd=(c,cls)=>c==null?D:`<span class="bd ${cls||''}" title="${esc(c)}">${esc(ruT(c))}</span>`;
+const kv=rows=>'<dl class=kv>'+rows.map(r=>r==='-'?'<hr>':r[0]==='!'?`<div>${r.slice(1)}</div>`:`<div><dt${r[2]?` title="${esc(r[2])}"`:''}>${r[0]}</dt><dd>${r[1]}</dd></div>`).join('')+'</dl>';
+const ph=(t,s,badge)=>`<div class=ph><h3>${t}</h3>${badge||''}<span class=s>${s||''}</span></div>`;
+const em=t=>'<div class=empty>'+t+'</div>';const cap=t=>`<div class=cap>${t}</div>`;
+const isP=()=>S.branch==='primary';
+const B=()=>S.O?S.O[S.branch]:null;
+const wr=b=>{if(!b||!isN(b.wins)||!isN(b.closed))return null;const den=b.closed-(isN(b.accounting_missing)?b.accounting_missing:0);return den>0?{r:b.wins/den*100,den}:null};
+const RMC='доля контрольных пунктов · не вероятность прибыли · не разрешение live';
+function safe(id,fn){const el=$(id);if(!el)return;try{const h=fn();if(h!=null)el.innerHTML=h}catch(e){el.innerHTML='<div class=err>ошибка отображения: '+esc(e&&e.message||e)+'</div>';console.warn(e)}}
+function kset(id,key,fn){let k;try{k=JSON.stringify(key)}catch(e){k=String(Math.random())}if(S.pk[id]===k)return;S.pk[id]=k;const el=$(id);if(!el)return;
+const sc=[...el.querySelectorAll('.fb,.tw')].map(x=>[x.scrollTop,x.scrollLeft]);safe(id,fn);
+el.querySelectorAll('.fb,.tw').forEach((x,i)=>{if(sc[i]){x.scrollTop=sc[i][0];x.scrollLeft=sc[i][1]}})}
+function enabled(k){const O=S.O;if(!O)return k==='primary';if(k==='route')return O.route!=null;if(k==='amm')return !!O.amm_branch_enabled_v100&&O.amm!=null;return true}
+function conn(){if(S.demo)return'ok';const now=Date.now();if(!S.everO)return S.errO?'err0':'load';return S.errO||now-S.okO>12000?'lost':'ok'}
+const aLate=()=>!S.A||(!S.demo&&Date.now()-S.okA>45000);
+// /api snapshot age (wall clock vs generated_ts); marks older than AMAX s (15 s period + slack) are not shown as current.
+const AMAX=25,aAge=()=>S.A&&isN(S.A.generated_ts)?Date.now()/1000-S.A.generated_ts:Infinity;
+const aOld=()=>!S.A||(!S.demo&&(aLate()||aAge()>AMAX));
+function monStatus(b){const l=b&&b.live_v87||{};let st=l.monitor_status;const why=g(l,'state_read_error.reason');if(st==='STATE_READ_ERROR'&&why==='MONITOR_STATE_MISSING'&&g(b,'runtime.state')==='NOT_STARTED')st='NOT_STARTED';return{st,why}}
+function notPaper(){const e=g(S.A,'execution_readiness');return !!e&&((e.mode!=null&&e.mode!=='PAPER')||e.main_strategy_live_routing===true)}
+function alerts(){const O=S.O||{},A=S.A||{},out=[];(O.alerts||[]).forEach(a=>out.push(String(a)));(g(O,'resources.alerts')||[]).forEach(a=>out.push('Ресурсы: '+a));
+(g(A,'capital.errors')||[]).forEach(a=>out.push('Учёт: '+(typeof a==='string'?a:JSON.stringify(a))));(g(A,'system_diagnostics.issues')||[]).filter(i=>i.severity==='CRITICAL').forEach(i=>out.push('Диагностика: '+ruT(i.code)));return out}
+function chip(k,v,dot,title){return `<div class=chip${title?` title="${esc(title)}"`:''}>${dot!=null?`<i class="dot ${dot}"></i>`:''}<span class=k>${k}</span><span>${v}</span></div>`}
+const ageDot=(v,a,b)=>isN(v)?(v<=a?'ok':v<=b?'warn':'bad'):'';
+function rTop(){const O=S.O,A=S.A,p=O&&O.primary,fr=g(p,'runtime.frozen')===true;
+$('ver').textContent=O&&O.version?O.version:D;
+const vs=[O&&O.version,A&&A.version,S.H&&S.H.version].filter(Boolean);const mis=new Set(vs).size>1;
+$('vm').innerHTML=mis?`<span class="bd dn" title="${esc('overview '+(O&&O.version||D)+' · api '+(A&&A.version||D)+' · health '+(S.H&&S.H.version||D))}">≠ версии</span>`:'';
+const np=notPaper(),pe=$('paper');pe.className='paper'+(np?' bad':'');pe.textContent=np?'ВНИМАНИЕ: режим не PAPER — проверьте конфиг':'PAPER · без реальных денег';
+safe('tick',()=>{if(!O)return chip('Бот',D,'');const rt=p&&p.runtime||{},l=p&&p.live_v87||{},cap=p&&p.capital||{};
+const rs=rt.state,rd=rs==='RUNNING'?'ok':rs==='STARTING'?'warn':rs==='STOPPED'||rs==='NOT_STARTED'?'':rs?'bad':'';
+const accOk=cap.status==='OK'&&!(p.accounting_missing>0);const dt=g(A,'device_time_check');
+return chip('Бот',esc(rt.label||ruT(rs)),rd,(rt.label||'')+' '+(rs||''))+(rs==='NOT_STARTED'||!isN(rt.elapsed_s)?chip('Работает',D):chip('Работает',`<span class=m>${dur(rt.elapsed_s)}</span>${fr?' ⏸ заморожено':''}`,fr?'warn':null))
++chip('Heartbeat',`<span class=m>${age(l.loop_heartbeat_age_s)}</span>`,fr?'warn':ageDot(l.loop_heartbeat_age_s,5,15))
++chip('Рынок',`<span class=m>${age(l.market_data_age_s)}</span>`,ageDot(l.market_data_age_s,5,20),isN(l.market_data_age_s)?'':'рыночных данных ещё не было')
++chip('Поток',ru(g(p,'stream.state')))+chip('RPC',ru(g(O,'rpc_control_v89.status')))
++chip('Учёт',p?(accOk?'<span class=up>OK</span>':'<span class=dn>сверка</span>'):D,p?(accOk?'ok':'bad'):'',cap.status)
++chip('Часы',ru(dt&&dt.state),null,dt&&dt.label)+chip('Кампания',O.campaign&&O.campaign.id?`<span class=m>${esc(String(O.campaign.id).slice(0,8))}</span>`:'не создана')});
+const n=alerts().length,b=$('alc');b.textContent='⚠ '+(O?n:D);b.setAttribute('aria-label','Предупреждения: '+(O?n:D));b.className='al'+(n>0?' on':'');rStatus()}
+function rStatus(){const c=conn(),el=$('st'),O=S.O,A=S.A;
+if(c==='load'){el.innerHTML='загрузка…';return}
+if(c==='err0'){el.innerHTML='<span class=dn>нет связи с dashboard — повтор через '+retryS()+' с</span>';return}
+const got=S.demo?'демо':'получено '+Math.max(0,Math.round((Date.now()-S.okO)/1000))+' с назад';
+const aa=A&&O&&isN(A.generated_ts)&&isN(O.generated_ts)?Math.max(0,O.generated_ts-A.generated_ts):null;
+el.innerHTML=`данные <span class=m>${hms(O&&O.generated_ts)}</span> · ${got} · <span class="${!S.demo&&aOld()?'warn':''}">снимок /api ${isN(aa)?age(aa)+' назад':D}</span>`}
+function rBans(){const c=conn(),O=S.O,A=S.A,h=[];
+if(c==='lost')h.push(['r','Нет связи с dashboard — показаны последние данные ('+Math.round((Date.now()-S.okO)/1000)+' с назад) · повтор через '+retryS()+' с']);
+const al=O?alerts():[];if(al.length)h.push(['r','⚠ '+al[0]+(al.length>1?' (+'+(al.length-1)+')':'')]);
+if(A&&A.frozen===true&&g(O,'primary.runtime.frozen')!==false)h.push(['a','Отчёт заморожен: данные на момент '+hms(A.as_of)+' — бот остановлен или нет свежего heartbeat']);
+if(A&&!S.demo&&aOld())h.push(['a','Снимок /api устарел ('+age(Math.max(0,Math.round(aLate()?(Date.now()-S.okA)/1000:aAge())))+' без обновления) — оценки по тику и «Оценка с открытыми» скрыты']);
+if(S.demo)h.push(['i','ДЕМО: синтетические образцы samples/*.json. Числа не относятся к вашему боту.']);
+$('bans').innerHTML=h.map(x=>`<div class="ban ${x[0]}" title="${esc(x[1])}">${esc(x[1])}</div>`).join('')}
+function kc(l,v,c,big){return `<div class="kc${big?' big':''}"><div class=l>${l}</div><div class=v>${v}</div><div class=c>${c}</div></div>`}
+function rKpi(){const b=B();
+if(b&&(b.status==='BRANCH_REPORT_ERROR'||b.status==='CAMPAIGN_MISMATCH'))return `<div class="kc e">Ошибка отчёта ветки: ${esc(b.status)}</div>`;
+const c=b&&b.capital||{},w=wr(b),n=b&&b.positions?b.positions.length:null;
+return kc('Деньги',num(c.cash),'PAPER-$ · без открытых позиций')+kc('Доступно для входов',num(c.available),'деньги − резерв ордеров')
++kc('В позициях',num(c.principal),'номинал входа, не стоимость · '+(n==null?D:n)+' откр.')
++kc('Нетто PNL закрытых',`<span class="${cl(b&&b.net)}">${sgn(b&&b.net)}</span>`,b&&!isN(b.net)?'— учёт неполный':'после расходов обоих плеч',1)
++kc('Расходы закрытых',num(b&&b.costs),'брутто '+sgn(b&&b.gross))
++kc('Сделки',b?nv(b.closed)+' / '+nv(b.entries):D,'закрыто / входов'+(b&&b.carried_closed>0?' · перенесено '+b.carried_closed:''))
++kc('Прибыльных',b?nv(b.wins)+' · '+(w?pct(w.r):D):D,'доля прошлых, не вероятность'+(w&&w.den<100?' · <span class=warn>малая выборка</span>':''))
++kc('Макс. просадка',dd(b&&b.closed_drawdown),'по закрытым сделкам')}
+function rBbar(){const b=B(),bb=$('bbar');
+if(!bb.querySelector('.seg'))bb.innerHTML='<div class=seg role=group aria-label="Сценарий">'+BR.map(([k,n])=>`<button type=button data-b="${k}">${n}</button>`).join('')+'</div><span id=bbc></span>';
+bb.querySelectorAll('button[data-b]').forEach(x=>{const k=x.dataset.b,en=enabled(k),on=S.branch===k;x.classList.toggle('on',on);x.disabled=!en;x.setAttribute('aria-pressed',on?'true':'false');
+const t=en?'':k==='route'?'ветка не запускалась':'AMM-ветка выключена';if(t)x.title=t;else x.removeAttribute('title')});
+const cap2=(b?ru(b.cost_basis_v89):D)+' · сценарии независимы, капитал не складывается; PNL веток напрямую не сравнимы',c=$('bbc');if(c&&c.dataset.h!==cap2){c.innerHTML=cap2;c.dataset.h=cap2}}
+function rSys(){const O=S.O,A=S.A||{},p=O&&O.primary,l=p&&p.live_v87||{},mf=A.market_feed||{},rpc=O&&O.rpc_control_v89||{},sd=A.system_diagnostics||{},dt=A.device_time_check||{},ref=g(dt,'report.reference')||{};
+const m=monStatus(p),cl2=rpc.cleanup_v96||{},res=p&&p.resources||{};const cpu=parseFloat(res.cpu),ram=parseFloat(res.ram_mb);
+const fr=rpc.failure_recovered_v97;const iss=sd.issues||[];
+const mAge=isN(l.market_data_age_s)?l.market_data_age_s:A.frozen===true?null:isN(mf.market_age_s)?mf.market_age_s:g(p,'stream.age_s');
+const rows=[['Фид',ru(mf.state)],['Возраст рынка',age(mAge),'как в индикаторе «Рынок» сверху'],['Последние данные',hms(mf.last_market_ts)],['Переподкл. / сообщ.',nv(mf.reconnects)+' / '+nv(mf.messages)],'-',
+['Монитор позиций',`<span title="${esc(m.why?ruT(m.why):'')}">${esc(ruT(m.st))}</span>`],['Heartbeat монитора',age(l.monitor_heartbeat_age_s)],
+['Проверки',nv(l.active_checks)+'/'+nv(l.worker_limit)],['Старейшая проверка',age(l.oldest_check_age_s)]];
+if(l.ownership_pending===true)rows.push('!<span class=dn>владение не подтверждено — входы и проверки заблокированы</span>');
+rows.push('-',['RPC-регулятор',ru(rpc.status)],['Лимит',(isN(rpc.rate_per_origin)?rpc.rate_per_origin+'/с':D)+' · '+(isN(rpc.max_inflight)?rpc.max_inflight+' парал.':D)],
+['Ожидают итога',nv(rpc.pending_outcomes)],['Приоритет выхода',isN(rpc.exit_priority_pending_v94)?rpc.exit_priority_pending_v94:D],
+['Очистка',(isN(cl2.committed_files_pending)?cl2.committed_files_pending:D)+' / '+(isN(cl2.unresolved_outcomes)?cl2.unresolved_outcomes:D)],
+['Восстановлен после сбоя',fr===true?'да':fr===false?'нет':D],'-',['Часы',ru(dt.state),dt.label],
+['Смещение',isN(ref.offset_median_ms)?ref.offset_median_ms+' ± '+nv(ref.uncertainty_max_ms)+' мс'+(dt.stale&&dt.state!=='NOT_CHECKED'?' <span class=warn>устар.</span>':''):D],
+['CPU / RAM',(isN(cpu)?cpu+' %':D)+' · '+(isN(ram)?ram+' MB':D)]);
+let h=kv(rows);
+if(iss.length){h+='<hr><ul class=ul>'+iss.slice(0,3).map(i=>`<li title="${esc(i.detail||'')}">${bd(i.severity,sevC(i.severity))} ${esc(ruT(i.code))}</li>`).join('')+'</ul>'+(iss.length>3?cap('ещё '+(iss.length-3)+' → вкладка Диагностика'):'')}
+return ph('Состояние системы','',sd.status?bd(sd.status,sevC(sd.status)||(sd.status==='OK'?'up':'')):'')+h}
+function rEnt(){const b=B();if(!b)return ph('Входы')+em('Ветка не запускалась');
+const bl=b.blocks||[],q=g(b,'timing.queue')||{},rt=g(b,'timing.runtime')||{};
+return ph('Входы',esc(labT(b.last_entry_result)))+(bl.length?'<ul class="ul w">'+bl.map(x=>`<li>${esc(x)}</li>`).join('')+'</ul>':'<div class=okm>Общих ограничений нет; ожидаем подходящий сигнал</div>')
++'<div class=sp></div>'+kv([['Последний результат',lab(b.last_entry_result)],['Время',isP()?hms(g(S.A,'diagnostics.last_entry_ts')):D],['Очередь p50/p95',ms(q.p50_ms)+' / '+ms(q.p95_ms)],['Проверка p50/p95',ms(rt.p50_ms)+' / '+ms(rt.p95_ms)]])}
+const clp=v=>Math.max(0,Math.min(100,+v||0));const rmCls=s=>s==='BLOCKED'?'r':s==='NOT_TESTED'||s==='WAITING'?'g':'';
+const rmBc=s=>s==='BLOCKED'?'dn':s==='IN_PROGRESS'||s==='REVIEW'?'acc':'';
+function rRm(){const r=S.O&&S.O.roadmap_progress;if(!r)return ph('Дорожная карта')+em(D);
+return ph('Дорожная карта')+`<div class=rb>${pct(r.percent)}</div>`+cap(RMC)+'<div class=sp></div>'+(r.stages||[]).map(s=>`<div class=rmr><span title="${esc(s.title)}">${esc(s.id)}. ${esc(s.title)}</span>${bd(s.status,rmBc(s.status))}<span class=m>${isN(s.percent)?s.percent+'%':D}</span></div><div class=bar><i class="${rmCls(s.status)}" style="width:${clp(s.percent)}%"></i></div>`).join('')+cap(esc(r.basis||''))}
+let CH=null;
+function chH(){const w=innerWidth;return w>=1440?Math.max(160,Math.min(240,innerHeight*.24)):w<=760?150:160}
+function rChart(){const b=B(),el=$('pChart');const W=Math.max(200,(el.clientWidth||600)-24);
+const key=S.branch+'|'+W+'|'+chH()+'|'+(b?JSON.stringify([b.net,b.closed,(b.trades||[]).map(t=>[t.ts,t.net])]):'x');if(key===S.chartKey)return;S.chartKey=key;
+safe('pChart',()=>{CH=null;const tr=b&&b.trades||[];const head=ph('Нетто закрытых сделок, накопленно',b?'последние '+tr.length+' из '+nv(b.closed)+' закрытий · PAPER-$':'');
+const foot=cap('Только закрытые сделки после расходов; открытые позиции не включены. Не прогноз.');
+if(!b)return head+em('Ветка не запускалась')+foot;
+if(!tr.length)return head+em('Закрытых сделок пока нет')+foot;
+if(!isN(b.net)||tr.some(t=>!isN(t.net)))return head+em('Учёт расходов неполный — кривая недоступна')+foot;
+const win=tr.slice().reverse(),sum=win.reduce((a,t)=>a+t.net,0);let acc=b.net-sum;const pts=[acc];win.forEach(t=>{acc+=t.net;pts.push(acc)});
+const H=chH(),SB=34,AX=58,pw=W-AX,lo=Math.min(0,...pts),hi=Math.max(0,...pts),sp=(hi-lo)||1,pad=8;
+const X=i=>pts.length>1?i*pw/(pts.length-1):pw/2,Y=v=>pad+(hi-v)/sp*(H-2*pad);
+const line=pts.map((v,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1)).join('');
+const area=line+`L${X(pts.length-1).toFixed(1)} ${H}L0 ${H}Z`;
+const mx=Math.max(...win.map(t=>Math.abs(t.net)))||1,bw=Math.max(1,pw/win.length*.6);
+const bars=win.map((t,i)=>{const cx=(X(i)+X(i+1))/2,h=Math.abs(t.net)/mx*(SB/2-3);return `<rect x="${(cx-bw/2).toFixed(1)}" y="${(t.net>=0?H+SB/2-h:H+SB/2).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(.5,h).toFixed(1)}" fill="${t.net>=0?'var(--up)':'var(--dn)'}"/>`}).join('');
+const ticks=[hi,(hi+lo)/2,lo].map(v=>`<text x="${W-4}" y="${(Y(v)+4).toFixed(1)}" text-anchor="end" fill="var(--mut)" font-size="10">${sgn(v)}</text>`).join('');
+const last=pts[pts.length-1];CH={pts,win,X,Y,pw,H};
+return head+`<div class=cbox><svg role=img aria-label="${esc('Накопленное нетто закрытых сделок: '+sgn(last)+' PAPER-$, сделок: '+win.length)}" viewBox="0 0 ${W} ${H+SB}" height="${H+SB}"><defs><linearGradient id=ga x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--acc)" stop-opacity=".12"/><stop offset="1" stop-color="var(--acc)" stop-opacity="0"/></linearGradient></defs>
+<path d="${area}" fill="url(#ga)"/><line x1="0" x2="${pw}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}" stroke="var(--line2)" stroke-dasharray="3"/><path d="${line}" fill="none" stroke="var(--acc)" stroke-width="1.6"/>
+<circle cx="${X(pts.length-1).toFixed(1)}" cy="${Y(last).toFixed(1)}" r="3" fill="var(--acc)"/>${ticks}
+<text x="${Math.max(0,X(pts.length-1)-6).toFixed(1)}" y="${Y(last)<20?Y(last)+15:Y(last)-7}" text-anchor="end" fill="var(--tx)" font-size="11">${sgn(last)}</text>
+<line x1="0" x2="${pw}" y1="${H+SB/2}" y2="${H+SB/2}" stroke="var(--line)"/>${bars}<line id=chx x1="0" x2="0" y1="0" y2="${H+SB}" stroke="var(--line2)" visibility="hidden"/></svg><div class=tip id=ctip hidden></div></div>`+foot})}
+function chMove(e){const svg=e.target.closest&&e.target.closest('svg'),tip=$('ctip'),ln=$('chx');if(!CH||!svg||!tip){if(tip)tip.hidden=true;return}
+const r=svg.getBoundingClientRect(),vbW=svg.viewBox.baseVal.width,x=(e.clientX-r.left)*vbW/r.width;const n=CH.win.length;
+let i=Math.round(x/CH.pw*n);i=Math.max(1,Math.min(n,i));const t=CH.win[i-1];
+tip.innerHTML=`${hms(t.ts)} · ${esc(t.mint?t.mint.slice(0,4)+'…'+t.mint.slice(-4):D)} · ${esc(ruT(t.reason))} · нетто ${sgn(t.net)} · накоплено ${sgn(CH.pts[i])}`;tip.hidden=false;
+const px2=CH.X(i)*r.width/vbW;tip.style.left=Math.max(0,Math.min(r.width-tip.offsetWidth,px2+8))+'px';if(ln){ln.setAttribute('x1',CH.X(i));ln.setAttribute('x2',CH.X(i));ln.setAttribute('visibility','visible')}}
+function rPos(){const b=B(),A=S.A,P=isP(),rt=S.branch==='route';if(!b)return ph('Открытые позиции')+em('Ветка не запускалась');
+const ps=b.positions||[];let sub=ps.length+' откр.';
+if(P&&A)sub+=' · ждут выхода '+num(A.waiting_principal)+' PAPER-$ · тики: устар. '+(isN(g(A,'evidence.stale_ticks'))?A.evidence.stale_ticks:D)+' / неизв. '+(isN(g(A,'evidence.unknown_ticks'))?A.evidence.unknown_ticks:D);
+const am={};if(A)(A.positions||[]).forEach(x=>am[x.trade_id]=x);const va=g(A,'capital.valuation')||{},mt=isN(va.max_tick_age_s)?va.max_tick_age_s:1.0;
+// Same base as paper_capital: wall clock at snapshot (generated_ts), never the frozen as_of; nothing is marked while frozen or when the server priced nothing.
+const old=aOld(),anyPriced=A&&!old&&A.frozen!==true&&isN(A.generated_ts)&&(va.excluded_count===0||va.priced_count>0);
+let h;if(!ps.length)h=em('Открытых позиций нет');else{
+h='<div class=tw><table><thead><tr><th>Токен</th><th class=n>Размер</th><th class=n>Возраст</th>'+(P?'<th class=n>Вход / Текущая</th><th class=n>По тику</th><th class=n>MFE/MAE</th>':'')+'<th>Решение по выходу</th><th class=n>Ожидание</th>'+(rt?'<th>Состояние</th><th class=n>Дедлайн</th>':'')+'</tr></thead><tbody>'+ps.map(p=>{
+const a=am[p.trade_id],wd=p.wait_diagnostic;let pc='';
+if(P){if(!a)pc=`<td class=n data-l="Вход / текущая">${D}</td><td class=n data-l="По тику">${D}</td><td class=n data-l="MFE / MAE">${D}</td>`;else{const dts=isN(a.last_update_ts)?A.generated_ts-a.last_update_ts:NaN;
+const fresh=anyPriced&&p.exit_decision!=='WAITING_FRESH_TICK'&&dts>=0&&dts<=mt&&a.entry>0&&isN(a.current)&&a.current>0;
+const ch=fresh?a.current/a.entry-1:null;pc=`<td class=n data-l="Вход / текущая">${px(a.entry)}<br><span class=sm>${old?D:px(a.current)}</span></td><td class=n data-l="По тику">${fresh?sv(p.size*ch)+'<br><span class=sm>'+sgn(ch*100,1)+'%</span>':'<span class=warn'+(A.frozen===true?' title="отчёт заморожен — оценки нет"':'')+'>'+(old?'снимок /api устарел':'цена устарела')+'</span>'}</td><td class=n data-l="MFE / MAE"><span class=up>${isN(a.mfe)?sgn(a.mfe*100,1)+'%':D}</span><br><span class=dn>${isN(a.mae)?sgn(a.mae*100,1)+'%':D}</span></td>`}}
+const dec=bd(p.exit_decision,/WAIT|PENDING/.test(p.exit_decision||'')?'warn':p.exit_decision==='ELIGIBLE'?'acc':'')+(p.exit_reason?' <span class=mut>'+ru(p.exit_reason)+'</span>':'')+(wd?`<br><span class=sm title="${esc('событий '+nv(wd.raw_events)+', отклонено '+nv(wd.rejected)+', др. пул '+nv(wd.other_pool))}">${esc(ruT(wd.state))}</span>`:'');
+return `<tr${p.exit_overdue?' class=od':''}><td class=tk data-l="Токен">${tok(p.mint)}</td><td class=n data-l="Размер">${num(p.size,2)}</td><td class=n data-l="Возраст">${dur(p.age_s)}</td>${pc}<td class=dec data-l="Решение по выходу">${dec}</td><td class="n${p.exit_overdue?' dn':''}" data-l="Ожидание">${p.exit_overdue?'⚠ ':''}${age(p.exit_wait_s)}</td>`
++(rt?`<td data-l="Состояние">${ru(p.exit_state_v96)}${p.remainder_reason_v96?' · '+ru(p.remainder_reason_v96):''}${p.slot_retained_v96?'<br><span class=sm>держит слот</span>':''}</td><td class=n data-l="Дедлайн">${hms(p.exit_deadline_ts_v96)}</td>`:'')+'</tr>'}).join('')+'</tbody></table></div>'}
+if(P&&A){const ex=g(A,'diagnostics.exits')||[];if(ex.length)h+='<ul class="ul w" style="margin-top:6px">'+ex.map(x=>`<li>${tok(x.mint)} · ${ru(x.reason)} · ${age(x.wait_s)} · ${esc((x.causes||[]).map(ruT).join(', '))}</li>`).join('')+'</ul>'}
+return ph('Открытые позиции',sub)+h+cap('По тику — брутто по тику, без расходов входа и выхода'+(P&&A?'; цены из снимка /api '+hms(A.generated_ts):'')+'; свежая цена не гарантирует продажу. Тишина по токену не доказывает отсутствие сделок.'+(P?'':' Цены и MFE/MAE сервер отдаёт только для основного сценария.'))}
+function runRows(cur){if(!cur)return em('Запусков нет');const r=cur.result||{};
+return '<div style="margin-bottom:5px">'+bd(cur.status,cur.status==='RUNNING'?'up':cur.status==='INTERRUPTED'?'warn':'')+'</div>'+kv([['Длит.',dur(cur.elapsed_s)],['Входов / закрыто',nv(r.entries)+' / '+nv(r.closed)],['Нетто закрытых',sv(r.net_closed)],['Расходы',num(r.costs_in_run)],['Изменение денег',sgn(r.cash_change)+'<br><span class=sm>включает покупки — не PNL</span>'],['Ещё открыто',nv(r.entered_still_open)]])}
+function rCap(){const b=B(),A=S.A,P=isP(),O=S.O,c=b&&b.capital||{},ac=A&&A.capital||{},v=ac.valuation||{};
+const g1=kv([['Старт',num(g(O,'campaign.start_balance'),2)],['Деньги',num(c.cash)],['Доступно',num(c.available)],['В позициях',num(c.principal)],['Резерв ордеров',P&&A?num(ac.reserved):D]]);
+const vOk=A&&!aOld(),g2=P?kv([['Оценка с открытыми',!vOk?(A?'<span class=warn>— снимок /api устарел</span>':D):isN(ac.marked_equity_before_exit_cost)?num(ac.marked_equity_before_exit_cost):'<span class=warn>— оценка неполная</span>','до будущих расходов выхода; свежая цена ≠ гарантия продажи'],
+['Покрытие',vOk?nv(v.priced_count)+' оценено / '+nv(v.excluded_count)+' без цены ('+num(v.excluded_principal)+')':D],['Брутто закрытых',sv(b&&b.gross)],['Новых / перенесённых',(b&&b.new_closed!=null?b.new_closed:D)+' / '+(b&&b.carried_closed!=null?b.carried_closed:D)]]):'<div class=sm>только для основного</div>';
+const g3=P&&A?kv([['Расходы всего',num(ac.total_cost)],['· пул',num(ac.pool_cost),'ставка пула из неверифицированного фида'],['· маршрут',num(ac.route_cost),'допущение 0.25%'],['· фикс.',num(ac.fixed_cost)],['Входы открытых',num(ac.open_entry_cost)],['Пропуски ставки выхода',nv(ac.missing_exit_rate_count)]])+cap('не включены rent, impact, конвертация, упавшие транзакции'):'<div class=sm>'+(P?D:'только для основного')+'</div>';
+const g4=P?(A?runRows(g(A,'runs.current')):D):'<div class=sm>только для основного</div>';
+return ph('Капитал ветки','PAPER-$')+`<div class=cg><div><h4>Балансы</h4>${g1}</div><div><h4>Оценка</h4>${g2}</div><div><h4>Расходы</h4>${g3}</div><div><h4>Текущий запуск</h4>${g4}</div></div>`}
+function rAl(){const a=alerts();return ph('Предупреждения','',`<span class="bd ${a.length?'dn':'up'}">${a.length}</span>`)+(a.length?'<ul class="ul al">'+a.map(x=>`<li>${esc(x)}</li>`).join('')+'</ul>':'<div class=okm>Предупреждений нет</div>')}
+const ftok=m=>m?`<span class=m>${esc(String(m).slice(0,4))}</span>`:D;
+function fr(ts,tag,tc,mint,txt,amt,at){return `<div class=fr><span class=t>${hms(ts)}</span><span class="bd ${tc}">${tag}</span><span class=x title="${esc((mint||D)+' '+txt)}">${ftok(mint)} ${esc(txt)}</span><span class=m${at?` title="${at}"`:''}>${amt}</span></div>`}
+function rFeed(){const b=B(),A=S.A;let rows=[];
+if(isP()){if(!A)return ph('Лента событий')+'<div class=fb><div class=empty>ожидание /api…</div></div>';
+const nm={};(g(S.O,'primary.trades')||[]).forEach(t=>{if(t&&t.trade_id&&isN(t.net))nm[t.trade_id]=t.net});
+(A.trades||[]).forEach(t=>{if(t.side==='BUY')rows.push([t.ts,fr(t.ts,'BUY','info',t.mint,'покупка @ '+px(t.price),num(t.size,2))]);
+else if(t.side==='SELL'){const n=nm[t.trade_id];rows.push([t.ts,fr(t.ts,'SELL','warn',t.mint,ruT(t.reason)+' @ '+px(t.price),isN(n)?sv(n):'<span class=mut>бр. '+sgn(t.pnl)+'</span>',isN(n)?'нетто после расходов':'брутто, до расходов — нетто недоступно')])}});
+(A.entry_debug||[]).forEach(e=>{if(e.stage==='BLOCKED')rows.push([e.ts,fr(e.ts,'ОТКАЗ','',e.mint,String(labT(e.reason)),'')])})}
+else if(b)(b.trades||[]).forEach(t=>rows.push([t.ts,fr(t.ts,'ВЫХОД','warn',t.mint,String(ruT(t.reason)),sv(t.net))]));
+rows.sort((x,y)=>(y[0]||0)-(x[0]||0));const lim=innerWidth<=760?15:60;
+return ph('Лента событий',rows.length?Math.min(rows.length,lim)+' событий':'')+'<div class=fb>'+(rows.length?rows.slice(0,lim).map(r=>r[1]).join(''):em('Событий нет'))+'</div>'}
+function hbars(rows){if(!rows.length)return em('Нет данных');const mx=Math.max(...rows.map(r=>r.n))||1;
+return '<div class=hb>'+rows.map(r=>`<span title="${esc(r.code||'')}">${esc(r.l)}</span><span class=tr><i style="width:${(r.n/mx*100).toFixed(1)}%"></i></span><span class=m>${r.n}</span>`).join('')+'</div>'}
+function group(list,key){const m={};list.forEach(x=>{const k=x[key];m[k]=(m[k]||0)+1});return Object.keys(m).map(k=>({code:k,l:labT(k),n:m[k]})).sort((a,b)=>b.n-a.n)}
+function divbar(v,mx){if(!isN(v))return '';const w=60,h=Math.abs(v)/(mx||1)*w;return `<svg role=img aria-label="${esc('нетто '+sgn(v))}" width="${2*w}" height="10" viewBox="0 0 ${2*w} 10"><line x1="${w}" x2="${w}" y1="0" y2="10" stroke="var(--line2)"/><rect x="${v>=0?w:w-h}" y="2" width="${Math.max(.5,h)}" height="6" fill="${v>=0?'var(--up)':'var(--dn)'}"/></svg>`}
+function tTrades(){const b=B(),A=S.A;let h='';const tr=b&&b.trades||[];
+h+='<h4>Сделки ветки</h4>'+(tr.length?'<div class=tw><table><tr><th>Время</th><th>Токен</th><th>Причина</th><th class=n>Удерж.</th><th class=n>Брутто</th><th class=n>Расходы</th><th class=n>Нетто</th></tr>'+tr.map(t=>`<tr><td class=m>${hms(t.ts)}</td><td>${tok(t.mint)}</td><td>${ru(t.reason)}</td><td class=n>${age(t.hold)}</td><td class=n>${sv(t.pnl)}</td><td class=n>${num(t.cost)}</td><td class=n>${sv(t.net)}</td></tr>`).join('')+'</table></div>':em('Закрытых сделок пока нет'));
+const st=isP()&&g(A,'system_diagnostics.strategy');
+if(st){h+='<div class=sp></div><div class=cards><div class=card><h4>Итоги стратегии (вся база)</h4>'+kv([['Закрыто / учтено',nv(st.closed)+' / '+nv(st.accounted)],['Прибыльных / убыточных',nv(st.wins)+' / '+nv(st.losses)],['Profit factor',num(st.profit_factor,3)],['Среднее нетто',sv(st.mean_net)],['Нетто',sv(st.net)],['Макс. просадка',dd(st.max_closed_drawdown)]])+'</div>';
+const br=st.by_reason||[],mx=Math.max(...br.map(r=>Math.abs(r.net)||0),0)||1;
+h+='<div class=card><h4>По причинам выхода</h4><div class=tw><table><tr><th>Причина</th><th class=n>Кол-во</th><th class=n>Прибыльных</th><th class=n>Нетто</th><th></th></tr>'+br.map(r=>`<tr><td>${ru(r.reason)}</td><td class=n>${nv(r.count)}</td><td class=n>${nv(r.wins)}</td><td class=n>${sv(r.net)}</td><td>${divbar(r.net,mx)}</td></tr>`).join('')+'</table></div></div></div>'
++cap('итоги прошлых PAPER-сделок, не прогноз'+(isN(st.closed)&&st.closed<100?' · <span class=warn>малая выборка (&lt;100)</span>':''))}
+return h}
+function tRej(){const A=S.A;if(!A)return em('ожидание /api…');const d=A.diagnostics||{},ed=A.entry_debug||[];
+return '<div class=cards><div><h4>Отказы по причинам (последние '+ed.length+' записей)</h4>'+hbars(group(ed.filter(e=>e.stage==='BLOCKED'),'reason'))+'</div><div><h4>Наблюдения · всего '+nv(d.observation_total)+'</h4>'+hbars((d.observations||[]).map(o=>({code:o.entry_result,l:labT(o.entry_result),n:o.n})))+cap('первый PASS-кандидат на токен; не сделки и не гипотетическая прибыль')+'</div></div>'
++'<div style="margin:8px 0"><span class=mut>Статус входов:</span> '+esc(d.entry_status||D)+'</div>'
++'<div class=tw><table><tr><th>Время</th><th>Токен</th><th>Этап</th><th>Причина</th></tr>'+ed.slice(0,40).map(e=>`<tr><td class=m>${hms(e.ts)}</td><td>${tok(e.mint)}</td><td>${bd(e.stage,e.stage==='BLOCKED'?'':'acc')}</td><td>${esc(labT(e.reason))} <span class="sm m">${esc(e.reason)}</span></td></tr>`).join('')+'</table></div>'}
+function tOrd(){const A=S.A,b=B();if(!A)return em('ожидание /api…');const ep=A.entry_pipeline||{},oc=ep.outcome_counts||{};const pe=b&&b.preentry||{};const pk=Object.keys(pe).filter(k=>pe[k]==null||typeof pe[k]!=='object');
+const ob=l=>hbars((l||[]).map(x=>({code:x.status,l:ruT(x.status),n:x.n})));
+return '<div class=cards><div><h4>Покупки</h4>'+ob(A.buys)+'</div><div><h4>Продажи</h4>'+ob(A.sells)+'</div><div><h4>Воронка · ордеров '+nv(ep.total_orders)+'</h4>'+hbars(Object.keys(oc).map(k=>({code:k,l:labT(k),n:oc[k]})))+'</div>'
++'<div><h4>Pre-entry</h4>'+(pk.length?kv(pk.map(k=>[esc(k),esc(pe[k]??D)])):em('Нет данных'))+'</div><div><h4>Текущий запуск</h4>'+runRows(g(A,'runs.current'))+'</div></div>'+cap('PAPER-ордер: задержка 250 мс, окно 2 с; не биржевые ордера')}
+function bcard(k,n){const O=S.O;const b=O&&O[k];if(k==='amm'&&(!O||!O.amm_branch_enabled_v100||!b))return `<div class=card><h4>${n}</h4><div class=empty>выключена</div></div>`;
+if(!b)return `<div class=card><h4>${n}</h4><div class=empty>ветка не запускалась</div></div>`;const c=b.capital||{},w=wr(b);
+let rows=[['Состояние',esc(g(b,'runtime.label')||ruT(g(b,'runtime.state')))],['Деньги / доступно',num(c.cash)+' / '+num(c.available)],['В позициях',num(c.principal)],['Нетто закрытых',sv(b.net)],['Закрыто / входов',nv(b.closed)+' / '+nv(b.entries)],['Прибыльных',nv(b.wins)+' · '+(w?pct(w.r):D)],['Модель расходов',ru(b.cost_basis_v89)]];
+let ex='';if(k==='route'){const ce=b.curve_exits||0,ae=b.amm_exits||0,ue=b.unknown_route_exits||0,t=ce+ae+ue||1;const fv=b.failure_v93||{},se=b.stressed_equity_v100||{};
+rows.push('-',['Проверенные выходы',nv(b.verified_exits)+` <span class=sm>Curve ${nv(b.curve_exits)} · AMM ${nv(b.amm_exits)} · неизв. ${nv(b.unknown_route_exits)}</span>`]);
+ex=`<div class=split><i style="width:${ce/t*100}%;background:var(--acc)"></i><i style="width:${ae/t*100}%;background:var(--info)"></i><i style="width:${ue/t*100}%;background:var(--warn)"></i></div>`;
+const ed=b.exit_decisions||{};rows.push(['Решения выхода',esc(Object.keys(ed).map(x=>ruT(x)+': '+ed[x]).join(', ')||D)],['Транспорт / стоп',ru(g(b,'transport.status'))+' / '+ru(g(b,'stop.status'))],
+['Разрыв входных данных',b.input_gap===true?'<span class=dn>да — входы ветки заблокированы</span>':b.input_gap===false?'нет':D],['Причина сбоя',ru(fv.primary_cause)+' / '+ru(fv.transport_cause)],
+['Верхняя граница, не котировка',num(se.equity_upper_before_exit_cost)])}
+return `<div class=card><h4>${n}</h4>${kv(rows)}${ex}</div>`}
+function tBr(){return '<div class=cards>'+BR.map(([k,n])=>bcard(k,n)).join('')+'</div>'+cap('Итога по всем веткам нет намеренно')}
+function tRm(){const r=S.O&&S.O.roadmap_progress;if(!r)return em(D);
+return `<div class=rb style="font-size:30px">${pct(r.percent)}</div>`+cap(RMC+' · '+esc(r.basis||''))+'<div class=sp></div><div class=cards>'+(r.stages||[]).map(s=>`<div class=card><h4>${esc(s.id)}. ${esc(s.title)}</h4>${bd(s.status,rmBc(s.status))} <span class=m>${isN(s.percent)?s.percent+'%':D}</span><div class=bar><i class="${rmCls(s.status)}" style="width:${clp(s.percent)}%"></i></div><div class=sm>${esc(s.progress||'')}</div><ul class=ul>${(s.checkpoints||[]).map(c=>`<li><span class="${c.passed?'up':'mut'}">${c.passed?'✓':'○'}</span> ${esc(c.title)}</li>`).join('')}</ul></div>`).join('')+'</div>'}
+function tDiag(){const A=S.A,O=S.O;if(!A)return em('ожидание /api…');const sd=A.system_diagnostics||{},mf=A.market_feed||{},dt=A.device_time_check||{},er=A.execution_readiness||{},rpc=O&&O.rpc_control_v89||{};
+const iss=(sd.issues||[]).map(i=>`<li>${bd(i.severity,sevC(i.severity))} ${esc(ruT(i.code))} <span class="sm m">${esc(i.code)}</span></li>`).join('');
+const ep=rpc.endpoints||[],pr=g(O,'resources.processes')||[];
+return '<div class=cards><div class=card><h4>Проблемы</h4>'+(iss?'<ul class=ul>'+iss+'</ul>':'<div class=okm>Проблем нет</div>')+'</div>'
++'<div class=card><h4>Фид и часы</h4>'+kv([['Фид',ru(mf.state)],A.frozen===true?['Возраст рынка <span class=sm>на момент heartbeat</span>',age(mf.market_age_s),'отчёт заморожен: возраст отсчитан от последнего heartbeat, не от текущего времени']:['Возраст рынка',age(mf.market_age_s)],['Последние данные',hms(mf.last_market_ts)],['Переподкл. / сообщ.',nv(mf.reconnects)+' / '+nv(mf.messages)],'-',['Часы',ru(dt.state),dt.label],['Возраст проверки',age(dt.age_s)],['Устарела',dt.stale===true?'<span class=warn>да</span>':dt.stale===false?'нет':D],['Неопределённость',isN(g(dt,'report.reference.uncertainty_max_ms'))?dt.report.reference.uncertainty_max_ms+' мс':D]])+'</div>'
++'<div class=card><h4>Исполнение</h4>'+kv([['Режим',ru(er.mode)],['Live-маршрутизация',er.main_strategy_live_routing===true?'<span class=dn>ВКЛ.</span>':er.main_strategy_live_routing===false?'<span class=up>выкл.</span>':D],['Реальное исполнение',er.mainnet_execution_verified===true?'проверено':'не проверено'],['Адаптер',esc(er.execution_adapter||D)]])+'</div>'
++'<div class=card><h4>Процессы</h4>'+(pr.length?kv(pr.map(p=>[esc(p.role||D),'pid '+esc(nv(p.pid))])):em('Нет данных'))+'</div></div>'
++'<h4 style="margin-top:12px">Эндпоинты RPC</h4>'+(ep.length?'<div class=tw><table><tr><th>Хеш</th><th class=n>Начато</th><th class=n>429</th><th class=n>Др. ошибки</th><th class=n>Отложено</th><th class=n>Макс. ожид.</th><th class=n>Пауза</th></tr>'+ep.map(e=>`<tr><td class=m>${esc(String(e.endpoint_hash||D).slice(0,12))}</td><td class=n>${nv(e.started)}</td><td class="n${e.server_429>0?' warn':''}">${nv(e.server_429)}</td><td class="n${e.other_errors>0?' dn':''}">${nv(e.other_errors)}</td><td class=n>${nv(e.local_deferred)}</td><td class=n>${ms(e.max_wait_ms)}</td><td class=n>${age(e.cooldown_remaining_s)}</td></tr>`).join('')+'</table></div>':em('Эндпоинты RPC ещё не использовались'))}
+const TF=[tTrades,tRej,tOrd,tBr,tRm,tDiag];
+function tabIn(t){const b=B(),A=S.A||{},O=S.O||{};return [[b&&b.trades,A.generated_ts],[A.generated_ts],[A.generated_ts,b&&b.preentry],[O.primary,O.route,O.amm,O.amm_branch_enabled_v100],[O.roadmap_progress],[A.generated_ts,O.rpc_control_v89,g(O,'resources.processes')]][t]}
+function rTabs(force){const tn=$('tn');if(!tn.querySelector('button'))tn.innerHTML=TABS.map((n,i)=>`<button type=button role=tab id="tab${i}" aria-controls=tb data-t="${i}" title="клавиша ${i+1}">${n}</button>`).join('');
+tn.querySelectorAll('button[data-t]').forEach(x=>{const on=+x.dataset.t===S.tab;x.classList.toggle('on',on);x.setAttribute('aria-selected',on?'true':'false');x.tabIndex=on?0:-1});$('tb').setAttribute('aria-labelledby','tab'+S.tab);
+const key=S.tab+'|'+S.branch+'|'+JSON.stringify(tabIn(S.tab));if(!force&&key===S.tabKey)return;S.tabKey=key;const tb=$('tb'),st=tb.scrollTop;safe('tb',TF[S.tab]);tb.scrollTop=st}
+function rFoot(){const O=S.O;return esc(O&&O.note||'')+' · Все суммы — PAPER-$ сценария, не реальные средства · <a href="/details">Подробный отчёт →</a> · <a href="/">Обзор</a>'}
+function render(){if(S.O&&!enabled(S.branch))S.branch='primary';const c=conn();document.body.classList.toggle('stale',c==='lost');
+try{rTop()}catch(e){}try{rBans()}catch(e){}
+const O=S.O||{},A=S.A||{},b=B(),P=isP(),br=S.branch,ag=A.generated_ts;
+kset('kpi',[br,b],rKpi);try{rBbar()}catch(e){console.warn(e)}
+kset('pSys',[O.primary&&[O.primary.live_v87,O.primary.resources,O.primary.stream,O.primary.runtime],O.rpc_control_v89,ag,A.frozen],rSys);
+kset('pEnt',[br,b&&[b.blocks,b.timing,b.last_entry_result],P?ag:0],rEnt);kset('pRm',[O.roadmap_progress],rRm);rChart();
+kset('pPos',[br,b&&b.positions,P?[ag,A.frozen,A.as_of,aOld()]:0],rPos);
+kset('pCap',[br,b&&[b.capital,b.gross,b.new_closed,b.carried_closed],g(O,'campaign.start_balance'),P?[ag,aOld()]:0],rCap);
+kset('pAl',[alerts()],rAl);kset('pFeed',[br,innerWidth<=760,P?[ag,(g(O,'primary.trades')||[]).map(t=>[t.trade_id,t.net])]:b&&b.trades],rFeed);rTabs();kset('foot',[O.note],rFoot)}
+function maybe(){const k=[g(S.O,'generated_ts'),g(S.A,'as_of'),g(S.A,'generated_ts'),g(S.H,'version'),conn(),aLate(),aOld(),g(S.O,'primary.runtime.frozen'),S.branch,S.tab].join('|');if(k!==S.key){S.key=k;render()}else{rStatus();if(conn()==='lost'||(S.A&&aOld()))rBans()}}
+async function get(path,t){const c=new AbortController(),tm=setTimeout(()=>c.abort(),t);try{const r=await fetch(path,{cache:'no-store',signal:c.signal});if(!r.ok)throw new Error('HTTP '+r.status);return await r.json()}finally{clearTimeout(tm)}}
+const EP={O:['/overview',6000,3000],A:['/api',12000,15000],H:['/health',8000,30000]};
+const retryS=()=>Math.max(1,Math.round((S.next.O-Date.now())/1000));
+async function poll(k){if(S.inf[k])return;S.inf[k]=1;S.next[k]=Date.now()+EP[k][2];
+try{const d=await get(EP[k][0],EP[k][1]);S[k]=d;S.ec[k]=0;if(k==='O'){S.okO=Date.now();S.errO=false;S.everO=true}else if(k==='A'){S.okA=Date.now();S.errA=false}
+if(k!=='H'&&S.H&&d&&d.version&&d.version!==S.H.version&&!S.vmc){S.vmc=1;S.next.H=0}}
+catch(e){S.ec[k]=Math.min((S.ec[k]||0)+1,10);S.next[k]=Date.now()+Math.min(EP[k][2]*2**S.ec[k],60000);if(k==='O')S.errO=true;else if(k==='A')S.errA=true}finally{S.inf[k]=0;maybe()}}
+function force(){const n=Date.now();if(S.demo||n-S.lastForce<5000)return;S.lastForce=n;if(!S.ec.O)S.next.O=0;if(!S.ec.A&&n-(S.okA||0)>=15000)S.next.A=0;tick()}
+function tick(){if(S.demo){rStatus();return}if(!document.hidden){const n=Date.now();for(const k of ['O','A','H'])if(n>=S.next[k])poll(k)}maybe()}
+async function demo(kind){const sfx=kind==='empty'?'_empty':'';S.demo=kind||'1';try{const [o,a]=await Promise.all([get('../samples/overview'+sfx+'.json',6000),get('../samples/api'+sfx+'.json',12000)]);S.O=o;S.A=a;S.everO=true;S.okO=S.okA=Date.now()}
+catch(e){if(location.protocol!=='file:'){S.demo=null;S.O=S.A=null;S.everO=false;S.key='';render();tick();return}$('st').innerHTML='<span class=dn>демо-образцы не найдены</span>'}maybe()}
+let rzT=0;addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(()=>{rChart();S.key='';maybe()},120)});
+$('pChart').addEventListener('mousemove',chMove);$('pChart').addEventListener('mouseleave',()=>{const t=$('ctip'),l=$('chx');if(t)t.hidden=true;if(l)l.setAttribute('visibility','hidden')});
+$('bbar').addEventListener('click',e=>{const x=e.target.closest('button[data-b]');if(!x||x.disabled)return;setBranch(x.dataset.b)});
+$('tn').addEventListener('click',e=>{const x=e.target.closest('button[data-t]');if(x)setTab(+x.dataset.t)});
+$('alc').addEventListener('click',()=>{const p=$('pAl');if(p)p.scrollIntoView({behavior:'smooth',block:'start'})});
+function setBranch(k){if(!enabled(k))k='primary';S.branch=k;try{localStorage.setItem('pfterm.branch',k)}catch(e){}S.key='';S.chartKey='';maybe()}
+function setTab(t){S.tab=t;try{localStorage.setItem('pfterm.tab',String(t))}catch(e){}rTabs(true);S.key='';maybe()}
+$('tn').addEventListener('keydown',e=>{if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft'&&e.key!=='Home'&&e.key!=='End')return;e.preventDefault();const n=TABS.length;
+const t=e.key==='Home'?0:e.key==='End'?n-1:(S.tab+(e.key==='ArrowRight'?1:n-1))%n;setTab(t);const x=$('tab'+t);if(x)x.focus()});
+document.addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey||e.repeat)return;const tg=e.target&&e.target.tagName;if(tg==='INPUT'||tg==='TEXTAREA'||tg==='SELECT'||(e.target&&e.target.isContentEditable))return;
+const k=e.key.toLowerCase();if(e.shiftKey){if(k==='d'||k==='в')location.href='/details';return}
+if(k>='1'&&k<='6'){setTab(+k-1)}else if(k==='b'||k==='и'){const en=BR.map(x=>x[0]).filter(enabled);setBranch(en[(en.indexOf(S.branch)+1)%en.length])}
+else if(k==='r'||k==='к'){force()}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)force()});
+try{const b=localStorage.getItem('pfterm.branch');if(b&&BR.some(x=>x[0]===b))S.branch=b;const t=parseInt(localStorage.getItem('pfterm.tab'),10);if(t>=0&&t<6)S.tab=t}catch(e){}
+(function(){const q=new URLSearchParams(location.search).get('demo');render();if(q==='1'||q==='empty')demo(q);else if(location.protocol==='file:')demo('1');else tick();setInterval(tick,1000)})();
+</script></body></html>

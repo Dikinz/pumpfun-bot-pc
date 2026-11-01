@@ -57,7 +57,7 @@
     "app/candidate_features.py": "9ff4e01e8938ad87e928e8f8e7c005060af3335b8abaeef959203aaa4a8e97ed",
     "app/candidate_lab.py": "58044bd3fe854098aa6c1bab2df6116c1359dcb08363178dd3667fd41dda6b6d",
     "app/check_entry_selection.py": "db4ceaa5637c88bdc33c008fe14c81129c246659063d9c57324a4067f770a706",
-    "app/check_plan_v972.py": "a26514111acb0017baf3953801259285e28f4f231fc4dbc96a932928663c93e1",
+    "app/check_plan_v972.py": "4c7f2959e5c76a3836e1c7121df1f5a66da2fc2635d91192e53c59d06992850d",
     "app/child_diagnostics.py": "2cda0498f199ef6130ed6e0a0f89a91b6fd83fc727fbbfe728d793e515e011d5",
     "app/clean_campaign.py": "358fd7ba822416e4af0e53860d7d707037c7b96e797b4e3d5396c069f5f88eb6",
     "app/clock_lab.py": "fac280c6a41921de20a260eda5894fce28036c51a360ec073eb5134a0935db74",
@@ -74,7 +74,8 @@
     "app/dashboard/cache.py": "8141629a28b135d67ccfc63e7811884e6adf8959eabeae69b5c7e47354eecb7f",
     "app/dashboard/details.html": "70c7e1cafdf55bfeb4f9b9e081f60910d6643de8c4d7638239a8ba64a2c3dba8",
     "app/dashboard/page.html": "58b11ecc47d2ca023b9d0831dc0e5274cd571eadff5b3044f4f45300b5f84301",
-    "app/dashboard/server.py": "92e18ab53f172219e318e3c99b752f5f3695bfc01abc8f602a2113eeb164a498",
+    "app/dashboard/server.py": "67906702c2f0aa7313e216a804f65ed4d98abfcf151196a5a61e2b10bbfce661",
+    "app/dashboard/terminal.html": "a6eaf67553a0c2154b3bd693de0f3b6cc14cd52d3efb248ca3d7713ff9d104d2",
     "app/database.py": "1427d1b5a5fe60339e09e331c4bb2be947b79c64bd1370de57b25dc16f7af98b",
     "app/diagnostics.py": "63dae45e454a1a776a77791ac1cdb32dccbf5c35f78be1e38fbdd111efbe82b7",
     "app/direct_pump_v2.py": "10961d70d3d0c97bf4a4397a756bf2f19b97ff9f86e2bbbafe36c69d616ecb92",
@@ -379,6 +380,7 @@
     "validation/VALIDATION_v1011.json": "8c693c3c8e631b2d7cbfdfa741ac820ee749b1cf5b5c8e75c7c3e87fa466fcf3",
     "app/tests/test_win314_release.py": "ac2188f0f8be3ee69feedbe9740fdc89f86ae2aaacfbc955b272bf68e21df369",
     "app/tests/test_win314_rpc.py": "089e55f13ae25385f21039b369614abdbec78298bc1e15c27d200b69e399fe55",
-    "app/tests/test_win314_tools.py": "ca39beb2b47919723bdc121df2169e61bf07fb79b7dc37ac2e49e1e24c2a7310"
+    "app/tests/test_win314_tools.py": "ca39beb2b47919723bdc121df2169e61bf07fb79b7dc37ac2e49e1e24c2a7310",
+    "app/tests/test_terminal_v1011.py": "a52085d0cf9cfa443d4d2987f0b3995598e97b1adc2857f41fb5aab1ff459868"
   }
 }
