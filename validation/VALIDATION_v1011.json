@@ -1,0 +1,36 @@
+{
+  "version": "v0.7.101.1",
+  "created_ts": "2026-10-31T23:59:35.092505+00:00",
+  "scope": "LINUX_OFFLINE_LOCAL_FAULT_MODELS",
+  "local_checks_passed": true,
+  "critic_verdict": "PASS_FOR_WINDOWS_PAPER_TEST",
+  "source_python_manifest_sha256": "cf78f66c1237b1d2e2af4a49129d187d84e91ed3c215db9951a1723d65f3a1a2",
+  "input_archive_sha256": "cc8375e92d074b7b13219d743f9f0dfb3945003e646235fcabbe1b8e0496da16",
+  "full_suite": {
+    "tests": 1319,
+    "passed": 1303,
+    "skipped": 16,
+    "failed": 0,
+    "errors": 0,
+    "returncode": 0,
+    "elapsed_s": 183.695
+  },
+  "recovery": {
+    "tests": 605,
+    "passed": 590,
+    "skipped": 15,
+    "failed": 0,
+    "returncode": 0,
+    "elapsed_s": 148.55407760000003,
+    "budget_s": 600,
+    "new_regressions": 15,
+    "new_regressions_passed": true
+  },
+  "strategy_thresholds_unchanged": true,
+  "global_rpc_limits_unchanged": true,
+  "windows_native_proven": false,
+  "provider_two_hour_test_proven": false,
+  "current_amm_exit_proven": false,
+  "live_readiness_proven": false,
+  "memory_reduction_proven": false
+}

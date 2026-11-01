@@ -1,0 +1,59 @@
+{
+  "schema": "RELEASE_VALIDATION_V101",
+  "version": "v0.7.101",
+  "created_ts": 1793474197.936889,
+  "source_platform": "LINUX_PYTHON_3_12",
+  "baseline_zip_sha256": "dc577c50484eaf287f8cbc5f241a47054c4c98f0cdccbcb286217eda85541a64",
+  "full_suite": {
+    "total": 1304,
+    "passed": 1288,
+    "skipped": 16,
+    "failures": 0,
+    "elapsed_s": 201.797
+  },
+  "controlled_recovery": {
+    "passed": true,
+    "counts": {
+      "PASSED": 575,
+      "SKIPPED": 15
+    },
+    "elapsed_s": 158.11454437400016,
+    "budget_s": 600,
+    "new_models": 43
+  },
+  "preserved_limits": {
+    "rpc_per_second": 6,
+    "inflight": 4,
+    "admission_wait_s": 0.75,
+    "worker_deadline_s": 10,
+    "freshness_s": 5
+  },
+  "native_windows_verified": false,
+  "provider_rpc_proven": false,
+  "actual_two_hour_paper_test_completed": false,
+  "real_time_local_injection": {
+    "schema": "REAL_TIME_LOCAL_HTTP_INJECTION_V101",
+    "elapsed_s": 8.524432543999865,
+    "scope": "LOCAL_HTTP_SYNTHETIC_ACCESS_DENIED_NOT_PROVIDER_OR_WINDOWS_KERNEL",
+    "configured_rate": 6,
+    "configured_slots": 4,
+    "http_before": 18,
+    "http_strictly_inside_fault": 0,
+    "http_after": 24,
+    "deferred": {
+      "RATE": 85,
+      "PRIORITY_READ_BUSY": 12
+    },
+    "permanent_latch_created": false,
+    "outstanding_slots": 0,
+    "started": 42,
+    "passed": true
+  },
+  "original_failed_marker_not_deleted": true,
+  "caveats": [
+    "Exact audited legacy latch only; unknown/changed state remains blocked",
+    "Short local HTTP and accelerated timer models are not a 2-hour provider/Windows run",
+    "Run complete 04_CHECK, then guarded read-only 14_RPC_STATUS on target machine",
+    "15_PAPER_FAULT_TEST supplies the requested 7200-second PAPER run with injected denial after 3600 seconds"
+  ]
+}

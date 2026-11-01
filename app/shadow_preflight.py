@@ -10,7 +10,7 @@ QUEUE_AGE=10.
 CHILD_TIMEOUT=30.
 TOTAL_AGE=10.
 SNAPSHOT_AGE=5.
-MAX_RPC_CALLS=3
+MAX_RPC_CALLS=6 # Warm 5 / cold 6 HTTP calls, including genesis; shared 6/s stays unchanged.
 MAX_LOSS_BPS=1500
 BACKOFF_BASE=60.
 BACKOFF_MAX=300.
@@ -30,7 +30,7 @@ def parameters():
       max_rpc_calls_per_job=MAX_RPC_CALLS,queue_age_s=QUEUE_AGE,child_timeout_s=CHILD_TIMEOUT,total_age_s=TOTAL_AGE,
       snapshot_age_s=SNAPSHOT_AGE,size_units=config.POSITION_SIZE,max_loss_bps=MAX_LOSS_BPS,min_reserve_multiple=1,
       buy_min_fraction='0.95',fx_max_age_s=120,backoff_base_s=BACKOFF_BASE,backoff_max_s=BACKOFF_MAX,
-      selection='first_SHADOW_100_FEATURE_PASS_per_mint_FIFO_no_retry',wallet='fresh_synthetic_SOL_tokens_from_BUY',orders=False)
+      selection='first_SHADOW_100_FEATURE_PASS_per_mint_FIFO_no_retry_skip_known_unstartable',wallet='fresh_synthetic_SOL_tokens_from_BUY',orders=False)
 
 def freeze(c):
     payload=json.dumps(parameters(),sort_keys=True);old=c.execute('SELECT payload FROM shadow_preflight_config_v0743 WHERE id=1').fetchone()
@@ -51,6 +51,11 @@ def request(c,mint,price,now,features):
     elif not valid_fx:status='SKIPPED_MISSING_FX'
     elif c.execute('SELECT COUNT(*) FROM shadow_preflight_v0743 WHERE started_ts>?',(now-3600,)).fetchone()[0]>=STARTS_PER_HOUR:status='SKIPPED_HOURLY_LIMIT'
     elif c.execute("SELECT COUNT(*) FROM shadow_preflight_v0743 WHERE status='PENDING'").fetchone()[0]>=MAX_PENDING:status='SKIPPED_QUEUE_FULL'
+    if status=='PENDING':
+        service=c.execute('SELECT cooldown_until FROM shadow_preflight_service_v0743 WHERE id=1').fetchone()
+        last=c.execute('SELECT MAX(started_ts) FROM shadow_preflight_v0743').fetchone()[0]
+        if service and service[0]>now+QUEUE_AGE:status='SKIPPED_SAMPLING_BACKOFF'
+        elif last is not None and last+START_INTERVAL>now+QUEUE_AGE:status='SKIPPED_SAMPLING_INTERVAL'
     strict=c.execute("SELECT 1 FROM candidate_first_v0742 WHERE variant='STRICT_0' AND mint=? AND stage='FEATURE_PASS'",(mint,)).fetchone() is not None
     data=dict(mint=mint,signal_ts=now,signal_price=str(price),size_units=str(config.POSITION_SIZE),fx_rate=rate,fx_ts=fx_ts,
       max_loss_bps=MAX_LOSS_BPS,min_reserve_multiple=1,buy_min_fraction='0.95',candidate_features=features)
@@ -138,7 +143,7 @@ async def run_job(j):
     except asyncio.CancelledError:
         complete(db.con(),j,partial_report(out,'INTERRUPTED_STOP'));raise
     except Exception as e:
-        complete(db.con(),j,{'status':'WORKER_ERROR_'+type(e).__name__,'error_type':type(e).__name__,'child_diagnostics_v73':getattr(e,'child_diagnostics_v73',{})})
+        complete(db.con(),j,{'status':'WORKER_ERROR_'+type(e).__name__,'error_type':type(e).__name__,'exception_v96':__import__('safe_error_v96').capture(e),'child_diagnostics_v73':getattr(e,'child_diagnostics_v73',{})})
         if str(e).startswith('SIMULATION_CHILD_CLEANUP_') or getattr(e,'child_diagnostics_v73',{}).get('cleanup_exception'):raise
 
 async def worker():
@@ -162,21 +167,27 @@ async def worker():
 
 def child(data,out,replay=None):
     import preentry,local_simulation as lab
-    original=lab.read_accounts;calls=[]
-    def bounded_read(addresses,min_slot=None):
+    import exit_quotes as q
+    original=lab.read_accounts;original_json=q.request_json;calls=[]
+    def observed(method,count,operation):
         if len(calls)>=MAX_RPC_CALLS:raise lab.LabError('RPC_CALL_LIMIT')
-        item=dict(method='getMultipleAccounts',accounts=len(addresses),started_ts=time.time(),status='STARTED');calls.append(item)
+        item=dict(method=method,accounts=count,started_ts=time.time(),status='STARTED');calls.append(item)
         (out/'rpc_activity.json').write_text(json.dumps(calls))
         try:
-            result=original(addresses,min_slot);item['status']='OK';return result
+            result=operation();item['status']='OK';return result
         except Exception as e:
             item['status']='ERROR';item['error_type']=type(e).__name__
             if isinstance(getattr(e,'code',None),int):item['http_status']=e.code
             raise
         finally:item['finished_ts']=time.time();(out/'rpc_activity.json').write_text(json.dumps(calls))
-    lab.read_accounts=bounded_read
+    def bounded_read(addresses,min_slot=None,*,data_slice=None,commitment='confirmed'):
+        # Keep the current capture_bank API, including rooted code and later headers.
+        return observed('getMultipleAccounts',len(addresses),lambda:original(addresses,min_slot,data_slice=data_slice,commitment=commitment))
+    def bounded_json(url,stage,body=None,key=None):
+        return observed((body or {}).get('method','HTTP_JSON'),None,lambda:original_json(url,stage,body,key))
+    lab.read_accounts=bounded_read;q.request_json=bounded_json
     try:r=preentry.child(data,out,replay)
-    finally:lab.read_accounts=original
+    finally:lab.read_accounts=original;q.request_json=original_json
     r.update(rpc_calls=len(calls),rpc_activity=calls,scope='SHADOW_100_NO_ORDERS',network_costs_known=False)
     with zipfile.ZipFile(out/'evidence.zip') as source,zipfile.ZipFile(out/'shadow.tmp','w',zipfile.ZIP_DEFLATED) as z:
         for n in source.namelist():

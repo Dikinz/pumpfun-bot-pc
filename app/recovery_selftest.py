@@ -4,23 +4,23 @@ import recovery_evidence,traceback
 from pathlib import Path
 from xml.etree import ElementTree as ET
 APP=Path(__file__).resolve().parent
-SUITE_TIMEOUT_S=300  # Entire offline suite only; no production deadline change.
+SUITE_TIMEOUT_S=600  # Entire offline suite only; no production deadline change.
 REPORT=APP.parent/'results/recovery_check_v89.json'
 
 def main():
     import config
-    report=dict(schema='RECOVERY_SELFTEST_V89',build_revision='RPC_ADMISSION_V95',version=config.VERSION,created_ts=time.time(),
+    report=dict(schema='RECOVERY_SELFTEST_V89',build_revision='AGENT_REVIEW_V1011',version=config.VERSION,created_ts=time.time(),
         passed=False,scope='OFFLINE_DISPOSABLE_PAPER_CLOCK_INJECTION',os_clock_modified=False,
         windows_suspend_resume_proven=False,live_rpc_proven=False,
         note='Time reports and the market are injected test data. Test DBs are temporary; no existing trading DB is opened. The running bot is not paused or controlled.')
     with tempfile.TemporaryDirectory(prefix='pump_recovery_v78_') as td:
         root=Path(td);xml=root/'tests.xml';evidence=root/'scenario.json';monitor_evidence=root/'monitor.json'
         p0_evidence=root/'p0.jsonl';cancel_evidence=root/'saved_result_cancel.jsonl';spawn_evidence=root/'spawn.jsonl';curve_evidence=root/'curve_replay.json';cleanup_evidence=root/'cleanup_v84.jsonl';ownership_evidence=root/'late_ownership_v85.jsonl';state_evidence=root/'monitor_state_v86.jsonl';io_evidence=root/'io87.jsonl'
-        env=dict(os.environ,RPC_CONTROL_EVIDENCE_V891=str(root/'rpc_control_evidence_v891.jsonl'),IO_CHECK_EVIDENCE_V87=str(io_evidence),RECOVERY_PROGRESS_PATH=str(root/'progress.jsonl'),PYTHONUNBUFFERED='1',MONITOR_STATE_EVIDENCE=str(state_evidence),LATE_OWNERSHIP_EVIDENCE=str(ownership_evidence),CLEANUP_REGRESSION_EVIDENCE=str(cleanup_evidence),CURVE_REPLAY_EVIDENCE=str(curve_evidence),SPAWN_BOUNDARY_EVIDENCE=str(spawn_evidence),SAVED_RESULT_CANCEL_EVIDENCE=str(cancel_evidence),P0_CHECK_EVIDENCE=str(p0_evidence),DATABASE_PATH=str(root/'unused.db'),EXECUTION_MODE='paper',
+        env=dict(os.environ,TRANSPORT_THREAD_EVIDENCE_V992=str(root/'transport_threads_v992.jsonl'),RPC_CONCURRENCY_EVIDENCE_V972=str(root/'rpc_concurrency_v972.json'),RPC_CONTROL_EVIDENCE_V891=str(root/'rpc_control_evidence_v891.jsonl'),IO_CHECK_EVIDENCE_V87=str(io_evidence),RECOVERY_PROGRESS_PATH=str(root/'progress.jsonl'),PYTHONUNBUFFERED='1',MONITOR_STATE_EVIDENCE=str(state_evidence),LATE_OWNERSHIP_EVIDENCE=str(ownership_evidence),CLEANUP_REGRESSION_EVIDENCE=str(cleanup_evidence),CURVE_REPLAY_EVIDENCE=str(curve_evidence),SPAWN_BOUNDARY_EVIDENCE=str(spawn_evidence),SAVED_RESULT_CANCEL_EVIDENCE=str(cancel_evidence),P0_CHECK_EVIDENCE=str(p0_evidence),DATABASE_PATH=str(root/'unused.db'),EXECUTION_MODE='paper',
             PYTEST_DISABLE_PLUGIN_AUTOLOAD='1',RECOVERY_CHECK_EVIDENCE=str(evidence),MONITOR_ADMISSION_CHECK_EVIDENCE=str(monitor_evidence))
         for key in ('PYTEST_ADDOPTS','PYTHONPATH','PYTHONHOME'):env.pop(key,None)
         command=[sys.executable,'-m','pytest','-vv','-s','-rA','-p','recovery_progress','--basetemp',str(root/'cases'),
-            '--junitxml',str(xml),'tests/test_rpc_admission_v95.py','tests/test_preparation_v95.py','tests/test_program_cache_v57.py','tests/test_candidate_writer_v94.py','tests/test_rpc_priority_v94.py','tests/test_cleanup_owner_v93.py','tests/test_sql_admission_v92.py','tests/test_route_io_v91.py','tests/test_exit_priority_v90.py','tests/test_rpc_outcomes_v892.py','tests/test_rpc_control_v89.py','tests/test_network_entrypoints_v89.py','tests/test_network_watchdog_v88.py','tests/test_io_dashboard_v87.py','tests/test_monitor_file_reader_v862.py','tests/test_monitor_state_v86.py','tests/test_late_spawn_ownership_v85.py','tests/test_cleanup_regressions_v84.py','tests/test_curve_overflow_v83.py','tests/test_spawn_boundaries_v82.py','tests/test_monitor_shutdown_v81.py','tests/test_saved_result_cancel_v80.py','tests/test_p0_isolation_v79.py','tests/test_windows_child_v78.py','tests/test_monitor_admission_v77.py','tests/test_recovery_classification_v76.py','tests/test_recovery_gate_v75.py']
+            '--junitxml',str(xml),*__import__('check_plan_v972').RECOVERY_TEST_FILES]
         try:
             result=recovery_evidence.run(command,cwd=APP,env=env,root=root,report=report,timeout=SUITE_TIMEOUT_S)
             report.update(child_returncode=result.returncode,stdout=result.stdout,stderr=result.stderr)
@@ -29,6 +29,11 @@ def main():
             report['tests']=[dict(name=c.get('name'),outcome='FAILED' if c.find('failure') is not None or c.find('error') is not None else 'SKIPPED' if c.find('skipped') is not None else 'PASSED') for c in cases]
             rpc_evidence=root/'rpc_control_evidence_v891.jsonl'
             report['rpc_control_evidence_v891']=[json.loads(line) for line in rpc_evidence.read_text(encoding='utf-8').splitlines()] if rpc_evidence.exists() else []
+            concurrency=root/'rpc_concurrency_v972.json'
+            report['rpc_concurrency_evidence_v972']=json.loads(concurrency.read_text(encoding='utf-8')) if concurrency.exists() else {}
+            new_cases=[c for c in report['tests'] if c['name'].startswith(('test_receipt972_','test_checkplan972_'))]
+            report['rpc_receipt_models_passed_v972']=len(new_cases)==13 and all(c['outcome']=='PASSED' for c in new_cases)
+            report['rpc_receipt_windows_verified_v972']=os.name=='nt' and sys.version_info[:2]==(3,14) and report['rpc_receipt_models_passed_v972'] and report['rpc_concurrency_evidence_v972'].get('passed') is True and result.returncode==0
             report['scenario']=json.loads(evidence.read_text(encoding='utf-8'))
             report['monitor_admission']=json.loads(monitor_evidence.read_text(encoding='utf-8'))
             report['p0_audits']=[json.loads(line) for line in p0_evidence.read_text().splitlines()]
@@ -81,7 +86,49 @@ def main():
             bank_cases=[c for c in report['tests'] if c['name'] in bank_names]
             report['program_cache_freshness_passed_v95']=len(bank_cases)==4 and all(c['outcome']=='PASSED' for c in bank_cases)
             report['rpc_coordination_windows_verified_v95']=os.name=='nt' and sys.version_info[:2]==(3,14) and report['rpc_coordination_models_passed_v95'] and report['program_cache_freshness_passed_v95'] and result.returncode==0
-            report['passed']=report['rpc_coordination_models_passed_v95'] and report['program_cache_freshness_passed_v95'] and report['candidate_rpc_models_passed_v94'] and report['cleanup_owner_models_passed_v93'] and report['io_models_passed_v87'] and report['monitor_state_models_passed_v86'] and report['late_spawn_ownership_model_passed_v85'] and report['cleanup_regressions_model_passed_v84'] and result.returncode==0 and bool(cases) and all(c['outcome']=='PASSED' or (os.name!='nt' and ((c in io_cases and c['name']=='test_io87_native_windows_control_state_replace_recovers_after_release') or c in reader_cases or c in native or c['name'] in ('test_windows_timeout_kills_descendants','test_saved_result_sell_cancels_live_tree[native_windows]','test_native_late_spawn_after_timeout_cleans_tree','test_native_late_owner_survives_stop_and_reaps_tree','test_actual_shutdown_does_not_kill_retained_monitor','test_native_known_launcher_owner_survives_delayed_signal','test_monitor_state_native_windows_sharing_violation_preserves_heartbeat')) and c['outcome']=='SKIPPED') for c in report['tests']) and report['curve_overflow_replay_v83']['passed'] and report['curve_overflow_replay_v83'].get('paper_ledger_unchanged') is True and report['scenario'].get('financial_integrity')=='OK' and report['monitor_admission'].get('unknown_result_status')=='RECOVERY_INVALIDATED'
+            v96_cases=[c for c in report['tests'] if c['name'].startswith(('test_gc96_','test_probe96_'))]
+            report['rpc_cleanup_models_passed_v96']=len(v96_cases)==18 and all(c['outcome']=='PASSED' for c in v96_cases)
+            report['rpc_cleanup_windows_verified_v96']=os.name=='nt' and sys.version_info[:2]==(3,14) and report['rpc_cleanup_models_passed_v96'] and result.returncode==0
+            review_cases=[c for c in report['tests'] if c['name'].startswith('test_review96_')]
+            report['review_models_passed_v96']=len(review_cases)==5 and all(c['outcome']=='PASSED' for c in review_cases)
+            transient_cases=[c for c in report['tests'] if c['name'].startswith('test_transient97_')]
+            report['rpc_transient_models_passed_v97']=len(transient_cases)==18 and all(c['outcome']=='PASSED' for c in transient_cases)
+            report['rpc_transient_windows_verified_v97']=os.name=='nt' and sys.version_info[:2]==(3,14) and report['rpc_transient_models_passed_v97'] and result.returncode==0
+            proof_cases=[c for c in report['tests'] if c['name'].startswith('test_exitproof971_')]
+            report['saved_result_handle_models_passed_v971']=len(proof_cases)==11 and all(c['outcome']=='PASSED' for c in proof_cases)
+            native_proofs=[e.get('retained_exit_proof_v971') for e in report['saved_result_cancel_v80'] if e.get('kind')=='SAVE_RESULT_CANCEL_SCENARIO' and e.get('backend')=='native_windows' and e.get('refused_termination') is False]
+            exact_proofs=len(native_proofs)==1 and isinstance(native_proofs[0],list) and len(native_proofs[0])==2 and all(p.get('proof')=='PRE_CANCEL_RETAINED_WINDOWS_HANDLE_V971' and p.get('wait_status')==0 and p.get('handle_retained_before_cancel') is True and p.get('pid_reopened_after_cancel') is False for p in native_proofs[0])
+            report['saved_result_handles_windows_verified_v971']=os.name=='nt' and sys.version_info[:2]==(3,14) and report['saved_result_handle_models_passed_v971'] and report['saved_result_cancel_windows_verified_v80'] and exact_proofs and result.returncode==0
+            hint_cases=[c for c in report['tests'] if c['name'].startswith('test_hint98_')]
+            report['reserve_hint_models_passed_v98']=len(hint_cases)==31 and all(c['outcome']=='PASSED' for c in hint_cases)
+            report['reserve_hint_windows_verified_v98']=os.name=='nt' and sys.version_info[:2]==(3,14) and report['reserve_hint_models_passed_v98'] and result.returncode==0
+            pub_cases=[c for c in report['tests'] if c['name'].startswith('test_pub99_')]
+            transport_cases=[c for c in report['tests'] if c['name'].startswith('test_transport99_')]
+            report['monitor_publication_models_passed_v99']=len(pub_cases)==21 and all(c['outcome']=='PASSED' for c in pub_cases)
+            report['rpc_transport_models_passed_v99']=len(transport_cases)==30 and all(c['outcome']=='PASSED' for c in transport_cases)
+            report['monitor_publication_windows_verified_v99']=os.name=='nt' and sys.version_info[:2]==(3,14) and report['monitor_publication_models_passed_v99'] and result.returncode==0
+            report['rpc_transport_models_windows_verified_v99']=os.name=='nt' and sys.version_info[:2]==(3,14) and report['rpc_transport_models_passed_v99'] and result.returncode==0
+            read_cases=[c for c in report['tests'] if c['name'].startswith('test_read991_')]
+            report['rpc_outcome_read_models_passed_v991']=len(read_cases)==18 and all(c['outcome']=='PASSED' for c in read_cases)
+            report['rpc_outcome_read_windows_verified_v991']=os.name=='nt' and sys.version_info[:2]==(3,14) and report['rpc_outcome_read_models_passed_v991'] and result.returncode==0
+            thread_cases=[c for c in report['tests'] if c['name'].startswith('test_transport992_')]
+            thread_path=root/'transport_threads_v992.jsonl'
+            thread_evidence=[json.loads(line) for line in thread_path.read_text().splitlines()] if thread_path.exists() else []
+            report['transport_thread_evidence_v992']=thread_evidence
+            report['transport_thread_models_passed_v992']=len(thread_cases)==5 and all(c['outcome']=='PASSED' for c in thread_cases) and len(thread_evidence)==3 and all(e.get('status')=='PASSED' and e.get('requests')==6 and e.get('connections')==3 and len(e.get('workers',[]))==3 and all(w.get('same_connection') is True for w in e['workers']) for e in thread_evidence)
+            report['transport_thread_windows_verified_v992']=os.name=='nt' and sys.version_info[:2]==(3,14) and report['transport_thread_models_passed_v992'] and result.returncode==0
+            v100_cases=[c for c in report['tests'] if c['name'].startswith('test_review100_')]
+            report['review_models_passed_v100']=len(v100_cases)==24 and all(c['outcome']=='PASSED' for c in v100_cases)
+            report['review_windows_verified_v100']=os.name=='nt' and sys.version_info[:2]==(3,14) and report['review_models_passed_v100'] and result.returncode==0
+            overview_cases=[c for c in report['tests'] if c['name'].startswith('test_overview1001_')]
+            report['overview_models_passed_v1001']=len(overview_cases)==3 and all(c['outcome']=='PASSED' for c in overview_cases)
+            report['overview_windows_verified_v1001']=os.name=='nt' and sys.version_info[:2]==(3,14) and report['overview_models_passed_v1001'] and result.returncode==0
+            v101_cases=[c for c in report['tests'] if c['name'].startswith(('test_priority101_','test_branch101_','test_fault101_'))]
+            report['priority_models_passed_v101']=len(v101_cases)==43 and all(c['outcome']=='PASSED' for c in v101_cases)
+            report['priority_windows_verified_v101']=os.name=='nt' and sys.version_info[:2]==(3,14) and report['priority_models_passed_v101'] and result.returncode==0
+            review_cases=[c for c in report['tests'] if c['name'].startswith('test_review1011_')]
+            report['agent_review_models_passed_v1011']=len(review_cases)==15 and all(c['outcome']=='PASSED' for c in review_cases)
+            report['passed']=report['agent_review_models_passed_v1011'] and report['priority_models_passed_v101'] and report['overview_models_passed_v1001'] and report['review_models_passed_v100'] and report['transport_thread_models_passed_v992'] and report['rpc_outcome_read_models_passed_v991'] and report['monitor_publication_models_passed_v99'] and report['rpc_transport_models_passed_v99'] and report['reserve_hint_models_passed_v98'] and report['rpc_receipt_models_passed_v972'] and report['rpc_concurrency_evidence_v972'].get('passed') is True and report['saved_result_handle_models_passed_v971'] and (os.name!='nt' or report['saved_result_handles_windows_verified_v971']) and report['rpc_transient_models_passed_v97'] and report['review_models_passed_v96'] and report['rpc_cleanup_models_passed_v96'] and report['rpc_coordination_models_passed_v95'] and report['program_cache_freshness_passed_v95'] and report['candidate_rpc_models_passed_v94'] and report['cleanup_owner_models_passed_v93'] and report['io_models_passed_v87'] and report['monitor_state_models_passed_v86'] and report['late_spawn_ownership_model_passed_v85'] and report['cleanup_regressions_model_passed_v84'] and result.returncode==0 and bool(cases) and all(c['outcome']=='PASSED' or (os.name!='nt' and ((c in io_cases and c['name']=='test_io87_native_windows_control_state_replace_recovers_after_release') or c in reader_cases or c in native or c['name'] in ('test_windows_timeout_kills_descendants','test_saved_result_sell_cancels_live_tree[native_windows]','test_native_late_spawn_after_timeout_cleans_tree','test_native_late_owner_survives_stop_and_reaps_tree','test_actual_shutdown_does_not_kill_retained_monitor','test_native_known_launcher_owner_survives_delayed_signal','test_monitor_state_native_windows_sharing_violation_preserves_heartbeat')) and c['outcome']=='SKIPPED') for c in report['tests']) and report['curve_overflow_replay_v83']['passed'] and report['curve_overflow_replay_v83'].get('paper_ledger_unchanged') is True and report['scenario'].get('financial_integrity')=='OK' and report['monitor_admission'].get('unknown_result_status')=='RECOVERY_INVALIDATED'
         except Exception as exc:
             report.update(error_type=type(exc).__name__,error=str(exc),error_traceback_v86_1=traceback.format_exc())
         finally:
@@ -96,6 +143,8 @@ def main():
     if report.get('tests'):
         counts=__import__('collections').Counter(x['outcome'] for x in report['tests'])
         print('Tests:',dict(counts))
+        failed=[c['name'] for c in report['tests'] if c['outcome']=='FAILED']
+        if failed:print('Failed tests:',', '.join(failed))
     if report.get('error_type'):print('Reason:',report['error_type'],report.get('error',''))
     if report.get('last_test_phase_v86_1'):print('Last test phase:',json.dumps(report['last_test_phase_v86_1'],ensure_ascii=True))
     if report.get('failure_evidence_zip_v86_1'):print('Partial evidence:',report['failure_evidence_zip_v86_1'])

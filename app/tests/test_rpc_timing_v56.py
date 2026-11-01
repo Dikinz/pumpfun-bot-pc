@@ -155,3 +155,9 @@ def test_rpc_rejection_return_value_unchanged_but_diagnostic_is_error(tmp_path,m
     assert trace['status']=='RPC_ERROR'
     assert timing.rpc_summary([dict(rpc_timing=timing.snapshot())])['groups'][0]['errors']==1
     assert 'SECRET' not in (tmp_path/'rpc_timing.json').read_text()
+
+@pytest.fixture(autouse=True)
+def legacy_url_lib_backend(monkeypatch):
+    # These tests inject urllib openers; keep-alive has separate real-budget tests.
+    import config
+    monkeypatch.setattr(config,"RPC_KEEPALIVE",False)

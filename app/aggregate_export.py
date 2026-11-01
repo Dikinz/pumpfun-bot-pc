@@ -30,7 +30,8 @@ def summary(c,role,now=None):
     for p in c.execute('SELECT trade_id,mint,size FROM positions'):
         order=c.execute("SELECT signal_ts,reason FROM paper_orders_v0720 WHERE trade_id=? AND side='SELL' AND status='PENDING'",(p['trade_id'],)).fetchone()
         decision=c.execute('SELECT decision FROM route_exit_decisions_v59 WHERE trade_id=? ORDER BY available_ts DESC LIMIT 1',(p['trade_id'],)).fetchone() if 'route_exit_decisions_v59' in tables else None
-        positions.append(dict(p,signal_ts=order['signal_ts'] if order else None,reason=order['reason'] if order else None,
+        remainder=__import__('route_remainder_v96').state(order['signal_ts'] if order else None,now,decision[0] if decision else None) if role=='route' else {}
+        positions.append(dict(p,**remainder,signal_ts=order['signal_ts'] if order else None,reason=order['reason'] if order else None,
           wait_s=max(0,now-order['signal_ts']) if order else None,exit_decision=decision[0] if decision else
           ('WAITING_VERIFIED_ROUTE_RESULT' if role=='route' else 'WAITING_FRESH_TICK_OR_AMM' if role=='amm' else 'WAITING_FRESH_TICK') if order else 'NO_EXIT_SIGNAL'))
     return dict(schema='AGGREGATES_V61',role=role,scope='WHOLE_CAMPAIGN',stages=stages,reasons=reasons,

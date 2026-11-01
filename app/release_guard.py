@@ -1,7 +1,7 @@
 """Standard-library-only validation before importing any bot module."""
 import hashlib,json,socket
 from pathlib import Path
-VERSION='v0.7.95'
+VERSION='v0.7.101.1'
 
 def verify(root):
     root=Path(root).resolve()
@@ -13,7 +13,10 @@ def verify(root):
     for name,digest in files.items():
         path=(root/name).resolve()
         if not path.is_relative_to(root):raise RuntimeError('CLEAN_RELEASE_INVALID_PATH')
-        try:actual=hashlib.sha256(path.read_bytes()).hexdigest()
+        try:
+            # Validate every byte on every invocation, using a bounded buffer.
+            # No timestamp/size cache: changed files must still block startup.
+            with path.open('rb') as source:actual=hashlib.file_digest(source,'sha256').hexdigest()
         except OSError:raise RuntimeError('CLEAN_RELEASE_FILE_MISSING: '+name)
         if actual!=digest:raise RuntimeError('CLEAN_RELEASE_FILE_CHANGED: '+name+'; extract a fresh full ZIP')
     for path in (root/'app').rglob('*.py'):

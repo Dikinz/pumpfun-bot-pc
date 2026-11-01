@@ -46,6 +46,8 @@ def main():
         print('CLEAN RELEASE:',config.VERSION,flush=True)
         print('FOLDER:',ROOT,flush=True)
         print('DASHBOARD: http://127.0.0.1:'+str(config.PORT),flush=True)
+    if command=='rpc-status':return __import__('rpc_status_v101').main(sys.argv[2:])
+    if command=='paper-fault-test':return __import__('paper_fault_test_v101').main(sys.argv[2:])
     if command=='test-amm-stop':
         print(__import__('branch_isolation').inject_stop(config.DB),flush=True);return 0
     if command=='amm-check':return launcher.call('target_amm_check.py')

@@ -266,3 +266,9 @@ def test_repeated_cold_start_coordination_four_processes(tmp_path):
     for index in range(6):
         folder=tmp_path/str(index);folder.mkdir()
         test_real_processes_obey_global_slots_and_shared_rate(folder)
+
+@pytest.fixture(autouse=True)
+def legacy_url_lib_backend(monkeypatch):
+    # These tests inject urllib openers; keep-alive has separate real-budget tests.
+    import config
+    monkeypatch.setattr(config,"RPC_KEEPALIVE",False)

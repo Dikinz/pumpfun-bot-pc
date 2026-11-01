@@ -1,0 +1,31 @@
+{
+  "name": "pytest",
+  "errors": "0",
+  "failures": "0",
+  "skipped": "16",
+  "tests": "1319",
+  "time": "183.695",
+  "timestamp": "2026-10-31T23:52:30.147060+00:00",
+  "hostname": "91e14d47424f",
+  "passed": 1303,
+  "returncode": 0,
+  "skips": {
+    "Native Windows job/process handles require Windows": 1,
+    "Actual Windows target-denial and release required": 1,
+    "Native Windows job/process tree verification requires Windows": 1,
+    "PID namespace differs from procfs; real monitor tree proof requires Windows check here": 1,
+    "Actual Windows native read required": 4,
+    "Actual Windows shared handle required": 1,
+    "Actual Win32 sharing-violation read requires Windows": 1,
+    "Native Windows descendant timeout needs Windows 10+": 1,
+    "Exact native Windows SAVE_RESULT/SELL/tree scenario requires Windows": 1,
+    "Late real Windows Job Object creation requires Windows": 1,
+    "Native Windows Job Object proof requires Windows 10+": 2,
+    "Sandbox /proc does not expose native process ancestry; deterministic multi-level ancestry tests still run": 1
+  },
+  "last_case": {
+    "classname": "tests.test_worker_identity_v611",
+    "name": "test_bound_worker_pid_change_is_still_a_confirmed_fault",
+    "time": "0.007"
+  }
+}

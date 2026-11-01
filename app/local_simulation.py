@@ -54,11 +54,16 @@ def read_accounts(addresses,min_slot=None,*,data_slice=None,commitment='confirme
     import rpc_timing
     with __import__('rpc_budget').guard(url) as permit, rpc_timing.request('getMultipleAccounts',len(addresses)) as trace:
         trace.row['rpc_admission_v89']=permit.telemetry()
-        with trace.phase('OPEN_HEADERS'):
-            response=urllib.request.build_opener(NoRedirect()).open(req,timeout=6)
-        with response as f:
-            with trace.phase('READ_BODY'):data=f.read(24*1024*1024+1)
-            trace.row['response_bytes']=len(data)
+        import rpc_transport_v99 as transport
+        if getattr(config,'RPC_KEEPALIVE',False) and transport.available(url):
+            data=transport.post(url,req.data,trace,24*1024*1024)
+        else:
+            trace.row['transport_v99']='URLLIB'
+            with trace.phase('OPEN_HEADERS'):
+                response=urllib.request.build_opener(NoRedirect()).open(req,timeout=6)
+            with response as f:
+                with trace.phase('READ_BODY'):data=f.read(24*1024*1024+1)
+        trace.row['response_bytes']=len(data)
         with trace.phase('DECODE_VALIDATE'):
             if len(data)>24*1024*1024:raise LabError('RPC_RESPONSE_TOO_LARGE')
             d=json.loads(data)

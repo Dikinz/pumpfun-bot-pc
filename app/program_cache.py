@@ -4,12 +4,14 @@ A cache hit requires fresh confirmed Program+ProgramData metadata after the live
 bank. Misses load finalized code; unsupported or changing data uses a full fresh
 bank. SHA256 detects local corruption, not a compromised RPC/local administrator.
 """
-import base64,hashlib,json,sqlite3,struct,time
+import base64,hashlib,json,math,sqlite3,struct,threading,time
 from pathlib import Path
 from contextlib import closing
 LOADER='BPFLoaderUpgradeab1e11111111111111111111111'
 MAX_BYTES=16*1024*1024
 CACHE=Path(__file__).parent/'data/program_cache_v57.db'
+GENESIS_CACHE=Path(__file__).parent/'data/program_cache_genesis_v99.json'
+_GENESIS_LOCK=threading.Lock()
 
 class CacheError(RuntimeError):pass
 
@@ -81,13 +83,73 @@ class Store:
             with closing(self.connect()) as c,c:c.execute('DELETE FROM programs WHERE namespace=? AND pid=? AND pd=?',(namespace,pid,pd))
         except (sqlite3.Error,OSError):pass
 
+def _valid_genesis(value):
+    from solders.hash import Hash
+    try:Hash.from_string(value);return True
+    except Exception:return False # solders.ParseHashError is not a ValueError.
+
+def _genesis_key(url):return hashlib.sha256(url.encode()).hexdigest()
+
+def _genesis_load(path):
+    try:
+        path=Path(path)
+        with path.open('rb') as stream:raw=stream.read(32769)
+        if len(raw)>32768:return {}
+        data=json.loads(raw)
+        return data if isinstance(data,dict) and len(data)<=8 else {}
+    except (OSError,ValueError,TypeError,RecursionError):return {}
+
+def _genesis_cached(path,url,ttl):
+    from solders.hash import Hash
+    row=_genesis_load(path).get(_genesis_key(url))
+    try:
+        stamp=row['ts'];value=row['value']
+        if type(stamp) not in (int,float) or not math.isfinite(stamp) or not 0<=time.time()-stamp<=ttl:return None
+        return value if _valid_genesis(value) else None
+    except (TypeError,ValueError,KeyError,OverflowError):return None
+
+def _genesis_store(path,url,value):
+    # Non-authoritative, optional cache. Unique state_io temporary files and an
+    # OS-held writer lock avoid the supplied patch's shared-PID temp-file race.
+    from solders.hash import Hash
+    import rpc_budget,state_io
+    fd=None
+    try:
+        if not _valid_genesis(value):return False
+        path=Path(path);path.parent.mkdir(parents=True,exist_ok=True)
+        with _GENESIS_LOCK:
+            fd=rpc_budget.lock_slot(Path(str(path)+'.lock'))
+            if fd is None:return False
+            try:
+                now=time.time();data={}
+                for key,row in _genesis_load(path).items():
+                    try:
+                        if len(key)!=64 or any(x not in '0123456789abcdef' for x in key):continue
+                        if type(row['ts']) not in (int,float) or not math.isfinite(row['ts']) or row['ts']>now:continue
+                        if _valid_genesis(row['value']):data[key]=row
+                    except (TypeError,ValueError,KeyError,OverflowError):continue
+                data[_genesis_key(url)]=dict(value=value,ts=now)
+                data=dict(sorted(data.items(),key=lambda pair:pair[1]['ts'],reverse=True)[:8])
+                state_io.atomic_json(path,data)
+                return True
+            finally:rpc_budget.unlock_slot(fd)
+    except (OSError,ValueError,TypeError,OverflowError):return False
+
 def genesis(lab):
     import exit_quotes as q
     from solders.hash import Hash
-    d=q.request_json(lab.config.QUOTE_RPC_URL,'PROGRAM_CACHE_GENESIS',{'jsonrpc':'2.0','id':1,'method':'getGenesisHash','params':[]})
+    url=lab.config.QUOTE_RPC_URL;ttl=getattr(lab.config,'GENESIS_CACHE_TTL_S',0)
+    enabled=type(ttl) in (int,float) and math.isfinite(ttl) and 0<ttl<=21600
+    path=getattr(lab.config,'GENESIS_CACHE_PATH',GENESIS_CACHE)
+    if enabled:
+        cached=_genesis_cached(path,url,ttl)
+        if cached:return cached
+    d=q.request_json(url,'PROGRAM_CACHE_GENESIS',{'jsonrpc':'2.0','id':1,'method':'getGenesisHash','params':[]})
     try:
-        value=d['result'];Hash.from_string(value);return value
+        value=d['result'];Hash.from_string(value)
     except Exception:raise CacheError('CACHE_GENESIS_UNVERIFIED') from None
+    if enabled:_genesis_store(path,url,value)
+    return value
 
 def capture_bank(lab,addresses,programs,min_slot,store=None,chain=None):
     import rpc_timing as timing

@@ -1,0 +1,78 @@
+{
+  "passed": true,
+  "agent_review_models_passed_v1011": true,
+  "priority_models_passed_v101": true,
+  "child_returncode": 0,
+  "suite_elapsed_s_v86_1": 148.55407760000003,
+  "suite_timeout_s_v86_1": 600,
+  "priority_windows_verified_v101": false,
+  "windows_suspend_resume_proven": false,
+  "live_rpc_proven": false,
+  "counts": {
+    "PASSED": 590,
+    "SKIPPED": 15
+  },
+  "new_regressions": [
+    {
+      "name": "test_review1011_late_snapshot_denial_keeps_unknown_and_blocked[False]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_review1011_late_snapshot_denial_keeps_unknown_and_blocked[True]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_review1011_rpc_resume_requires_known_counter_pair[midpoint_unknown]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_review1011_rpc_resume_requires_known_counter_pair[final_unknown]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_review1011_rpc_resume_requires_known_counter_pair[unknown_then_valid]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_review1011_retry_releases_metadata_and_all_slots_before_wait",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_review1011_denied_directory_preserves_429_and_defers[open]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_review1011_denied_directory_preserves_429_and_defers[iteration]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_review1011_audited_recovery_refuses_unknown_directory[open]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_review1011_audited_recovery_refuses_unknown_directory[iteration]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_review1011_missing_directory_is_normal_and_limits_unchanged",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_review1011_shutdown_crossing_deadline_requires_timer_stop[False]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_review1011_shutdown_crossing_deadline_requires_timer_stop[True]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_review1011_route_overview_summary_does_not_export_settlement_history[1]",
+      "outcome": "PASSED"
+    },
+    {
+      "name": "test_review1011_route_overview_summary_does_not_export_settlement_history[100]",
+      "outcome": "PASSED"
+    }
+  ],
+  "returncode": 0
+}

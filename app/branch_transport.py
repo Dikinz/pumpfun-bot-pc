@@ -194,7 +194,7 @@ class Fanout:
         global LAST
         self.publishers=[];self.protected={};LAST=self
         try:
-            for module in ('paper_branch','route_branch'):
+            for module in __import__('branch_mode_v100').modules(primary):
                 p=Publisher.__new__(Publisher)
                 try:Publisher.__init__(p,primary,module)
                 except BaseException:

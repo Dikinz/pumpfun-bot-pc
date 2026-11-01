@@ -116,6 +116,7 @@ def child(data,out,replay=None):
         else:report['category']=report['status']
     except Exception as e:
         report={'status':str(e) if isinstance(e,(lab.LabError,lab.v.VerificationError)) else 'REQUEST_OR_LAB_ERROR_'+type(e).__name__}
+        report['exception_v96']=__import__('safe_error_v96').capture(e)
         if isinstance(e,lab.v.VerificationError):report['unsupported_details']=e.details
     rpc_timing.stage('SAVE_RESULT');report['rpc_timing']=rpc_timing.snapshot()
     report.update(finished_ts=time.time(),signal_ts=data['signal_ts'],paper_mutated=False,broadcast=False)
@@ -142,7 +143,7 @@ async def run_job(j):
     except asyncio.CancelledError:
         complete(db.con(),j,{'status':'INTERRUPTED_STOP'});raise
     except Exception as e:
-        complete(db.con(),j,{'status':'WORKER_ERROR_'+type(e).__name__,'error_type':type(e).__name__,'child_diagnostics_v73':getattr(e,'child_diagnostics_v73',{})})
+        complete(db.con(),j,{'status':'WORKER_ERROR_'+type(e).__name__,'error_type':type(e).__name__,'exception_v96':__import__('safe_error_v96').capture(e),'child_diagnostics_v73':getattr(e,'child_diagnostics_v73',{})})
         if str(e).startswith('SIMULATION_CHILD_CLEANUP_') or getattr(e,'child_diagnostics_v73',{}).get('cleanup_exception'):raise
 
 

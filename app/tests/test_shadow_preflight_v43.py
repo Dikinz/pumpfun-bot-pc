@@ -26,9 +26,9 @@ def test_priority_interval_and_hourly_budget(queue,monkeypatch):
     assert sp.next_job(queue,100)==(None,'PRIMARY_PREFLIGHT_BUSY')
     queue.execute("update preentry_v0729 set status='USED'")
     j,_=sp.next_job(queue,100);sp.complete(queue,j,result(j),now=102);offer(queue,'interval',103)
-    assert sp.next_job(queue,103)==(None,'START_INTERVAL')
+    assert job(queue,'interval')['status']=='SKIPPED_SAMPLING_INTERVAL' and sp.next_job(queue,103)==(None,'IDLE')
     monkeypatch.setattr(sp,'STARTS_PER_HOUR',1)
-    assert offer(queue,'hour',104)=='SKIPPED_HOURLY_LIMIT' and sp.next_job(queue,104)==(None,'HOURLY_LIMIT')
+    assert offer(queue,'hour',104)=='SKIPPED_HOURLY_LIMIT' and sp.next_job(queue,104)==(None,'IDLE')
 
 @pytest.mark.parametrize('changes,now,status',[
  ({},103,'CHECK_PASSED'),({'net_gate':'ROUNDTRIP_LOSS_TOO_HIGH'},103,'CHECK_REJECTED'),
@@ -46,8 +46,8 @@ def test_missing_fx_and_backoff(queue,monkeypatch):
     monkeypatch.setattr(q,'FX',{});assert offer(queue,'nofx')=='SKIPPED_MISSING_FX'
     monkeypatch.setattr(q,'FX',{'rate':'100','ts':100});offer(queue);j,_=sp.next_job(queue,100)
     sp.complete(queue,j,{'status':'REQUEST_OR_LAB_ERROR_HTTPError'},now=102);offer(queue,'wait',103)
-    assert sp.next_job(queue,103)==(None,'ERROR_BACKOFF');sp.next_job(queue,114)
-    assert job(queue,'wait')['status']=='SKIPPED_QUEUE_EXPIRED' and job(queue,'wait')['last_blocker']=='ERROR_BACKOFF'
+    assert sp.next_job(queue,103)==(None,'IDLE');sp.next_job(queue,114)
+    assert job(queue,'wait')['status']=='SKIPPED_SAMPLING_BACKOFF'
     assert sp.summary(queue)['service']['cooldown_until']==162
 
 def test_membership_and_missing_denominator(queue):
@@ -62,8 +62,8 @@ def test_membership_and_missing_denominator(queue):
 
 def test_recover_stop_freeze(queue,monkeypatch):
     offer(queue);sp.next_job(queue,100);offer(queue,'pending');sp.recover(queue)
-    assert sp.summary(queue)['groups']['ALL']['statuses']=={'INTERRUPTED_RESTART':2}
-    offer(queue,'later');sp.stop(queue);assert job(queue,'later')['status']=='INTERRUPTED_STOP'
+    assert sp.summary(queue)['groups']['ALL']['statuses']=={'INTERRUPTED_RESTART':1,'SKIPPED_SAMPLING_INTERVAL':1}
+    offer(queue,'later',121);sp.stop(queue);assert job(queue,'later')['status']=='INTERRUPTED_STOP'
     monkeypatch.setattr(sp,'MAX_PENDING',8)
     with pytest.raises(RuntimeError,match='parameters changed'):sp.freeze(queue)
 
@@ -98,10 +98,10 @@ def test_rpc_cap_partial_journal(queue,tmp_path,monkeypatch):
     offer(queue);j,_=sp.next_job(queue,100);called=[]
     monkeypatch.setattr(lab,'read_accounts',lambda *a,**k:called.append(1) or {})
     def excessive(*a,**k):
-        for i in range(4):lab.read_accounts(['a'])
+        for i in range(sp.MAX_RPC_CALLS+1):lab.read_accounts(['a'])
     monkeypatch.setattr(lab,'capture',excessive);r=sp.child(json.loads(j['input_json']),tmp_path)
-    assert r['status']=='RPC_CALL_LIMIT' and r['rpc_calls']==len(called)==3
-    assert len(json.loads((tmp_path/'rpc_activity.json').read_text()))==3
+    assert r['status']=='RPC_CALL_LIMIT' and r['rpc_calls']==len(called)==sp.MAX_RPC_CALLS
+    assert len(json.loads((tmp_path/'rpc_activity.json').read_text()))==sp.MAX_RPC_CALLS
 
 def test_cancel_kills_child(queue,tmp_path,monkeypatch):
     offer(queue);j,_=sp.next_job(queue,100);monkeypatch.setattr(sp,'ROOT',tmp_path)

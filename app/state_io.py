@@ -31,7 +31,7 @@ def _journal(path,row):
         row['journal_error']=child_diagnostics.exception(exc)
 
 def atomic_json(path,data):
-    path=Path(path);temp=None;stage='SERIALIZE';start=time.monotonic();failures=[];attempt=0
+    path=Path(path);temp=None;stage='SERIALIZE';start=time.monotonic();failures=[];attempt=0;failure=None;info=None
     try:
         body=json.dumps(data,ensure_ascii=False,allow_nan=False).encode('utf-8')
         stage='MKDIR';path.parent.mkdir(parents=True,exist_ok=True)
@@ -48,8 +48,10 @@ def atomic_json(path,data):
                 _pause(DELAYS[attempt])
         if failures:
             _journal(path,dict(schema='STATE_IO_V87',status='RECOVERED',path=str(path),stage=stage,ts=time.time(),pid=os.getpid(),attempts=attempt+1,failures=failures,elapsed_ms=(time.monotonic()-start)*1000))
-        return dict(attempts=attempt+1,bytes=len(body),recovered=bool(failures))
+        info=dict(attempts=attempt+1,bytes=len(body),recovered=bool(failures))
+        return info
     except BaseException as exc:
+        failure=exc
         if isinstance(exc,(OSError,ValueError,TypeError)):
             row=dict(schema='STATE_IO_V87',status='FAILED',path=str(path),stage=stage,ts=time.time(),pid=os.getpid(),attempts=attempt+1,failures=failures,
                      error_type=type(exc).__name__,errno=getattr(exc,'errno',None),winerror=getattr(exc,'winerror',None),elapsed_ms=(time.monotonic()-start)*1000)
@@ -58,4 +60,9 @@ def atomic_json(path,data):
     finally:
         if temp is not None:
             try:temp.unlink(missing_ok=True)
-            except OSError:pass # The FAILED record still makes publication failure explicit.
+            except OSError as exc:
+                cleanup=dict(path=str(temp),error_type=type(exc).__name__,errno=exc.errno,winerror=getattr(exc,'winerror',None))
+                if failure is not None:failure.state_temp_cleanup_v99=cleanup
+                if info is not None:info['temp_cleanup_v99']=cleanup
+                _journal(path,dict(schema='STATE_IO_V87',status='TEMP_CLEANUP_FAILED',path=str(path),stage='TEMP_CLEANUP',
+                    ts=time.time(),pid=os.getpid(),error_type=type(exc).__name__,errno=exc.errno,winerror=getattr(exc,'winerror',None),primary_error_type=type(failure).__name__ if failure else None))

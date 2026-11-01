@@ -1,0 +1,18 @@
+{
+  "schema": "REAL_TIME_LOCAL_HTTP_INJECTION_V101",
+  "elapsed_s": 8.524432543999865,
+  "scope": "LOCAL_HTTP_SYNTHETIC_ACCESS_DENIED_NOT_PROVIDER_OR_WINDOWS_KERNEL",
+  "configured_rate": 6,
+  "configured_slots": 4,
+  "http_before": 18,
+  "http_strictly_inside_fault": 0,
+  "http_after": 24,
+  "deferred": {
+    "RATE": 85,
+    "PRIORITY_READ_BUSY": 12
+  },
+  "permanent_latch_created": false,
+  "outstanding_slots": 0,
+  "started": 42,
+  "passed": true
+}

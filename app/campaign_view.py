@@ -22,7 +22,8 @@ def branch(c,primary,role,now):
         order=by_mint.get(r['mint']);wait=max(0,at-order['signal_ts']) if order else None
         decision=c.execute('SELECT decision FROM route_exit_decisions_v59 WHERE trade_id=? ORDER BY available_ts DESC LIMIT 1',(r['trade_id'],)).fetchone() if role=='route' else None
         state=decision[0] if decision else ('WAITING_VERIFIED_ROUTE_RESULT' if role=='route' else 'WAITING_VERIFIED_AMM_OR_TICK' if role=='amm' else 'WAITING_FRESH_TICK') if order else 'NO_EXIT_SIGNAL'
-        positions.append(dict(r,wait_diagnostic=wait_details.get(r['trade_id']),exit_decision=state,exit_executor='VERIFIED_ROUTE' if role=='route' else 'AMM_OR_TICK' if role=='amm' else 'TICK_BASELINE',age_s=max(0,at-r['opened_ts']),exit_reason=order['reason'] if order else None,exit_wait_s=wait,
+        remainder=__import__('route_remainder_v96').state(order['signal_ts'] if order else None,at,state) if role=='route' else {}
+        positions.append(dict(r,**remainder,wait_diagnostic=wait_details.get(r['trade_id']),exit_decision=state,exit_executor='VERIFIED_ROUTE' if role=='route' else 'AMM_OR_TICK' if role=='amm' else 'TICK_BASELINE',age_s=max(0,at-r['opened_ts']),exit_reason=order['reason'] if order else None,exit_wait_s=wait,
             exit_overdue=wait is not None and wait>config.MAX_HOLD))
     new_closed=0;carried_closed=0
     trades=deque(maxlen=12);missing=0;closed=0;gross=0.;fees=0.;net_total=0.;wins=0
@@ -84,14 +85,20 @@ def branch(c,primary,role,now):
         oldest_check_age_s=observed_wall-oldest if isinstance(oldest,(int,float)) else None,
         ownership_pending=ownership if type(ownership)==bool else None,
         state_read_error=monitor.get('state_read_error_v86'))
-    return dict(failure_v93=cause,cost_basis_v89=('ISOLATED_SELL_WITH_ACCOUNT_SETUP' if role=='route' else 'TICK_FEE_MODEL_WITHOUT_ACCOUNT_SETUP'),live_v87=live,runtime_perf=__import__('runtime_control').read(primary if role=='primary' else engine.path(primary)),first_gap=first_gap,resources=dict(cpu=meta.get('process_cpu_pct'),ram_mb=meta.get('process_ram_mb')),role=role,campaign=campaign,runtime=runtime,blocks=blocks,last_entry_result=last,capital=dict(available=cap['available'],cash=cap['net_cash'],principal=cap['open_principal'],status=cap['status']),
+    stressed=None
+    if role=='route':stressed=__import__('remainder_reporting_v100').stress(c,__import__('monitor_service').paths(engine.path(primary))['db'],at,cap)
+    model=None
+    if role=='route':
+        wallet_settlements=(dict(r) for r in c.execute('SELECT details FROM branch_amm_settlements ORDER BY settled_ts'))
+        model=__import__('cost_classes_v100').wallet_model(wallet_settlements,cap['closed_net'])
+    return dict(persistent_wallet_model_v100=model,stressed_equity_v100=stressed,remainder_slot_exclusions_v100=__import__('remainder_reporting_v100').slot_exclusions(c),failure_v93=cause,cost_basis_v89=('ISOLATED_SELL_WITH_ACCOUNT_SETUP' if role=='route' else 'TICK_FEE_MODEL_WITHOUT_ACCOUNT_SETUP'),live_v87=live,runtime_perf=__import__('runtime_control').read(primary if role=='primary' else engine.path(primary)),first_gap=first_gap,resources=dict(cpu=meta.get('process_cpu_pct'),ram_mb=meta.get('process_ram_mb')),role=role,campaign=campaign,runtime=runtime,blocks=blocks,last_entry_result=last,capital=dict(available=cap['available'],cash=cap['net_cash'],principal=cap['open_principal'],status=cap['status']),
         new_closed=new_closed,carried_closed=carried_closed,entries=entries,closed=closed,wins=wins,net=None if missing else net_total,gross=gross,costs=None if missing else fees,
         accounting_missing=missing,closed_drawdown=None if missing else drawdown,positions=positions,trades=list(reversed(trades)),preentry=pending,timing=timing,
         matched_entry_counts=matched,verified_exits=settlements,verified_routes=route_counts,curve_exits=route_counts.get('PUMP_CURVE',0),amm_exits=route_counts.get('PUMP_AMM',0),unknown_route_exits=sum(n for route,n in route_counts.items() if route not in ('PUMP_CURVE','PUMP_AMM')),stop=stop,transport=transport,input_gap=meta.get('branch_input_gap')=='1' or transport_gap,
         stream=dict(state=meta.get('trade_stream_state'),age_s=max(0,at-float(meta.get('trade_last_market_ts',0))) if meta.get('trade_last_market_ts') else None))
 
 def roadmap(primary,amm,route=None):
-    a=amm if amm and amm.get('role')=='amm' else {};closed=a.get('closed',0)
+    a=amm if amm and amm.get('role')=='amm' else {};baseline=primary or a;closed=baseline.get('new_closed',baseline.get('closed',0))
     r=route or {};counts=r.get('verified_routes',{})
     return [dict(id=1,title='Самостоятельный проверенный выход',status='IN_PROGRESS',estimate_percent=65,estimate_kind='ENGINEERING_ESTIMATE_NOT_ACCEPTANCE',progress=f"Оценка ~65%; Curve: {counts.get('PUMP_CURVE',0)}; AMM: {counts.get('PUMP_AMM',0)}; новые закрытия: {r.get('new_closed',0)}; перенесённые: {r.get('carried_closed',0)}",
         criterion='В отдельной ROUTE-ветке: свежая симуляция после сигнала, точный объём, расходы и освобождённый слот. Без тика SELL. Нехватка ликвидности остаётся открытым остатком. AMM — отдельная целевая RPC-проверка; историческая проверка не заменяет текущий пул.'),
@@ -132,10 +139,16 @@ def overview(primary=None):
         if b['input_gap']:alerts.append(label+': потеря локальных данных, новые входы заблокированы')
         if b['runtime']['state'] in ('UNKNOWN','FAILED'):alerts.append(label+': состояние процесса '+b['runtime']['state'])
     rpc_control=__import__('rpc_budget').snapshot()
+    if rpc_control['status']=='OUTCOME_READ_BUSY':alerts.append('RPC: список результатов временно недоступен; новые запросы отложены до подтверждённого чтения')
+    if rpc_control['status']=='PRIORITY_READ_BUSY':alerts.append('RPC: файл приоритета временно недоступен; запросы отложены до успешного чтения')
     if rpc_control['status']=='PENDING':alerts.append('RPC: результаты ожидают записи; новые запросы ждут обработки журнала')
     if rpc_control['status'] in ('BLOCKED','UNAVAILABLE'):alerts.append('RPC: служебное состояние не подтверждено, новые запросы заблокированы — открыть диагностику')
     progress=__import__('roadmap_progress').build(roadmap(p,a,route),p,a,route,rpc_control)
-    return dict(roadmap_progress=progress,rpc_control_v89=rpc_control,version=config.VERSION,generated_ts=now,campaign=p['campaign'],primary=p,amm=a,route=route,alerts=alerts,roadmap=progress['stages'],
+    # Criteria are rendered from roadmap; repeating the full text in the
+    # progress cards costs >4K escaped characters even on an empty campaign.
+    stages=progress['stages']
+    progress=dict(progress,stages=[{k:v for k,v in stage.items() if k!='criterion'} for stage in stages])
+    return dict(amm_branch_enabled_v100=config.AMM_BRANCH_ENABLED,roadmap_progress=progress,rpc_control_v89=rpc_control,version=config.VERSION,generated_ts=now,campaign=p['campaign'],primary=p,amm=a,route=route,alerts=alerts,roadmap=stages,
         resources=__import__('system_health').read_state(primary),note='Три независимых PAPER-сценария. Капитал не складывается; это не реальные средства. Итоги относятся к новой кампании, время работы — к текущему запуску.')
 
 def from_snapshot(snapshot):

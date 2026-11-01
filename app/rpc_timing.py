@@ -105,7 +105,7 @@ def distribution(values):
     return dict(n=len(a),p50_ms=a[max(0,math.ceil(len(a)*.5)-1)] if a else None,p95_ms=a[max(0,math.ceil(len(a)*.95)-1)] if a else None,max_ms=max(a) if a else None)
 
 def rpc_summary(reports):
-    groups={};missing=0;stages={};control_values={k:[] for k in ('metadata_hold_ms','sqlite_commit_ms')};control_counts={k:0 for k in ('connections_opened','transactions','outcomes_drained')};contention={}
+    groups={};missing=0;stages={};control_values={k:[] for k in ('metadata_hold_ms','sqlite_commit_ms')};control_counts={k:0 for k in ('connections_opened','transactions','outcomes_drained','unlink_deferred')};contention={}
     cache=dict(jobs=0,hits=0,downloads=0,bytecode_bytes_reused=0,modes={})
     for report in reports:
         d=report.get('rpc_timing') or {}

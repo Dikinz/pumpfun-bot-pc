@@ -43,7 +43,7 @@ def test_failure_without_junit_still_writes_report(tmp_path,monkeypatch):
     monkeypatch.setattr(roadmap_progress,'acceptance_path',lambda:live)
     monkeypatch.setattr(check,'REPORT',tmp_path/'results/recovery_check_v87.json')
     def timeout(*args,**kwargs):
-        assert kwargs['timeout']==check.SUITE_TIMEOUT_S==300
+        assert kwargs['timeout']==check.SUITE_TIMEOUT_S==600
         raise subprocess.TimeoutExpired(args[0],kwargs['timeout'],output=b'last test pending',stderr=b'')
     monkeypatch.setattr(subprocess,'run',timeout)
     assert check.main()==1

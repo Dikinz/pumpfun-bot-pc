@@ -55,7 +55,8 @@ def failure(primary, component, exc):
     frames=[dict(file=Path(f.filename).name,line=f.lineno,function=f.name)
             for f in traceback.extract_tb(exc.__traceback__)[-12:]]
     return event(primary,'UNHANDLED_ERROR',component=component,
-                 error_type=type(exc).__name__,frames=frames)
+                 error_type=type(exc).__name__,frames=frames,
+                 exception_v99=__import__('monitor_publication_v99').error(exc))
 
 async def supervise(name, coroutine, primary, allow_return=False):
     import asyncio
@@ -112,6 +113,9 @@ class Recorder:
                 meta=dict(c.execute('SELECT k,v FROM meta'))
                 opened=c.execute('SELECT COUNT(*) FROM positions').fetchone()[0]
             age=now-float(meta.get('heartbeat_ts',0));data['primary_heartbeat_age_s']=age
+            publication=__import__('monitor_publication_v99').from_meta(meta)
+            data['monitor_publication_v99']=publication
+            if publication.get('status') in ('FAILED','UNREADABLE'):alerts.append(__import__('monitor_publication_v99').ALERT)
             data['open_positions']=opened
             data['event_loop_lag_ms']=float(meta.get('event_loop_lag_ms',0))
             if mono-self.origin>30 and (age>15 or age < -2):alerts.append('PRIMARY_HEARTBEAT_INVALID')

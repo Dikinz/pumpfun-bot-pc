@@ -48,6 +48,8 @@ def results():
         __import__('rpc_evidence_v892').export(config.RPC_CONTROL_DIR,rpc_evidence)
         with zipfile.ZipFile(target,'a',zipfile.ZIP_DEFLATED) as z:z.write(rpc_evidence,rpc_evidence.name)
         print('PRESERVED EVIDENCE:',target,flush=True)
+        volumes=__import__('review_bundle_v100').database_volumes(target,folder/'raw_database_volumes')
+        print('RAW DATABASE VOLUMES:',folder/'raw_database_volumes',flush=True)
         damaged=any(x.get('integrity')!=['ok'] for x in manifest['databases']) or manifest['errors'] or any(not x['stable'] for x in manifest['files'])
         if damaged:
             print('PARTIAL DATA: inspect MANIFEST.json. No database repaired; trading results are not certified.');return 1
@@ -88,6 +90,7 @@ def legacy_results():
     controlled=ROOT/'results/recovery_check_v89.json'
     if controlled.exists():__import__('shutil').copy2(controlled,Path(folder)/controlled.name)
     __import__('rpc_evidence_v892').export(config.RPC_CONTROL_DIR,folder/'rpc_control_evidence_v892.zip')
+    __import__('monitor_publication_v99').export(config.DB,folder)
     (folder/'rpc_control_v89.json').write_text(json.dumps(__import__('rpc_budget').snapshot(),ensure_ascii=False,indent=2),encoding='utf-8')
     __import__('spawn_report_v89').write_report(folder/'spawn_diagnostics_v89.json',include_events=False)
     monitor_service.export(config.DB,folder)
@@ -142,7 +145,7 @@ def legacy_results():
     export_release_checks(folder)
     import execution_lab
     execution_lab.export(folder)
-    for diagnostic_name in ('phase1_wallet_check.json','phase1_rpc_probe.json'):
+    for diagnostic_name in ('phase1_wallet_check.json','phase1_rpc_probe.json','rpc_resume_status_v101.json','rpc_fault_paper_v101.json'):
         source=APP/'data'/diagnostic_name
         if source.is_file():__import__('shutil').copy2(source,folder/diagnostic_name)
     (folder/'execution_readiness.json').write_text(json.dumps(execution_lab.status(),ensure_ascii=False,indent=2),encoding='utf-8')
@@ -153,11 +156,12 @@ def legacy_results():
     import primary_integrity,paper_capital,execution_model,cost_evidence,entry_activity,diagnostics,exit_quotes
     for name,module in [('primary_integrity',primary_integrity),('capital',paper_capital),('execution_model',execution_model),('cost_evidence',cost_evidence),('entry_activity',entry_activity),('diagnostics',diagnostics),('exit_quote',exit_quotes)]:
         (folder/(name+'_results.json')).write_text(json.dumps(module.check(config.DB),ensure_ascii=False,indent=2),encoding='utf-8')
-    target=folder.with_suffix('.zip')
-    with zipfile.ZipFile(target,'w',zipfile.ZIP_STORED) as z:
-        for f in folder.iterdir():z.write(f,f.name)
-    print('RESULTS:',target)
-    return 0
+    (folder/'run_review_v100.json').write_text(json.dumps(__import__('run_review_v100').export(config.DB),ensure_ascii=False,indent=2),encoding='utf-8')
+    bundles=__import__('review_bundle_v100').export(folder)
+    for volume in bundles['volumes']:print('REVIEW BUNDLE:',folder/volume['name'])
+    if bundles['errors']:print('REVIEW BUNDLE PARTIAL: inspect review_bundle_manifest.json')
+    print('FULL EVIDENCE FOLDER:',folder)
+    return 1 if bundles['errors'] else 0
 
 def wait_dashboard(dash, timeout=12, launch_id=None):
     import config,system_health,urllib.request
@@ -214,7 +218,7 @@ def stop_child(child, graceful=False,primary=None):
         except psutil.Error:pass
     return dict(forced=True,exit_code=child.returncode)
 
-def start():
+def start(stop_condition=None):
     setup_env()
     import config,database as db,wallet_costs,monitor_service,system_health
     import release_guard
@@ -253,6 +257,7 @@ def start():
             print('PAPER startup requested. Trading readiness is checked inside the bot; inspect dashboard and subsequent messages. Ctrl+C once to stop.')
             recorder.sample(children,force=True);audit.capture(children)
             while children['bot'].poll() is None:
+                if stop_condition is not None and stop_condition():raise KeyboardInterrupt
                 for role in ('monitor','dashboard'):
                     if children[role].poll() is not None:
                         system_health.event(config.DB,'REQUIRED_PROCESS_EXIT',component=role,exit_code=children[role].returncode)
@@ -321,11 +326,12 @@ def main():
     if command=='settings':
         setup_env();return call('setup_quotes.py')
     if command=='check':
+        print('CHECK PLAN:',json.dumps(__import__('check_plan_v972').summary()),flush=True)
         if call('recovery_selftest.py'):return 1
         time_code=call('time_check.py')
         if time_code not in (0,2):return 1
         if call('monitor_selftest.py'):return 1
-        test_code=call('-m','pytest','-q','tests/test_rpc_admission_v95.py','tests/test_preparation_v95.py','tests/test_candidate_writer_v94.py','tests/test_rpc_priority_v94.py','tests/test_cleanup_owner_v93.py','tests/test_sql_admission_v92.py','tests/test_route_io_v91.py','tests/test_exit_priority_v90.py','tests/test_rpc_outcomes_v892.py','tests/test_rpc_control_v89.py','tests/test_network_entrypoints_v89.py','tests/test_network_watchdog_v88.py','tests/test_recovery_evidence_v861.py','tests/test_amm_export_v74.py','tests/test_child_diagnostics_v73.py','tests/test_coordinated_stop_v72.py','tests/test_stop_buy_release_v71.py','tests/test_event_counters_v70.py','tests/test_fresh_retry_v69.py','tests/test_shutdown_audit_v68.py','tests/test_counter_writer_v67.py','tests/test_sqlite_preserve_v66.py','tests/test_priority_exit_v65.py','tests/test_shared_lots_v64.py','tests/test_exit_cost_review_v63.py','tests/test_clean_release_v62.py','tests/test_worker_identity_v611.py','tests/test_watchdog_lifecycle_v61.py','tests/test_runtime_delivery_v60.py','tests/test_route_exit_v59.py','tests/test_clean_campaign_v58.py','tests/test_program_cache_v57.py','tests/test_stop_consistency_v57.py','tests/test_rpc_timing_v56.py','tests/test_branch_shutdown_v541.py','tests/test_parallel_paper_v54.py','tests/test_phase2_v54.py','tests/test_dashboard_launch_hotfix.py','tests/test_execution_safety_v52.py','tests/test_wallet_rpc_phase1.py','tests/test_system_strategy_v51.py','tests/test_primary_integrity.py','tests/test_execution_model.py','tests/test_cost_price_v50.py','tests/test_signal_exit_v49.py','tests/test_monitor_evidence_v48.py','tests/test_entry_monitor_v47.py','tests/test_exit_timeline_v46.py','tests/test_dashboard_start_v46.py','tests/test_run_exit_v45.py','tests/test_time_check_v44.py','tests/test_shadow_preflight_v43.py','tests/test_candidates_v42.py','tests/test_runtime_v41.py','tests/test_clock_reference_v40.py','tests/test_time_order_v39.py','tests/test_entry_diagnostics_v38.py','tests/test_connection_v37.py','tests/test_migration_v36.py','tests/test_monitor_v35.py','tests/test_delta_v34.py','tests/test_rules_v33.py','tests/test_monitor_v32.py','tests/test_monitor_v31.py','tests/test_monitor_v30.py','tests/test_preentry.py','tests/test_local_simulation.py','tests/test_exit_comparison.py')
+        test_code=call('-m','pytest','-q',*__import__('check_plan_v972').technical_remainder())
         if test_code:return 1
         print('Technical tests PASSED. '+('Time check PASSED.' if time_code==0 else 'TIME WARNING: review app/data/time_check.txt.'))
         return time_code

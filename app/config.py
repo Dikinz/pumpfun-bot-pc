@@ -3,7 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().with_name(".env"))
 
-VERSION="v0.7.95"
+VERSION="v0.7.101.1"
 EXECUTION_MODE=os.getenv("EXECUTION_MODE","paper").strip().lower()
 if EXECUTION_MODE!="paper":raise RuntimeError("Main strategy live adapter is not validated; EXECUTION_MODE must remain paper.")
 DB=os.getenv("DATABASE_PATH","data/clean_0762.db")
@@ -367,8 +367,17 @@ PREFLIGHT_ENABLED=True
 # Execution infrastructure only; no strategy or clock threshold.
 PROGRAM_CACHE_ENABLED=os.getenv("PROGRAM_CACHE_ENABLED","1")=="1"
 
-# v0.7.95: common admission for PAPER RPC readers; not a trading threshold.
+# v0.7.101.1: common admission for PAPER RPC readers; not a trading threshold.
 RPC_CONTROL_DIR=Path(os.getenv('RPC_CONTROL_DIR',str(Path(__file__).resolve().parent/'data/rpc_control_v89')))
 RPC_MAX_REQUESTS_PER_SECOND=float(os.getenv('RPC_MAX_REQUESTS_PER_SECOND','6'))
 RPC_MAX_INFLIGHT=int(os.getenv('RPC_MAX_INFLIGHT','4'))
 RPC_ADMISSION_WAIT_SECONDS=float(os.getenv('RPC_ADMISSION_WAIT_SECONDS','0.75'))
+
+# v99: direct HTTPS keep-alive preserves common RPC admission and 6s deadlines.
+RPC_KEEPALIVE=os.getenv("RPC_KEEPALIVE","1")=="1"
+# Optional endpoint identity cache. OFF preserves live genesis verification.
+GENESIS_CACHE_TTL_S=float(os.getenv("GENESIS_CACHE_TTL_S","0"))
+if not 0<=GENESIS_CACHE_TTL_S<=21600:raise ValueError("GENESIS_CACHE_TTL_S must be 0..21600")
+
+# Optional independent AMM PAPER process; targeted AMM check is separate.
+AMM_BRANCH_ENABLED=os.getenv("AMM_BRANCH_ENABLED","0")=="1"

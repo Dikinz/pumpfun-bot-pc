@@ -7,9 +7,10 @@ from pathlib import Path
 def export(root,target):
     root=Path(root);target=Path(target)
     report=dict(schema='RPC_CONTROL_EVIDENCE_V892',files=[],errors=[],source_exists=root.exists())
-    names=['control.db','control.db-wal','control.db-shm','control_failed.json','metadata.lock']
+    names=['control.db','control.db-wal','control.db-shm','control_failed.json','cleanup_v96.json','failure_recovery_v97.json','metadata.lock','outcome_read_v991.json','outcome_read_v991.json.io_v87.jsonl','outcome_read_v991.json.io_v87.jsonl.1']
     names += [p.name for p in root.glob('rate_*.bin')]
     names += ['slot_'+str(i)+'.lock' for i in range(8)]
+    names += ['publisher_v97_'+str(i)+'.lock' for i in range(8)]
     names += [p.relative_to(root).as_posix() for p in (root/'outcomes').glob('*') if p.suffix in ('.json','.tmp')]
     names += [p.relative_to(root).as_posix() for p in (root/'exit_priority_v94').glob('*') if p.suffix in ('.json','.tmp')]
     def stamp(path):

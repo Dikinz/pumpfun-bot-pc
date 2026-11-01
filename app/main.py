@@ -1034,7 +1034,7 @@ async def pumpportal_discovery(q):
     while True:
         try:
             async with websockets.connect(uri,ping_interval=None,close_timeout=3,max_queue=config.WS_MAX_QUEUE) as ws:
-                await ws.send(json.dumps({"method":"subscribeNewToken"}));db.setm("stream_state","LIVE");back=1;last=time.time()
+                await ws.send(json.dumps({"method":"subscribeNewToken"}));__import__("discovery_gaps_v100").recovered(db.con());db.setm("stream_state","LIVE");back=1;last=time.time()
                 while True:
                     try:raw=await asyncio.wait_for(ws.recv(),timeout=5)
                     except asyncio.TimeoutError:
@@ -1056,7 +1056,7 @@ async def pumpportal_discovery(q):
                         try:q.put_nowait(m)
                         except asyncio.QueueFull:db.inc("sub_queue_dropped")
         except Exception as e:
-            db.inc("discovery_ws_errors");db.inc("discovery_reconnects");db.inc("ws_errors");db.inc("reconnects");db.reconnect_event("discovery",repr(e),len(P));db.setm("last_error",f"discovery: {e!r}"[:400]);await asyncio.sleep(back+random.uniform(0,config.RECONNECT_JITTER_MAX));back=min(config.RECONNECT_BACKOFF_MAX,back*2)
+            __import__("discovery_gaps_v100").failed(db.con(),type(e).__name__);db.inc("discovery_ws_errors");db.inc("discovery_reconnects");db.inc("ws_errors");db.inc("reconnects");db.reconnect_event("discovery",repr(e),len(P));db.setm("last_error",f"discovery: {e!r}"[:400]);await asyncio.sleep(back+random.uniform(0,config.RECONNECT_JITTER_MAX));back=min(config.RECONNECT_BACKOFF_MAX,back*2)
 
 async def pumpportal_trades(q):
     db.setm("trade_stream_provider","pumpportal")
@@ -1472,7 +1472,9 @@ async def run():
     elif provider=="auto":
         provider="pumpapi"
     db.setm('matched_mode_v64',1)
+    branch_plan=__import__('branch_plan_v101').begin(db.con(),config.DB,run_audit.ACTIVE)
     publisher=await asyncio.to_thread(branch_transport.Fanout,config.DB);branch_transport.ACTIVE=publisher
+    __import__('branch_plan_v101').complete(db.con(),branch_plan,publisher)
     recovery_guard=recovery_gate.Coordinator(config.DB,run_audit.ACTIVE)
     recovery_gate.ACTIVE=recovery_guard
     runtime_probe=runtime_control.Probe(config.DB,extra=lambda:publisher.snapshot()).start()
@@ -1501,7 +1503,8 @@ async def run():
                     except Exception as exc:system_health.failure(config.DB,'isolated_branch_cleanup',exc)
                     branch_cleanup.remove(cleanup)
             supervision=await asyncio.to_thread(monitor_watch.sample)
-            db.setm('monitor_supervision_v79',supervision['status'])
+            db.setmany(dict(monitor_supervision_v79=supervision['status'],
+                monitor_publication_v99=json.dumps(supervision['publication_v99'])))
             await asyncio.sleep(1)
     tasks.append(('amm_branch_watch',branch_watch()))
     running=[asyncio.create_task(system_health.supervise(name,task,config.DB,allow_return=name=='clock_reference')) for name,task in tasks]

@@ -107,6 +107,7 @@ def init():
             raise RuntimeError('v0.7.52 requires a NEW database. Keep old data; use data/rapid_07520.db.')
         c.execute("PRAGMA journal_mode=WAL")
         c.executescript(run_audit.SCHEMA)
+        c.executescript(__import__('discovery_gaps_v100').SCHEMA)
         c.executescript(__import__('shared_lots').SCHEMA)
         c.executescript(exit_audit.SCHEMA)
         c.executescript(replay_log.SCHEMA)

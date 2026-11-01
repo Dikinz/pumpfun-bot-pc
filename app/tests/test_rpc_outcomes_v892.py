@@ -47,13 +47,13 @@ def test_commit_then_unlink_failure_replay_counts_only_once(tmp_path,monkeypatch
         if self.parent.name=='outcomes':raise PermissionError('SECRET')
         return original(self,*a,**k)
     monkeypatch.setattr(Path,'unlink',fail)
-    with pytest.raises(rpc.Unavailable):permit.__exit__(None,None,None)
-    assert b.failed.exists() and len(b._pending())==1
-    # Offline replay checks idempotence; production never removes the failure gate.
+    permit.__exit__(None,None,None)
+    assert not b.failed.exists() and len(b._pending())==1
+    # Replaying the committed receipt must not count the same outcome again.
     monkeypatch.setattr(Path,'unlink',original)
     with b.control_lock():b._drain_locked()
     assert b.snapshot()['endpoints'][0]['started']==1
-    assert b.failed.exists() and not b._pending()
+    assert not b.failed.exists() and not b._pending()
     assert b.snapshot()['endpoints'][0]['total_wait_ms']==pytest.approx(permit.wait_ms)
     with closing(sqlite3.connect(b.path)) as c:
         assert c.execute('select count(*) from outcome_receipts').fetchone()[0]<=32 # Bounded receipts remain replay-safe until the next atomic batch GC.

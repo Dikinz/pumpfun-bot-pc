@@ -54,7 +54,7 @@ def preserve(root,report,destination):
         files=[]
         with zipfile.ZipFile(path,'w',zipfile.ZIP_DEFLATED) as archive:
             for p in sorted(root.iterdir()):
-                if not p.is_file() or p.suffix not in ('.json','.jsonl','.xml','.log'):continue
+                if not p.is_file() or (p.suffix not in ('.json','.jsonl','.xml','.log') and p.name!='rpc_concurrency_v972.zip'):continue
                 try:
                     raw=p.read_bytes();archive.writestr(p.name,raw)
                     files.append(dict(path=p.name,bytes=len(raw),sha256=hashlib.sha256(raw).hexdigest()))

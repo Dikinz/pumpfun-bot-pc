@@ -151,13 +151,18 @@ def test_result_package_has_dashboard_database_and_all_evidence(fresh,tmp_path,m
     import launcher,zipfile
     monkeypatch.setattr(launcher,'ROOT',tmp_path)
     assert launcher.results()==0
-    target=next(p for p in (tmp_path/'results').glob('*.zip') if not p.name.startswith('preservation_'))
-    with zipfile.ZipFile(target) as z:
-        names=z.namelist()
-        assert 'dashboard.html' in names and 'summary.json' in names
-        assert all(any(n.startswith(prefix) for n in names) for prefix in ['test_data_','auto_simulations_','preentry_','position_monitor_'])
-        assert not any('.env' in n for n in names)
-        assert 'window.REPORT_DATA=' in z.read('dashboard.html').decode()
+    folder=next((tmp_path/'results').glob('*/review_bundle_manifest.json')).parent
+    assert (folder/'dashboard.html').exists() and (folder/'summary.json').exists()
+    assert 'window.REPORT_DATA=' in (folder/'dashboard.html').read_text()
+    names=[p.name for p in folder.iterdir()]
+    assert all(any(n.startswith(prefix) for n in names) for prefix in ['test_data_','auto_simulations_','preentry_','position_monitor_'])
+    volumes=list(folder.glob('review_bundle_*.zip'));assert volumes
+    for target in volumes:
+        with zipfile.ZipFile(target) as z:
+            assert 'REVIEW_MANIFEST.json' in z.namelist()
+            assert all(n.endswith('.json') for n in z.namelist())
+            assert not any('.env' in n for n in z.namelist())
+    assert list((tmp_path/'results').glob('preservation_*/raw_database_volumes/raw_db_*.zip'))
 
 def test_reserves_check_actual_lamports_not_only_curve_field(bundle):
     good=pm.reserve_evidence(bundle)

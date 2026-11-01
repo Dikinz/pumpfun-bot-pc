@@ -8,6 +8,7 @@ import position_monitor as pm,monitor_service as ms,priority_exit as priority
 import windows_child as wc,recovery_gate as rg
 from test_primary_integrity import fresh
 from test_p0_isolation_v79 import tree_snapshot
+from native_exit_proof_v971 import ExitProbe
 
 class SavedGroup:
     pid=123456789;created_ts=1000.;proof='INJECTED_TEST_GROUP';atomic_assignment=False
@@ -60,7 +61,7 @@ p=Path(sys.argv[1])
 (p/'result.json').write_text(json.dumps(dict(status='CHECKED',sentinel='SAVED_BUT_NOT_AUTHORIZED')))
 (p/'progress.json').write_text(json.dumps(dict(stage='SAVE_RESULT',ts=time.time())))
 import psutil
-(p/'worker_ready.json').write_text(json.dumps(dict(pid=os.getpid(),created_ts=psutil.Process().create_time())))
+ready=p/'worker_ready.tmp';ready.write_text(json.dumps(dict(pid=os.getpid(),created_ts=psutil.Process().create_time())));ready.replace(p/'worker_ready.json')
 time.sleep(60)
 """
     wrapper="import subprocess,sys,time;subprocess.Popen([sys.executable,'-u','-c',sys.argv[1],sys.argv[2]]);time.sleep(60)"
@@ -77,18 +78,23 @@ time.sleep(60)
     before=capital.summary(fresh);tid=main.P['saved-result']['trade_id']
     with ms.connect() as c:
         job=pm.next_job(c,time.time());assert job['trade_id']==tid
-        folder=out/job['id'];details={}
+        folder=out/job['id'];details=dict(kind='SAVE_RESULT_CANCEL_SCENARIO',backend=backend,refused_termination=refuse);probes=[];worker_id=None
         async def run():
             task=asyncio.create_task(pm.run_job(job,c))
             try:
                 await until(lambda:(folder/'result.json').exists() and (folder/'progress.json').exists() and owners and owners[0].pid is not None)
-                if backend=='native_windows':await until(lambda:(folder/'worker_ready.json').exists())
+                if backend=='native_windows':
+                    await until(lambda:(folder/'worker_ready.json').exists() and owners[0].spawn_done.is_set())
+                    worker_id=json.loads((folder/'worker_ready.json').read_text())
+                    for pid,birth in [(owners[0].pid,owners[0].created_ts),(worker_id['pid'],worker_id['created_ts'])]:
+                        probes.append(ExitProbe(pid,birth))
+                    details['pre_cancel_handles_v971']=[dict(pid=p.pid,created_ts=p.created_ts,wait_status=258) for p in probes]
                 assert json.loads((folder/'progress.json').read_text())['stage']=='SAVE_RESULT'
                 assert not task.done() and not owners[0].done.is_set()
                 saved_ts=time.time();signal_ts=time.time()
                 fresh.execute("INSERT INTO paper_orders_v0720(order_id,mint,side,status,signal_ts,signal_price,size,reason,trade_id) VALUES('new-sell','saved-result','SELL','PENDING',?,1,3,'TP2',?)",(signal_ts,tid))
                 priority.observe(c,signal_ts)
-                active={'initial':(task,job)};priority.preempt(c,active)
+                active={'initial':(task,job)};confirmation_deadline=time.monotonic()+6;priority.preempt(c,active)
                 assert job['cancel_status']=='SUPERSEDED_BY_EXIT_SIGNAL'
                 if refuse:
                     with pytest.raises(RuntimeError,match='SIMULATION_CHILD_CLEANUP_TIMEOUT'):await asyncio.wait_for(task,6)
@@ -117,22 +123,25 @@ time.sleep(60)
                 else:
                     assert diagnostic['status']=='SUPERSEDED_BY_EXIT_SIGNAL'
                     assert by['CLEANUP_CONFIRMED']['active_processes']==0
+                    if backend=='native_windows':
+                        await until(lambda:all(p.signaled() for p in probes),timeout=max(0,confirmation_deadline-time.monotonic()))
+                        assert [(p.pid,p.expected_birth) for p in probes]==[(trace['child_pid'],trace['child_created_ts']),(worker_id['pid'],worker_id['created_ts'])]
+                        details['retained_exit_proof_v971']=[p.exited() for p in probes]
                     replacement=priority.dispatch(c,time.time())
                     assert replacement and replacement['id']!=job['id'] and replacement['scheduled_ts']>=signal_ts
                     pm.finish(c,replacement,dict(status='REQUEST_ERROR'))
-                    if backend=='native_windows':
-                        worker_id=json.loads((folder/'worker_ready.json').read_text())
-                        for pid,birth in [(trace['child_pid'],trace['child_created_ts']),(worker_id['pid'],worker_id['created_ts'])]:
-                            try:p=psutil.Process(pid);assert abs(p.create_time()-birth)>.01 or not p.is_running()
-                            except psutil.NoSuchProcess:pass
                 details.update(kind='SAVE_RESULT_CANCEL_SCENARIO',backend=backend,refused_termination=refuse,saved_ts=saved_ts,signal_ts=signal_ts,job_started_ts=job['scheduled_ts'],outcome=row['status'],cancel_reason=job['cancel_status'],saved_result_unused=True,financial_integrity='OK',child_diagnostics=trace)
             finally:
-                if not task.done():task.cancel();await asyncio.gather(task,return_exceptions=True)
-                for p in owners:
-                    p.stop_requested.set()
-                    await asyncio.to_thread(p.thread.join,6)
-                    assert not p.thread.is_alive()
-        asyncio.run(run());record(details)
+                try:
+                    if not task.done():task.cancel();await asyncio.gather(task,return_exceptions=True)
+                    for p in owners:
+                        p.stop_requested.set()
+                        await asyncio.to_thread(p.thread.join,6)
+                        assert not p.thread.is_alive()
+                finally:
+                    for probe in probes:probe.close()
+        try:asyncio.run(run())
+        finally:record(details)
     assert all(x.closed for x in models)
 
 @pytest.mark.parametrize('backend',['model','native_windows'])

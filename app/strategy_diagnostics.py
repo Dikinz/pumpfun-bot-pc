@@ -23,10 +23,14 @@ def summary(c, snapshot, primary):
         issue('CRITICAL','STOPPED_WITH_OPEN_POSITIONS','Бот остановлен; открытые позиции не управляются')
     if runtime.get('state') in ('UNKNOWN','FAILED'):issue('CRITICAL','PRIMARY_HEARTBEAT_UNKNOWN','Немає свіжого heartbeat основного процесу')
     state=system_health.read_state(primary)
+    publication=__import__('monitor_publication_v99').from_meta(dict(c.execute("SELECT k,v FROM meta WHERE k='monitor_publication_v99'")))
+    if publication.get('status') in ('FAILED','UNREADABLE'):
+        issue('WARNING',__import__('monitor_publication_v99').ALERT,'Не удалось сохранить диагностический статус. Наблюдение за монитором выполняется отдельно; прежний JSON не является свежим подтверждением.')
     age=time.time()-state.get('heartbeat_ts',0) if state else None
     if state and state.get('status')=='RUNNING' and (age>15 or age < -2):
         issue('WARNING','RECORDER_HEARTBEAT_INVALID','Немає свіжого heartbeat незалежного реєстратора')
-    for code in state.get('alerts',[]):issue('WARNING',code,'Остання вибірка незалежного реєстратора')
+    for code in state.get('alerts',[]):
+        if not any(i['code']==code for i in issues):issue('WARNING',code,'Остання вибірка незалежного реєстратора')
     if state.get('status')=='FAILED':issue('CRITICAL','PREVIOUS_LAUNCH_FAILED',state.get('stop_reason',''))
     # Aggregate the complete ledger once, then join to SELL; never duplicate a
     # sell through two fee rows. Missing costs remain unknown, not zero.
@@ -61,7 +65,7 @@ def summary(c, snapshot, primary):
                           after_gap_s=after.get('delta_to_tick_s') if after else None))
     report=dict(schema='SYSTEM_STRATEGY_DIAGNOSTICS_V1',diagnostic_only=True,
       status='CRITICAL' if any(i['severity']=='CRITICAL' for i in issues) else 'WARNING' if any(i['severity']=='WARNING' for i in issues) else 'OK',
-      issues=issues,recorder=state,recorder_age_s=age,recorder_available=bool(state),
+      issues=issues,recorder=state,recorder_age_s=age,recorder_available=bool(state),monitor_publication_v99=publication,
       strategy=dict(closed=len(rows),accounted=len(valid),wins=sum(r['net']>0 for r in valid),
         losses=sum(r['net']<0 for r in valid),gross=gross,cost=cost,net=net,
         mean_net=net/len(valid) if valid else None,profit_factor=positives/losses if losses else None,

@@ -123,8 +123,8 @@ def report(primary):
         return dict(runtime_perf=__import__('runtime_control').read(p),first_gap=json.loads(meta.get('branch_first_gap_v60','null')),status='AVAILABLE',runtime=runtime_status.summary(c),capital=paper_capital.summary(c),runs=run_audit.summary(c),
             fork_trade_id=int(info['route_fork_trade_id']),carried_ids=json.loads(info['route_carried_ids']),
             lifecycle=lifecycle,transport=transport,session=meta.get('branch_session'),
-            settlements=settlements,decisions=dict(c.execute('SELECT decision,COUNT(*) FROM route_exit_decisions_v59 GROUP BY decision')),
-            open_positions=[dict(r) for r in c.execute('''SELECT p.trade_id,p.mint,p.size,o.reason,o.signal_ts,
+            settlements=settlements,persistent_wallet_model_v100=__import__('cost_classes_v100').wallet_model(settlements,paper_capital.summary(c)['closed_net']),decisions=dict(c.execute('SELECT decision,COUNT(*) FROM route_exit_decisions_v59 GROUP BY decision')),
+            open_positions=[dict(r,**__import__('route_remainder_v96').state(r['signal_ts'],time.time(),r['last_decision'])) for r in c.execute('''SELECT p.trade_id,p.mint,p.size,o.reason,o.signal_ts,
                 (SELECT decision FROM route_exit_decisions_v59 d WHERE d.trade_id=p.trade_id ORDER BY available_ts DESC LIMIT 1) last_decision
                 FROM positions p LEFT JOIN paper_orders_v0720 o ON o.trade_id=p.trade_id AND o.side='SELL' AND o.status='PENDING' ''')],
             input_gap=meta.get('branch_input_gap'),note='Independent PAPER; no tick SELL fallback. Fork history is inherited, only post-fork trades measure this scenario. Synthetic inventory, modeled isolated costs, no network execution.')

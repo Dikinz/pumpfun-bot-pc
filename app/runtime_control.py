@@ -23,10 +23,9 @@ def control_path(primary,session):
     p=Path(primary).resolve();return p.with_name(p.stem+'_stop_'+session+'.json')
 
 def atomic_json(path,value):
-    path=Path(path);path.parent.mkdir(parents=True,exist_ok=True)
-    tmp=path.with_name(path.name+'.'+str(os.getpid())+'.'+str(threading.get_ident())+'.tmp')
-    try:tmp.write_text(json.dumps(value,allow_nan=False),encoding='utf-8');tmp.replace(path)
-    finally:tmp.unlink(missing_ok=True)
+    # Shared strict writer: bounded rename retries and exact failure evidence.
+    # STOP/fault-control callers still receive every exhausted write failure.
+    return __import__('state_io').atomic_json(path,value)
 
 def request_stop(primary,session):atomic_json(control_path(primary,session),dict(control='STOP',session=session))
 
@@ -261,16 +260,20 @@ def request_branch_stops(primary):
         if state.get('session') and state.get('status')=='RUNNING':request_stop(engine.path(primary),state['session'])
 
 def shutdown_status(primary,bot_result):
-    import sqlite3,paper_branch,route_branch
+    import sqlite3,paper_branch,route_branch,branch_plan_v101
     from contextlib import closing
-    children={}
-    for engine in (paper_branch,route_branch):
-        ack=engine.read_lifecycle(primary);transport=engine.read_lifecycle(primary,True)
-        children[engine.__name__]=dict(ack=ack,transport=transport,confirmed=bool(ack.get('status')=='STOPPED' and (transport.get('status')=='STOPPED' or (transport.get('status')=='FAILED' and transport.get('failure') and transport.get('cleanup_confirmed') is True)) and ack.get('session')==transport.get('session') and transport.get('exit_code')==0 and not transport.get('forced') and not ack.get('monitor_forced')))
-    state=None
+    state=None;plan=None;had_plan=False
     try:
         with closing(sqlite3.connect(Path(primary).resolve().as_uri()+'?mode=ro',uri=True,timeout=.1)) as c:
             row=c.execute("SELECT v FROM meta WHERE k='runtime_state_v41'").fetchone();state=row[0] if row else None
+            had_plan=c.execute("SELECT 1 FROM meta WHERE k='branch_plan_v101'").fetchone() is not None
+            plan=branch_plan_v101.selected(c)
     except sqlite3.Error:pass
-    confirmed=bool(bot_result and not bot_result.get('forced') and bot_result.get('exit_code')==0 and state=='STOPPED' and all(x['confirmed'] for x in children.values()))
-    return dict(confirmed=confirmed,primary_state=state,bot=bot_result,branches=children)
+    children={}
+    for engine in (paper_branch,route_branch):
+        if plan is not None and engine.__name__ not in plan['modules']:continue
+        ack=engine.read_lifecycle(primary);transport=engine.read_lifecycle(primary,True)
+        bound=plan is None or ack.get('session')==plan['sessions'][engine.__name__]
+        children[engine.__name__]=dict(ack=ack,transport=transport,confirmed=bool(bound and ack.get('status')=='STOPPED' and (transport.get('status')=='STOPPED' or (transport.get('status')=='FAILED' and transport.get('failure') and transport.get('cleanup_confirmed') is True)) and ack.get('session')==transport.get('session') and transport.get('exit_code')==0 and not transport.get('forced') and not ack.get('monitor_forced')))
+    confirmed=bool(not (had_plan and plan is None) and bot_result and not bot_result.get('forced') and bot_result.get('exit_code')==0 and state=='STOPPED' and all(x['confirmed'] for x in children.values()))
+    return dict(confirmed=confirmed,primary_state=state,bot=bot_result,branches=children,branch_plan_v101='CURRENT_RUN_BOUND' if plan is not None else 'INVALID_CURRENT_PLAN' if had_plan else 'LEGACY_CONSERVATIVE')

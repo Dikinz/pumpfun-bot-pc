@@ -7,7 +7,7 @@ import config
 def acceptance_path():return Path(__file__).resolve().parent.parent/'results/acceptance_v90.json'
 
 def write_acceptance(report, report_path):
-    names=('native_job_verified_v78','monitor_shutdown_windows_verified_v81','late_spawn_windows_verified_v82','late_spawn_ownership_windows_verified_v85','native_state_io_windows_verified_v87','native_cleanup_owner_windows_verified_v93','candidate_rpc_windows_verified_v94','rpc_coordination_windows_verified_v95')
+    names=('priority_windows_verified_v101','overview_windows_verified_v1001','review_windows_verified_v100','transport_thread_windows_verified_v992','rpc_outcome_read_windows_verified_v991','monitor_publication_windows_verified_v99','rpc_transport_models_windows_verified_v99','native_job_verified_v78','monitor_shutdown_windows_verified_v81','late_spawn_windows_verified_v82','late_spawn_ownership_windows_verified_v85','native_state_io_windows_verified_v87','native_cleanup_owner_windows_verified_v93','candidate_rpc_windows_verified_v94','rpc_coordination_windows_verified_v95','rpc_cleanup_windows_verified_v96','rpc_transient_windows_verified_v97','saved_result_handles_windows_verified_v971','rpc_receipt_windows_verified_v972','reserve_hint_windows_verified_v98')
     value=dict(version=report.get('version'),passed=report.get('passed') is True,
                native_windows_verified=all(report.get(n) is True for n in names),created_ts=report.get('created_ts'))
     # Follow the actual report, including disposable failure-injection tests.
@@ -32,7 +32,7 @@ def build(stages,primary,amm,route,rpc,accepted=None):
            ('Проверенный Curve-выход',counts.get('PUMP_CURVE',0)>0),
            ('Проверенный AMM-выход',counts.get('PUMP_AMM',0)>0),
            ('Все входы ROUTE закрыты без разрыва',r.get('entries',0)>0 and r.get('closed')==r.get('entries') and not r.get('positions') and not r.get('input_gap') and r.get('runtime',{}).get('state')!='FAILED' and not r.get('live_v87',{}).get('ownership_pending') and not (r.get('runtime_perf',{}).get('diagnostic_writer_v92') or {}).get('diagnostic_gap_v94'))]
-    closed=max(0,a.get('new_closed',0));collection=min(100,closed)
+    closed=max(0,primary.get('new_closed',a.get('new_closed',0)));collection=min(100,closed)
     percentages=[sum(bool(v) for _,v in gates)*20,round(collection*.5),0,0]
     rows=[]
     for index,stage in enumerate(stages):
@@ -42,8 +42,8 @@ def build(stages,primary,amm,route,rpc,accepted=None):
             row['progress']=f"Подтверждено {sum(bool(v) for _,v in gates)}/{len(gates)} контрольных пунктов"
             row.pop('estimate_percent',None)
         elif index==1:
-            row['progress']=f'{closed}/100 новых закрытий; набор выборки даёт 50% этапа, разбор результатов ещё не подтверждён'
+            row['progress']=f'{closed}/100 новых закрытий PRIMARY; набор выборки даёт 50% этапа, разбор результатов ещё не подтверждён'
         else:row['checkpoints']=[]
         rows.append(row)
-    return dict(percent=round(sum(percentages)/4,1),stages=rows,
+    return dict(collection_basis_v100='PRIMARY_NEW_CLOSED' if 'new_closed' in primary else 'LEGACY_AMM_NEW_CLOSED',percent=round(sum(percentages)/4,1),stages=rows,
                 basis='Четыре этапа имеют равный вес. Это доля контрольных пунктов, не вероятность прибыли и не разрешение live. Этап 2: 50% за выборку, 50% после отдельного разбора.')

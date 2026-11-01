@@ -16,7 +16,7 @@ SCHEMA='''CREATE TABLE IF NOT EXISTS position_checks_v0730(
 SCHEMA+=__import__('priority_exit').SCHEMA+__import__('fresh_retry').SCHEMA
 SCHEMA+='CREATE INDEX IF NOT EXISTS checks_finished_v60 ON position_checks_v0730(finished_ts,id);'
 import connection_audit
-SCHEMA+=connection_audit.SCHEMA
+SCHEMA+=connection_audit.SCHEMA+__import__('remainder_probe_v100').SCHEMA
 RISK={'INSUFFICIENT_RESERVES','NET_BELOW_FLOOR','RESERVE_DROP','SALE_REJECTED'}
 GOOD={'SELLABLE','RESERVE_DROP','NET_BELOW_FLOOR','INSUFFICIENT_RESERVES','SALE_REJECTED'}
 
@@ -27,11 +27,13 @@ TECHNICAL={'WORKER_TIMEOUT','REQUEST_TIMEOUT','REQUEST_ERROR','REQUEST_INVALID_J
 def migrated(c,tid):
     return c.execute("SELECT 1 FROM position_checks_v0730 WHERE trade_id=? AND status IN ('POOL_COMPLETED','CURVE_COMPLETED_NEW_POOL_UNCHECKED') LIMIT 1",(tid,)).fetchone() is not None
 
-def next_due(c,tid,opened):
+def next_due(c,tid,opened,now=None):
     row=c.execute('SELECT started_ts,finished_ts,status,input_json FROM position_checks_v0730 WHERE trade_id=? ORDER BY started_ts DESC LIMIT 1',(tid,)).fetchone()
     import fresh_retry
     backoff=max(connection_audit.retry(c,tid)['not_before_ts'] or 0,fresh_retry.cooldown(c))
     urgent=fresh_retry.waiting_due(c,tid)
+    remainder=__import__('remainder_probe_v100').due(c,tid,now)
+    if remainder is not None:return max(backoff,remainder)
     if urgent is not None:return max(backoff,urgent)
     if not row:return max(backoff,opened)
     if row['status'] in ('POOL_COMPLETED',MIGRATION_STATUS):return max(backoff,(row['finished_ts'] or row['started_ts'])+1)
@@ -54,20 +56,34 @@ def next_job(c,now,lane=None,priority=None):
         if not priority and fresh_retry.blocks_regular(c,p['trade_id']):continue
         if priority:
             if now<(connection_audit.retry(c,p['trade_id'])['not_before_ts'] or 0):continue
-        elif now<next_due(c,p['trade_id'],p['opened_ts']):continue
+            remainder=__import__('remainder_probe_v100').due(c,p['trade_id'],now)
+            if remainder is not None and now<remainder:continue
+        elif now<next_due(c,p['trade_id'],p['opened_ts'],now):continue
         inv=c.execute('SELECT * FROM quote_inventory_v0723 WHERE trade_id=?',(p['trade_id'],)).fetchone()
-        prior=c.execute("SELECT result_json FROM position_checks_v0730 WHERE trade_id=? AND result_json IS NOT NULL ORDER BY started_ts DESC LIMIT 1",(p['trade_id'],)).fetchone()
-        previous=json.loads(prior[0]).get('reserves',{}).get('real_sol_lamports') if prior else None
+        prior=c.execute("SELECT id,trade_id,mint,status,input_json,result_json,started_ts,finished_ts FROM position_checks_v0730 WHERE trade_id=? AND result_json IS NOT NULL ORDER BY started_ts DESC LIMIT 1",(p['trade_id'],)).fetchone()
+        prior_result=json.loads(prior['result_json']) if prior else {}
+        previous=prior_result.get('reserves',{}).get('real_sol_lamports')
         import config
         data=dict(route='PUMP_AMM' if migrated(c,p['trade_id']) else 'PUMP_CURVE',trial_loss_bps=config.QUOTE_MAX_LOSS_BPS,id=uuid.uuid4().hex,trade_id=p['trade_id'],mint=p['mint'],opened_ts=p['opened_ts'],scheduled_ts=now,
-          inventory=dict(inv) if inv else None,entry_price=str(p['entry']),previous_reserve=previous,wallet_state=wallet_costs.ensure(c))
+          reserve_probe_v96=False,inventory=dict(inv) if inv else None,entry_price=str(p['entry']),previous_reserve=previous,wallet_state=wallet_costs.ensure(c))
         __import__('recovery_gate').stamp(data)
+        hint=__import__('reserve_hint_v98').select(c,data,prior,prior_result)
+        if hint is not None:data.update(reserve_probe_v96=True,reserve_hint_v98=hint)
         if priority:data['priority_exit']=dict(order_id=priority['order_id'],signal_ts=priority['signal_ts'],detected_ts=priority['detected_ts'],dispatched_ts=now,queue_wait_ms=(now-priority['detected_ts'])*1000)
-        c.execute("INSERT INTO position_checks_v0730(id,trade_id,mint,scheduled_ts,started_ts,status,input_json) VALUES(?,?,?,?,?,'RUNNING',?)",(data['id'],p['trade_id'],p['mint'],now,now,json.dumps(data)))
+        c.execute('SAVEPOINT schedule_check_v100')
+        try:
+            __import__('remainder_probe_v100').dispatched(c,data,now)
+            c.execute("INSERT INTO position_checks_v0730(id,trade_id,mint,scheduled_ts,started_ts,status,input_json) VALUES(?,?,?,?,?,'RUNNING',?)",(data['id'],p['trade_id'],p['mint'],now,now,json.dumps(data)))
+            c.execute('RELEASE schedule_check_v100')
+        except BaseException:
+            c.execute('ROLLBACK TO schedule_check_v100');c.execute('RELEASE schedule_check_v100');raise
         return data
 
 def classify(r,now):
     if r.get('status')=='AMM_SALE_EXECUTED' and not (0<=now-r.get('snapshot_received_ts',0)<=FRESH_SECONDS and 0<=now-r.get('scheduled_ts',0)<=TIMEOUT):return 'AMM_STALE_RESULT'
+    if r.get('status')=='CURVE_RESERVE_PROBE_INSUFFICIENT':
+        fresh=(type(r.get('snapshot_received_ts')) in (int,float) and type(r.get('scheduled_ts')) in (int,float) and 0<=now-r['snapshot_received_ts']<=FRESH_SECONDS and 0<=now-r['scheduled_ts']<=TIMEOUT)
+        return 'INSUFFICIENT_RESERVES' if fresh and r.get('reserves',{}).get('status')=='INSUFFICIENT_REAL_RESERVES' and r.get('sale') is None else 'STALE_RESULT'
     if r.get('status')!='CHECKED':return r.get('status','UNKNOWN')
     age=now-r['snapshot_received_ts']
     if age<0 or age>FRESH_SECONDS or now-r['scheduled_ts']<0 or now-r['scheduled_ts']>TIMEOUT:return 'STALE_RESULT'
@@ -92,6 +108,7 @@ def finish(c,job,r,archive=None,now=None):
     try:
         updated=c.execute("UPDATE position_checks_v0730 SET status=?,finished_ts=?,result_json=?,archive=? WHERE id=? AND status='RUNNING'",(status,now,json.dumps(r),archive,job['id'])).rowcount
         if updated:
+            __import__('remainder_probe_v100').completed(c,job,r,status,now)
             __import__('priority_exit').finished(c,job,status,now)
             connection_audit.record_alert(c,job,status,now)
             __import__('fresh_retry').completed(c,job,r,status,now)
@@ -167,6 +184,13 @@ def experiment(data,out):
             import config
             floor=max(1,int(Decimal(raw)/Decimal(10)**d*Decimal(data['entry_price'])*10**9*Decimal(10000-data.get('trial_loss_bps',config.QUOTE_MAX_LOSS_BPS))/10000))
         stage(out,'POOL_SNAPSHOT')
+        if data.get('reserve_probe_v96') is True:
+            stage(out,'CURVE_RESERVE_PROBE')
+            import curve_reserve_probe_v96
+            probe=curve_reserve_probe_v96.check(data['mint'],int(raw),data['wallet_state']['wallet'])
+            if probe is not None:
+                r.update(probe,amount_decimals=d,minimum_net_lamports=floor)
+                return save_experiment(data,out,r,probe['reserve_probe_evidence_v96'])
         bundle=lab.capture(data['mint'],int(raw),1,wallet=data['wallet_state']['wallet'])
         stage(out,'SALE_SIMULATION')
         sale=lab.run_snapshot(bundle,volume_scenario='WALLET',persisted_volume=data['wallet_state']['volume'])
@@ -185,6 +209,10 @@ def experiment(data,out):
         category='REQUEST_INVALID_JSON' if isinstance(e,json.JSONDecodeError) else MIGRATION_STATUS if code=='COMPLETE_CURVE_UNSUPPORTED' else 'UNSUPPORTED_POOL' if 'UNSUPPORTED' in code or code=='NON_SOL_CURVE' else 'REQUEST_ERROR' if 'RPC' in code or code in ('TimeoutError','URLError','HTTPError','ProbeError') else 'DATA_REJECTED'
         r.update(status=category,error_code=code,network_error=connection_audit.diagnostic(e),error_stage=json.loads((out/'progress.json').read_text())['stage'])
         if isinstance(e,v.VerificationError):r['unsupported_details']=e.details
+    return save_experiment(data,out,r,bundle)
+
+def save_experiment(data,out,r,bundle):
+    import rpc_timing
     stage(out,'SAVE_RESULT')
     r['rpc_timing']=rpc_timing.snapshot()
     r['finished_ts']=time.time()
@@ -412,7 +440,7 @@ def summary(c,now=None):
         r=dict(last) if last else {};r.pop('input_json',None);r.pop('archive',None)
         r['result']=json.loads(r.pop('result_json',None) or '{}')
         r.update(mint=p['mint'],trade_id=p['trade_id'],principal=p['size'],age_s=max(0,now-p['opened_ts']),health=dict(health) if health else {})
-        r['next_due_ts']=next_due(c,p['trade_id'],p['opened_ts'])
+        r['next_due_ts']=next_due(c,p['trade_id'],p['opened_ts'],now)
         r['route']='PUMP_AMM' if migrated(c,p['trade_id']) else 'PUMP_CURVE'
         r['stale']=now>r['next_due_ts']+TIMEOUT
         if r.get('finished_ts'):r['check_age_s']=max(0,now-r['finished_ts'])
@@ -432,8 +460,8 @@ def summary(c,now=None):
         detail=json.loads(check['result_json'] or '{}');amm_rows.append(dict(id=check['id'],trade_id=check['trade_id'],mint=check['mint'],status=check['status'],finished_ts=check['finished_ts'],timing=trial.timing(c,check['trade_id'],check['finished_ts']) if check['finished_ts'] else 'RUNNING',result=detail))
     from collections import Counter
     migration=dict(counts=dict(Counter(x['status'] for x in amm_rows)),recent=amm_rows[:50],open_positions=sum(migrated(c,p['trade_id']) for p in rows),interval_s=AMM_INTERVAL)
-    return dict(migration=migration,counts=counts,positions=rows,recent=recent,timing_counts=timing_counts,before_close_counts=before_counts,after_close_counts=after_counts,interval_s=INTERVAL,timeout_s=TIMEOUT,
-      note='Один приоритетный свежий запрос после SELL без ожидания таймера; technical backoff сохранён. В остальное время таймер 10 с на позицию; при медленном RPC фактический интервал больше. Проверяется прямой Pump-маршрут с синтетическими токенами. Проверка не закрывает PAPER-позицию и не обещает исполнение в сети.')
+    return dict(remainder_policy_v100=__import__('remainder_probe_v100').summary(c),migration=migration,counts=counts,positions=rows,recent=recent,timing_counts=timing_counts,before_close_counts=before_counts,after_close_counts=after_counts,interval_s=INTERVAL,timeout_s=TIMEOUT,
+      note='Один приоритетный свежий запрос после SELL без ожидания таймера; technical backoff сохранён. Для OPEN_REMAINDER после валидного отрицательного ответа — 10/30/60/300 с, событие mint будит с защитой 2 с; иначе таймер 10 с на позицию; при медленном RPC фактический интервал больше. Проверяется прямой Pump-маршрут с синтетическими токенами. Проверка не закрывает PAPER-позицию и не обещает исполнение в сети.')
 
 def export_evidence(db_path,folder='exports'):
     folder=Path(folder);folder.mkdir(parents=True,exist_ok=True)

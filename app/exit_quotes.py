@@ -4,7 +4,7 @@ PAPER dollars are interpreted as USDC solely for this sizing experiment.
 Token inventory is hypothetical: entry feed price, frozen SOL/USDC reference.
 Quote evidence never mutates trades, orders, positions or capital.
 """
-import asyncio,json,time,sqlite3,argparse,socket,urllib.request,urllib.error,urllib.parse
+import asyncio,json,time,sqlite3,argparse,socket,http.client,urllib.request,urllib.error,urllib.parse
 from decimal import Decimal,InvalidOperation,localcontext
 from pathlib import Path
 import config
@@ -57,19 +57,24 @@ def _request_json(url,stage,body=None,key=None,trace=None):
     if body is not None:headers['Content-Type']='application/json'
     req=urllib.request.Request(url,data=json.dumps(body).encode() if body is not None else None,headers=headers)
     try:
-        with trace.phase('OPEN_HEADERS'):
-            response=urllib.request.build_opener(NoRedirect()).open(req,timeout=6)
-        with response as r:
-            with trace.phase('READ_BODY'):raw=r.read(1024*1024+1)
-            with trace.phase('DECODE_VALIDATE'):
-                if len(raw)>1024*1024:raise ProbeError('INVALID_RESPONSE',stage)
-                data=json.loads(raw)
-                if not isinstance(data,dict):raise ProbeError('INVALID_RESPONSE',stage)
-                if data.get('error'):
-                    code=data['error'].get('code') if isinstance(data['error'],dict) else None
-                    trace.row['rpc_error_code']=code if type(code)==int else None
-                    trace.row['rpc_rejected']=True
-                return data
+        import rpc_transport_v99 as transport
+        if isinstance(body,dict) and body.get('jsonrpc')=='2.0' and key is None and getattr(config,'RPC_KEEPALIVE',False) and transport.available(url):
+            raw=transport.post(url,req.data,trace,1024*1024)
+        else:
+            trace.row['transport_v99']='URLLIB'
+            with trace.phase('OPEN_HEADERS'):
+                response=urllib.request.build_opener(NoRedirect()).open(req,timeout=6)
+            with response as r:
+                with trace.phase('READ_BODY'):raw=r.read(1024*1024+1)
+        with trace.phase('DECODE_VALIDATE'):
+            if len(raw)>1024*1024:raise ProbeError('INVALID_RESPONSE',stage)
+            data=json.loads(raw)
+            if not isinstance(data,dict):raise ProbeError('INVALID_RESPONSE',stage)
+            if data.get('error'):
+                code=data['error'].get('code') if isinstance(data['error'],dict) else None
+                trace.row['rpc_error_code']=code if type(code)==int else None
+                trace.row['rpc_rejected']=True
+            return data
     except urllib.error.HTTPError as e:
         status='AUTH_ERROR' if e.code in (401,403) else 'RATE_LIMITED' if e.code==429 else 'REQUEST_ERROR'
         try:data=json.loads(e.read(16384))
@@ -81,6 +86,7 @@ def _request_json(url,stage,body=None,key=None,trace=None):
     except (TimeoutError,socket.timeout):raise ProbeError('TIMEOUT',stage) from None
     except urllib.error.URLError as e:
         raise ProbeError('TIMEOUT' if isinstance(e.reason,(TimeoutError,socket.timeout)) else 'REQUEST_ERROR',stage) from None
+    except (OSError,http.client.HTTPException) as exc:raise ProbeError('REQUEST_ERROR',stage) from exc
     except (ValueError,UnicodeError):raise ProbeError('INVALID_RESPONSE',stage) from None
 
 def sanitize(data):

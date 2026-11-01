@@ -1,0 +1,127 @@
+{
+  "preentry": {
+    "statuses": {
+      "APPROVAL_EXPIRED": 66,
+      "BUY_SIMULATION_FAILED": 52,
+      "SPECIAL_CURVE_UNSUPPORTED": 56,
+      "LATE_PREFLIGHT_RESULT": 3,
+      "USED": 32,
+      "RECOVERY_INVALIDATED": 1
+    },
+    "expiry_by_wall_runtime": [
+      {
+        "bin": "<1.5",
+        "all_jobs": 35,
+        "used": 0,
+        "expired": 0,
+        "approved_denominator": 0,
+        "expiry_rate": null,
+        "statuses": {
+          "SPECIAL_CURVE_UNSUPPORTED": 35
+        }
+      },
+      {
+        "bin": "1.5-2.5",
+        "all_jobs": 96,
+        "used": 22,
+        "expired": 37,
+        "approved_denominator": 59,
+        "expiry_rate": 0.6271186440677966,
+        "statuses": {
+          "SPECIAL_CURVE_UNSUPPORTED": 9,
+          "BUY_SIMULATION_FAILED": 28,
+          "APPROVAL_EXPIRED": 37,
+          "USED": 22
+        }
+      },
+      {
+        "bin": "2.5-4",
+        "all_jobs": 45,
+        "used": 7,
+        "expired": 17,
+        "approved_denominator": 24,
+        "expiry_rate": 0.7083333333333334,
+        "statuses": {
+          "APPROVAL_EXPIRED": 17,
+          "SPECIAL_CURVE_UNSUPPORTED": 8,
+          "BUY_SIMULATION_FAILED": 12,
+          "RECOVERY_INVALIDATED": 1,
+          "USED": 7
+        }
+      },
+      {
+        "bin": ">=4",
+        "all_jobs": 34,
+        "used": 3,
+        "expired": 12,
+        "approved_denominator": 15,
+        "expiry_rate": 0.8,
+        "statuses": {
+          "APPROVAL_EXPIRED": 12,
+          "BUY_SIMULATION_FAILED": 12,
+          "LATE_PREFLIGHT_RESULT": 3,
+          "SPECIAL_CURVE_UNSUPPORTED": 4,
+          "USED": 3
+        }
+      }
+    ],
+    "buy_failure_reasons": [
+      {
+        "error_code": "6042",
+        "error_name": "BuySlippageBelowMinTokensOut",
+        "count": 52
+      }
+    ],
+    "denominator": "USED + APPROVAL_EXPIRED only; unsupported and failed jobs are not approved. Runtime excludes queue. Association is not causal proof."
+  },
+  "timeline": [
+    {
+      "trade_id": "14029dddbc9f4e81b8ed631bfa8bceeb",
+      "mint": "2feTQp2stugwbUoq48hEFtaeZFXeFVPVdkrqsZ5mpump",
+      "signal_ts": 1793419640.2227206,
+      "primary_fill_ts": 1793419661.7314384,
+      "primary_gross": -1.0315172673303836,
+      "first_post_signal_snapshot": {
+        "started_ts": 1793419640.4005668,
+        "snapshot_received_ts": 1793419642.7110548,
+        "real_sol_lamports": 8,
+        "slot": 463548094
+      },
+      "fill_minus_first_snapshot_s": 19.020383596420288,
+      "last_snapshot_before_fill": {
+        "started_ts": 1793419660.4443805,
+        "snapshot_received_ts": 1793419661.2474558,
+        "real_sol_lamports": 8,
+        "slot": 463548180
+      },
+      "first_snapshot_after_fill": {
+        "started_ts": 1793419670.4847965,
+        "snapshot_received_ts": 1793419671.1675854,
+        "real_sol_lamports": 987532,
+        "slot": 463548224
+      },
+      "limitation": "Snapshots are points in time; no proof of continuous reserves or executable PRIMARY fill. Tick-to-fill price path requires observed ticks and account proofs."
+    }
+  ],
+  "wallet_model": {
+    "schema": "PERSISTENT_WALLET_SENSITIVITY_V100",
+    "coverage_complete": true,
+    "token_setup": 1.43299215979608,
+    "volume_setup": 1.2960509295084002,
+    "retained_first_volume_by_program": 0.1297853690546,
+    "retain_token_accounts_cost_adjustment": 1.1662655604538001,
+    "assume_empty_ata_close_cost_adjustment": 2.59925772024988,
+    "strict_closed_net": -3.465356643358345,
+    "retain_token_accounts_model_net": -2.299091082904545,
+    "assumed_ata_close_model_net": -0.8660989231084648,
+    "actual_refunds_proven": false,
+    "common_wallet_costs_proven": false,
+    "assumptions": [
+      "Same entry/exit economics and FX as isolated candidates",
+      "One volume account retained per wallet/program",
+      "Optimistic variant assumes valid empty token-account closure",
+      "Extra close transaction/priority/landing costs excluded"
+    ],
+    "note": "Adjustments for a modeled line only. Never applied to ledger, collateral or realized PNL; not a validated persistent-wallet replay."
+  }
+}

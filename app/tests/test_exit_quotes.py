@@ -115,3 +115,8 @@ def test_http_statuses_and_no_route_are_distinct(monkeypatch):
         o.code,o.body=code,body
         with pytest.raises(q.ProbeError) as err:q.request_json(q.ENDPOINT,'QUOTE',key='fake')
         assert err.value.status==expected
+
+@pytest.fixture(autouse=True)
+def legacy_quote_opener_backend(monkeypatch):
+    import config
+    monkeypatch.setattr(config,"RPC_KEEPALIVE",False)

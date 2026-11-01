@@ -6,6 +6,7 @@ from decimal import Decimal,localcontext
 SCHEMA='''
 CREATE TABLE IF NOT EXISTS comparison_lots_v64(id INTEGER PRIMARY KEY,trade_id TEXT UNIQUE,mint TEXT,created_ts REAL,lot_hash TEXT,payload TEXT);
 CREATE TABLE IF NOT EXISTS comparison_signals_v64(trade_id TEXT PRIMARY KEY,payload TEXT);
+CREATE TABLE IF NOT EXISTS remainder_entry_exclusions_v100(trade_id TEXT PRIMARY KEY,observed_ts REAL,held_trade_ids TEXT,reason TEXT);
 CREATE TABLE IF NOT EXISTS comparison_receipts_v64(trade_id TEXT PRIMARY KEY,lot_hash TEXT,status TEXT,applied_ts REAL,signal_status TEXT,signal_delivery_ms REAL);
 '''
 FEATURE_TABLES=('entry_features','entry_trajectory_v064','entry_model_snapshot_v067','cost_decisions_v0719')
@@ -95,6 +96,7 @@ def apply_entry(main,row,now=None):
                 for feature in p.get('feature_rows',{}).get(table,[]):insert(c,table,feature)
             db.setm('cash',float(db.getm('cash'))-float(lot['size']));db.inc('entries');status='APPLIED'
         c.execute('INSERT INTO comparison_receipts_v64 VALUES(?,?,?,?,NULL,NULL)',(tid,row['lot_hash'],status,now))
+        if status=='EXCLUDED_LOCAL_SLOT':__import__('remainder_reporting_v100').record_slot_exclusion(c,tid,now)
     if status=='APPLIED':
         main.P[mint]=copy.deepcopy(p['memory_position']);main.ENTERED.add(mint)
         main.S.setdefault(mint,main.state());main.S[mint]['born']=p['born']

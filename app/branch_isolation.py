@@ -37,16 +37,21 @@ class MonitorWatch:
     def __init__(self,primary,clock=None):
         self.primary=primary;self.clock=clock or time.monotonic;self.origin=self.clock();self.alert=False;self.alert_code=None;self.alert_codes=set()
         self.observer=__import__('monitor_state').Observer(self.LIMIT)
+        self.publisher_v99=__import__('monitor_publication_v99').Publisher()
     def sample(self):
         result=self.observer.observe(monitor_service.read_state(self.primary),self.clock())
         result.update(schema='MONITOR_SUPERVISION_V86',source='PRIMARY_MONITOR_WATCH')
+        result.update(observed_ts_v99=time.time(),observed_mono_v99=self.clock())
+        target=Path(self.primary).resolve()
+        result['publication_v99']=self.publisher_v99.publish(target.with_name(target.stem+'_monitor_supervision_v79.json'),result)
         codes=set()
+        if result['publication_v99']['status']=='FAILED':codes.add(__import__('monitor_publication_v99').ALERT)
         if result['state_read_error_v86']:codes.add('MONITOR_STATE_READ_ERROR')
         if result['status']!='RUNNING':codes.add(result['status'])
         for code in self.alert_codes-codes:system_health.event(self.primary,'ALERT_CLEARED',code=code,supervision=result)
         for code in codes-self.alert_codes:system_health.event(self.primary,'ALERT_OPEN',code=code,supervision=result)
-        self.alert_codes=codes;self.alert=bool(codes);self.alert_code=result['status'] if codes else None
-        target=Path(self.primary).resolve();runtime_control.atomic_json(target.with_name(target.stem+'_monitor_supervision_v79.json'),result)
+        self.alert_codes=codes;self.alert=bool(codes)
+        self.alert_code=result['status'] if result['status']!='RUNNING' else (__import__('monitor_publication_v99').ALERT if codes else None)
         return result
 
 def fault_path(primary,module):
