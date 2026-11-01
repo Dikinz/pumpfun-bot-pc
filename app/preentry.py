@@ -115,7 +115,8 @@ def child(data,out,replay=None):
         elif report['status']=='POST_BUY_SELL_FAILED':report['category']='POST_BUY_PROGRAM_REJECTION'
         else:report['category']=report['status']
     except Exception as e:
-        report={'status':str(e) if isinstance(e,(lab.LabError,lab.v.VerificationError)) else 'REQUEST_OR_LAB_ERROR_'+type(e).__name__}
+        report={'status':str(e) if isinstance(e,(lab.LabError,lab.v.VerificationError)) else __import__('rpc_budget').lab_status(e,'REQUEST_OR_LAB_ERROR_')}
+        if __import__('rpc_budget').deferral(e):report['rpc_deferred_v1012']=__import__('rpc_budget').deferral(e)
         report['exception_v96']=__import__('safe_error_v96').capture(e)
         if isinstance(e,lab.v.VerificationError):report['unsupported_details']=e.details
     rpc_timing.stage('SAVE_RESULT');report['rpc_timing']=rpc_timing.snapshot()

@@ -38,6 +38,14 @@ class Deferred(TimeoutError):
         self.rpc_budget_reason=reason;self.retry_after_s=max(0.,float(retry_after_s));self.wait_ms=wait_ms
         super().__init__('LOCAL_RPC_'+reason)
 
+def lab_status(exc,prefix):
+    # Diagnostics label only (TERM-6/CR1-05): a local RPC deferral is not a request or
+    # lab failure. Admission, limits and retry behaviour are unchanged.
+    return 'RPC_DEFERRED' if isinstance(exc,Deferred) else prefix+type(exc).__name__
+
+def deferral(exc):
+    return dict(reason=exc.rpc_budget_reason,retry_after_s=exc.retry_after_s,wait_ms=exc.wait_ms) if isinstance(exc,Deferred) else None
+
 class Unavailable(RuntimeError):pass
 
 class MetadataBusy(sqlite3.OperationalError):pass

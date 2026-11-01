@@ -107,7 +107,7 @@ class Probe:
     def __init__(self,primary,extra=None,control=None):
         self.started_ts=time.time();self.primary=primary;self.extra=extra or (lambda:{});self.control=control
         self.main_thread=threading.get_ident();self.pulse=time.monotonic();self.stage='IDLE';self.closed=threading.Event();self.stop=threading.Event()
-        self.samples={};self.lock=threading.Lock();self.last_stall=0.;self.stalls=0;self.first_stack=None
+        self.samples={};self.lock=threading.Lock();self.last_stall=0.;self.stalls=0;self.first_stack=None;self.latest_stall=None
     def record(self,name,seconds):
         with self.lock:
             a=self.samples.setdefault(name,dict(calls=0,total_ms=0.,max_ms=0.))
@@ -118,15 +118,26 @@ class Probe:
         sql=dict(sql,age_s=max(0,now-sql['started_mono'])) if sql else None
         if lag>3 and (not self.last_stall or now-self.last_stall>=30):
             self.last_stall=now;self.stalls+=1
-            frame=sys._current_frames().get(self.main_thread);stack=[]
+            frames=sys._current_frames();frame=frames.get(self.main_thread);stack=[]
             while frame and len(stack)<16:
                 stack.append(dict(file=Path(frame.f_code.co_filename).name,function=frame.f_code.co_name,line=frame.f_lineno));frame=frame.f_back
-            if self.first_stack is None:self.first_stack=dict(age_s=lag,stage=self.stage,frames=stack,ts=time.time(),sql_v91=sql)
+            # run_20261101 fix evidence only: other threads' stacks and DB/WAL sizes at the stall.
+            names={t.ident:t.name for t in threading.enumerate()};others=[]
+            for ident,f in list(frames.items())[:24]:
+                if ident==self.main_thread:continue
+                rows=[]
+                while f and len(rows)<12:
+                    rows.append(dict(file=Path(f.f_code.co_filename).name,function=f.f_code.co_name,line=f.f_lineno));f=f.f_back
+                others.append(dict(name=names.get(ident),frames=rows))
+            try:files=__import__('stall_evidence_v1012').file_stats(self.primary)
+            except Exception as exc:files=dict(error_type=type(exc).__name__)
+            self.latest_stall=dict(age_s=lag,stage=self.stage,frames=stack,ts=time.time(),sql_v91=sql,threads_v1012=others,files_v1012=files,stall_index=self.stalls)
+            if self.first_stack is None:self.first_stack=dict(age_s=lag,stage=self.stage,frames=stack,ts=time.time(),sql_v91=sql,threads_v1012=others,files_v1012=files)
         with self.lock:samples={k:dict(v) for k,v in self.samples.items()}
         import counter_writer
         writer=counter_writer.ACTIVE.snapshot() if counter_writer.ACTIVE is not None else None
         return dict(schema='RUNTIME_V60',pid=os.getpid(),started_ts=self.started_ts,session=self.control[1] if self.control else None,ts=time.time(),state='PROBE_STOPPED' if self.closed.is_set() else 'RUNNING',
-            loop_pulse_age_s=lag,active_stage=self.stage,sql_v91=sql,diagnostic_writer_v92=writer,market_telemetry_v92=getattr(self,'market_telemetry_v92',None),stalls=self.stalls,first_stall=self.first_stack,samples=samples,**self.extra())
+            loop_pulse_age_s=lag,active_stage=self.stage,sql_v91=sql,diagnostic_writer_v92=writer,market_telemetry_v92=getattr(self,'market_telemetry_v92',None),stalls=self.stalls,first_stall=self.first_stack,latest_stall_v1012=self.latest_stall,samples=samples,**self.extra())
     def watch(self):
         while not self.closed.wait(.5):
             try:
@@ -255,9 +266,26 @@ def export(primary,folder):
 
 def request_branch_stops(primary):
     import paper_branch,route_branch
+    requested=[]
     for engine in (paper_branch,route_branch):
         state=engine.read_lifecycle(primary)
-        if state.get('session') and state.get('status')=='RUNNING':request_stop(engine.path(primary),state['session'])
+        if state.get('session') and state.get('status')=='RUNNING':
+            request_stop(engine.path(primary),state['session']);requested.append(dict(engine=engine.__name__,session=state['session']))
+    return requested
+
+def wait_branch_acks(primary,requested,timeout):
+    """Poll each requested branch's own lifecycle ack (no primary DB access)."""
+    import paper_branch,route_branch
+    engines={e.__name__:e for e in (paper_branch,route_branch)}
+    deadline=time.monotonic()+max(0,timeout);acks={}
+    while True:
+        for item in requested:
+            state=engines[item['engine']].read_lifecycle(primary)
+            same=state.get('session')==item['session']
+            acks[item['engine']]=dict(session=item['session'],status=state.get('status') if same else None,reason=state.get('reason') if same else None,
+                acked=bool(same and state.get('status') in ('STOPPED','FAILED')))
+        if all(a['acked'] for a in acks.values()) or time.monotonic()>=deadline:return acks
+        time.sleep(.2)
 
 def shutdown_status(primary,bot_result):
     import sqlite3,paper_branch,route_branch,branch_plan_v101

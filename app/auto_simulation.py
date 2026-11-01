@@ -87,7 +87,7 @@ def experiment(data,out):
                 # Final timing admission is decided only after the archive is durable.
                 r['admission_source']='exit_comparison_v0728 after parent persistence'
             except Exception as e:
-                r={'status':str(e) if isinstance(e,lab.LabError) else 'SCENARIO_ERROR_'+type(e).__name__}
+                r={'status':str(e) if isinstance(e,lab.LabError) else __import__('rpc_budget').lab_status(e,'SCENARIO_ERROR_')}
             scenarios[branch]=r
         report.update(scenarios['FIRST'])
         report['scenarios']=scenarios
@@ -103,7 +103,8 @@ def experiment(data,out):
 
         report['result_delay_s']=time.time()-data['signal_ts']
     except Exception as e:
-        report['status']=str(e) if isinstance(e,(q.ProbeError,v.VerificationError)) else (str(e) if isinstance(e,lab.LabError) else 'REQUEST_OR_LAB_ERROR_'+type(e).__name__)
+        report['status']=str(e) if isinstance(e,(q.ProbeError,v.VerificationError)) else (str(e) if isinstance(e,lab.LabError) else __import__('rpc_budget').lab_status(e,'REQUEST_OR_LAB_ERROR_'))
+        if __import__('rpc_budget').deferral(e):report['rpc_deferred_v1012']=__import__('rpc_budget').deferral(e)
         report['result_delay_s']=time.time()-data['signal_ts']
         if isinstance(e,v.VerificationError):report['unsupported_details']=e.details
     report['finished_ts']=time.time()

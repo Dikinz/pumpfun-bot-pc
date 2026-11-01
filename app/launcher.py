@@ -30,9 +30,22 @@ def export_release_checks(folder,source_root=None):
         except (OSError,ValueError) as exc:rows[name]=dict(rows.get(name,{}),status='UNREADABLE_OR_INVALID',error_type=type(exc).__name__)
     a=parsed.get('recovery_check_v89.json',{});b=parsed.get('acceptance_v90.json',{})
     matched=bool(a and b and a.get('version')==b.get('version')==config.VERSION and a.get('created_ts') is not None and a.get('created_ts')==b.get('created_ts') and a.get('passed') is b.get('passed'))
+    last={}
+    last_path=source/'recovery_last_attempt_v89.json'
+    try:
+        if last_path.stat().st_size<=1024*1024:
+            raw=last_path.read_bytes();(folder/last_path.name).write_bytes(raw);last=json.loads(raw)
+            if not isinstance(last,dict):last={}
+    except (OSError,ValueError):last={}
+    later_interrupted=bool(last.get('status')=='INTERRUPTED' and isinstance(last.get('created_ts'),(int,float)) and
+        (not isinstance(a.get('created_ts'),(int,float)) or last['created_ts']>a['created_ts']))
     report=dict(schema='RELEASE_CHECK_EXPORT_V94',version=config.VERSION,files=rows,pair_consistent=matched,
         passed=matched and a.get('passed') is True,native_windows_verified=matched and a.get('passed') is True and b.get('native_windows_verified') is True,
+        last_attempt_v1012=dict(status=last.get('status'),created_ts=last.get('created_ts'),finished_ts=last.get('finished_ts'),failure_evidence_zip=last.get('failure_evidence_zip')) if last else None,
+        last_attempt_interrupted_after_report_v1012=later_interrupted,
+        last_attempt_warning_v1012=('Last recovery attempt was INTERRUPTED (Ctrl+C) after the copied report'+(' (passed=%s, created_ts=%s)'%(a.get('passed'),a.get('created_ts')) if a else '')) if later_interrupted else None,
         note='Exact existing reports copied; missing, mismatching or failed checks are not replaced or synthesized.')
+    if later_interrupted:print('WARNING:',report['last_attempt_warning_v1012'],flush=True)
     (folder/'release_checks_v94.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
     return report
 
@@ -142,7 +155,7 @@ def legacy_results():
     __import__('shared_lots').export(config.DB,folder)
     for diagnostic in Path(config.DB).resolve().parent.glob('*_counter_writer_v67.json'):
         shutil.copy2(diagnostic,folder/diagnostic.name)
-    for pattern in ('*_shutdown_v68.json','*_integrity_*_v68.json','*_connection_close_v68.json','*_counter_writer_stop_v68.json'):
+    for pattern in ('*_shutdown_v68.json','*_integrity_*_v68.json','*_connection_close_v68.json','*_counter_writer_stop_v68.json','*_stall_evidence_v1012.json'):
         for diagnostic in Path(config.DB).resolve().parent.glob(pattern):shutil.copy2(diagnostic,folder/diagnostic.name)
     benchmark=APP/'data/runtime_benchmark_v60.json'
     if benchmark.exists():shutil.copy2(benchmark,folder/benchmark.name)
@@ -191,22 +204,47 @@ def wait_dashboard(dash, timeout=12, launch_id=None):
         except (OSError,ValueError):time.sleep(.2)
     raise RuntimeError('Dashboard readiness timeout')
 
-def stop_child(child, graceful=False,primary=None):
+BRANCH_ACK_WAIT_S=15  # Shutdown-only bound for direct branch STOP acks; no trading/RPC limit.
+
+def direct_branch_stop(primary,primary_stalled,wait_s=None):
+    """STOP branch workers through their own stop files and wait for their acks.
+
+    The primary normally relays STOP over the branch pipe. When its main thread is
+    blocked (run_20261101 fix user run: 53 s in SQLite COMMIT) that never happens, so
+    the launcher asks the branches directly before the process tree is killed."""
+    rc=__import__('runtime_control')
+    record=dict(primary_stalled=bool(primary_stalled),requested_ts=time.time())
+    try:record['requested']=rc.request_branch_stops(primary) or []
+    except Exception as exc:record.update(requested=[],request_error=type(exc).__name__)
+    try:record['acks']=rc.wait_branch_acks(primary,record['requested'],BRANCH_ACK_WAIT_S if wait_s is None else wait_s)
+    except Exception as exc:record.update(acks={},ack_error=type(exc).__name__)
+    acked=bool(record['requested']) and all(a.get('acked') for a in record['acks'].values())
+    prefix='PRIMARY_STALLED' if primary_stalled else 'PRIMARY_STOP_TIMEOUT'
+    record['classification']=prefix+('_NO_RUNNING_BRANCH' if not record['requested'] else '_ROUTE_ACKED' if acked else '_ROUTE_UNACKED')
+    record['finished_ts']=time.time()
+    return record
+
+def stop_child(child, graceful=False,primary=None,primary_stalled=False):
     if child is None:return dict(forced=False,exit_code=None)
     if child.poll() is not None:return dict(forced=False,exit_code=child.returncode)
     import psutil
     try:family=psutil.Process(child.pid).children(recursive=True)
     except psutil.Error:family=[]
+    branch_stop=None
     if graceful:
         try:
             if primary:__import__('runtime_control').request_primary_stop(primary)
+            if primary and primary_stalled:branch_stop=direct_branch_stop(primary,True)
             child.send_signal(signal.CTRL_BREAK_EVENT if os.name=='nt' else signal.SIGINT)
             child.wait(timeout=35)
             _,remaining=psutil.wait_procs(family,timeout=1)
             remaining=[p for p in remaining if p.is_running() and p.status()!=psutil.STATUS_ZOMBIE]
-            if not remaining:return dict(forced=False,exit_code=child.returncode)
+            if not remaining:return dict(forced=False,exit_code=child.returncode,branch_direct_stop_v1012=branch_stop)
         except (OSError,subprocess.TimeoutExpired,psutil.Error):
-            if primary:__import__('runtime_control').request_branch_stops(primary)
+            if primary and branch_stop is None:branch_stop=direct_branch_stop(primary,False)
+            elif primary:
+                try:__import__('runtime_control').request_branch_stops(primary)
+                except Exception:pass
     if __import__('late_spawn').wait_before_force(child,family):
         try:
             child.wait(timeout=3)
@@ -224,7 +262,7 @@ def stop_child(child, graceful=False,primary=None):
     for p in alive:
         try:p.kill()
         except psutil.Error:pass
-    return dict(forced=True,exit_code=child.returncode)
+    return dict(forced=True,exit_code=child.returncode,branch_direct_stop_v1012=branch_stop)
 
 def start(stop_condition=None):
     setup_env()
@@ -236,7 +274,7 @@ def start(stop_condition=None):
     # Lock this installation before schema initialization or startup diagnostics.
     lock=Path(config.DB).resolve().with_name(Path(config.DB).stem+'_launcher.lock')
     with monitor_service.singleton(lock):
-        recorder=system_health.Recorder(config.DB);children={};code=1;reason='STARTUP_FAILED'
+        recorder=system_health.Recorder(config.DB);children={};code=1;reason='STARTUP_FAILED';stalled=False
         audit=__import__('shutdown_audit').Audit(config.DB)
         try:
             if call('monitor_selftest.py'):
@@ -272,7 +310,10 @@ def start(stop_condition=None):
                         raise RuntimeError('Required process stopped: '+role)
                 sampled=recorder.sample(children);audit.capture(children)
                 if 'PRIMARY_HEARTBEAT_INVALID' in sampled.get('alerts',[]):
-                    system_health.event(config.DB,'STALL_CONTROLLED_STOP')
+                    stalled=True
+                    evidence=__import__('stall_evidence_v1012').capture(config.DB,children,sampled)
+                    system_health.event(config.DB,'STALL_CONTROLLED_STOP',evidence_v1012=evidence.get('written'),
+                        sql_v91=(evidence.get('primary_runtime_v60') or {}).get('sql_v91'))
                     raise RuntimeError('PRIMARY_EVENT_LOOP_STALLED; export diagnostics before restart')
                 time.sleep(.5)
             code=children['bot'].returncode;reason='BOT_EXIT' if code==0 else 'BOT_FAILED'
@@ -288,7 +329,7 @@ def start(stop_condition=None):
                 except Exception as exc:
                     audit.before=dict(phase='before',status='PROBE_UNAVAILABLE',databases=[])
                     system_health.failure(config.DB,'before_stop_integrity',exc)
-                bot_stop=stop_child(children.get('bot'),graceful=True,primary=config.DB)
+                bot_stop=stop_child(children.get('bot'),graceful=True,primary=config.DB,primary_stalled=stalled)
                 shutdown=__import__('runtime_control').shutdown_status(config.DB,bot_stop)
                 recorder.last['shutdown']=shutdown
                 recorder.last['shutdown_confirmed']=shutdown['confirmed']

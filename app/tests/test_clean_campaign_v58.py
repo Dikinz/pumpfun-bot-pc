@@ -81,7 +81,7 @@ def test_front_page_and_light_api_separate_from_engineering(tmp_path):
                     break
                 except OSError:time.sleep(.1)
             else:log.seek(0);raise AssertionError(log.read())
-            assert o['primary']['positions']==[] and o['version']=='v0.7.101.1'
+            assert o['primary']['positions']==[] and o['version']=='v0.7.101.2'
             with urllib.request.urlopen(f'http://127.0.0.1:{port}/') as r:page=r.read().decode()
             with urllib.request.urlopen(f'http://127.0.0.1:{port}/details') as r:detail=r.read().decode()
             assert 'Дорожная карта' in page and "fetch('/overview'" in page

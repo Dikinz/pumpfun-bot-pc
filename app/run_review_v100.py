@@ -27,6 +27,43 @@ def preentry(c):
     return dict(statuses=dict(counts),expiry_by_wall_runtime=buckets,buy_failure_reasons=[dict(error_code=k[0],error_name=k[1],count=v) for k,v in sorted(failures.items())],
         denominator='USED + APPROVAL_EXPIRED only; unsupported and failed jobs are not approved. Runtime excludes queue. Association is not causal proof.')
 
+DEFERRED_LAB_STATUSES=('RPC_DEFERRED','REQUEST_OR_LAB_ERROR_Deferred') # second: label before v0.7.101.2
+
+def exit_signal_lab(c):
+    """Read-only coverage of the exit-signal simulation lab (TERM-6/CR1-05).
+
+    A local RPC deferral is counted separately from request/lab failures; RPC limits are unchanged."""
+    if not c.execute("SELECT 1 FROM sqlite_master WHERE name='auto_sim_v0727'").fetchone():
+        return dict(available=False,jobs=0,classification='NO_JOBS')
+    statuses=collections.Counter(r[0] for r in c.execute('SELECT status FROM auto_sim_v0727'))
+    finished=sum(v for k,v in statuses.items() if k not in ('PENDING','RUNNING'))
+    executed=accepted=0
+    if c.execute("SELECT 1 FROM sqlite_master WHERE name='exit_comparison_v0728'").fetchone():
+        executed=c.execute("SELECT COUNT(*) FROM exit_comparison_v0728 WHERE branch='FIRST' AND technical_status='LOCAL_SWAP_EXECUTED'").fetchone()[0]
+        accepted=c.execute("SELECT COUNT(*) FROM exit_comparison_v0728 WHERE branch='FIRST' AND status='ACCEPTED_LOCAL'").fetchone()[0]
+    deferred=sum(statuses[k] for k in DEFERRED_LAB_STATUSES)
+    label='NO_JOBS' if not finished else 'NO_COVERAGE' if not executed else 'PARTIAL' if executed<finished else 'COVERED'
+    return dict(available=True,jobs=sum(statuses.values()),finished=finished,statuses=dict(statuses),rpc_deferred=deferred,
+        local_swap_executed=executed,accepted_local=accepted,coverage=executed/finished if finished else None,classification=label,
+        note='FIRST branch per exit signal. RPC_DEFERRED = local RPC budget deferral, not a request or lab failure. Diagnostics only; no trading rule depends on it.')
+
+UNFINISHED=('PENDING','RUNNING','READY')
+
+def unfinished_after_stop(c,primary,now=None):
+    """Read-only label for preentry jobs left open by a run that is no longer live.
+
+    The DB is not changed: the next start still marks them INTERRUPTED_RESTART."""
+    import runtime_status,system_health
+    runtime=runtime_status.summary(c,now)
+    counts={r[0]:r[1] for r in c.execute('SELECT status,COUNT(*) FROM preentry_v0729 WHERE status IN (?,?,?) GROUP BY status',UNFINISHED)}
+    if runtime['state'] in ('RUNNING','STARTING','NOT_STARTED') or not counts:
+        return dict(count=0,statuses={},classification=None,runtime_state=runtime['state'])
+    started=runtime.get('started_ts') or 0
+    stalled=any(e.get('kind')=='STALL_CONTROLLED_STOP' and isinstance(e.get('ts'),(int,float)) and e['ts']>=started for e in system_health.history(primary,limit=2000))
+    label='ABANDONED_ON_STALL' if stalled else 'ABANDONED_ON_STOP' if runtime['state']=='STOPPED' else 'ABANDONED_NO_HEARTBEAT'
+    return dict(count=sum(counts.values()),statuses=counts,classification=label,runtime_state=runtime['state'],
+        note='Frozen-report label only; the stored status stays as written and becomes INTERRUPTED_RESTART on the next start.')
+
 def fill_timeline(primary,route,monitor):
     rows=[]
     for p in route.execute('SELECT trade_id,mint FROM positions'):
@@ -50,6 +87,10 @@ def export(primary):
     try:
         with closing(connect(primary)) as p:
             p.execute('BEGIN');report['preentry']=preentry(p)
+            try:report['preentry']['unfinished_after_stop_v1012']=unfinished_after_stop(p,primary)
+            except (sqlite3.Error,ValueError,TypeError) as exc:report['preentry']['unfinished_after_stop_v1012']=dict(error_type=type(exc).__name__)
+            try:report['exit_signal_lab_v1012']=exit_signal_lab(p)
+            except (sqlite3.Error,ValueError,TypeError) as exc:report['exit_signal_lab_v1012']=dict(error_type=type(exc).__name__)
             report['discovery_gap_evidence']=dict(available=False,lost_candidates=None,note='Unobserved provider events cannot be counted locally.')
             if p.execute("SELECT 1 FROM sqlite_master WHERE name='discovery_gaps_v100'").fetchone():
                 report['discovery_gap_evidence'].update(available=True,gaps=[dict(r) for r in p.execute('SELECT * FROM discovery_gaps_v100 ORDER BY started_ts')])

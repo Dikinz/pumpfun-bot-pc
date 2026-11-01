@@ -105,7 +105,8 @@ def restart(c):
 def quantile(values,p):
     a=sorted(v for v in values if v is not None and math.isfinite(v))
     if not a:return None
-    return a[int((len(a)-1)*p)]
+    # Nearest-rank (ceil(n*p)-1): the floor index returned the median as "p90" for n=3.
+    return a[min(len(a)-1,max(0,math.ceil(len(a)*p)-1))]
 
 def summarize(c):
     cols={r[1] for r in c.execute('PRAGMA table_info(cost_decisions_v0719)')}

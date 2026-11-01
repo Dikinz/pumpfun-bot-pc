@@ -110,7 +110,7 @@ def complete(c,j,r,path=None,now=None):
         else:reason='CONTROL_NOT_CONFIRMED'
     r['check_decision_reason']=reason
     c.execute('UPDATE shadow_preflight_v0743 SET '+','.join(k+'=?' for k in x)+",finished_ts=?,run_s=?-started_ts,total_s=?-created_ts,result_json=?,archive=? WHERE job_id=? AND status='RUNNING'",(*x.values(),now,now,now,json.dumps(r),path,j['job_id']))
-    technical=r.get('status') in ('CHILD_TIMEOUT','CHILD_ERROR','WORKER_ERROR','RPC_CALL_LIMIT') or str(r.get('status','')).startswith(('RPC_ERROR','REQUEST_OR_LAB_ERROR'))
+    technical=r.get('status') in ('CHILD_TIMEOUT','CHILD_ERROR','WORKER_ERROR','RPC_CALL_LIMIT') or str(r.get('status','')).startswith(('RPC_ERROR','RPC_DEFERRED','REQUEST_OR_LAB_ERROR'))
     if technical:
         n=c.execute('SELECT failure_streak FROM shadow_preflight_service_v0743 WHERE id=1').fetchone()[0]+1
         c.execute('UPDATE shadow_preflight_service_v0743 SET failure_streak=?,cooldown_until=? WHERE id=1',(n,now+min(BACKOFF_MAX,BACKOFF_BASE*2**min(n-1,10))))

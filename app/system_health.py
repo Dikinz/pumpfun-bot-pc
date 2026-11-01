@@ -3,7 +3,9 @@ import json, os, time, traceback, uuid, sqlite3, shutil
 from pathlib import Path
 
 MAX_LOG_BYTES = 2 * 1024 * 1024
-BACKUPS = 2
+# run_20261101 fix: 2 backups (3 x 2 MiB) held ~64 min at the observed ~1.63 KB/s, less than
+# a 120-min PAPER run; 8 backups (9 x 2 MiB ~ 18.9 MB) cover ~3.2 h. Diagnostics only.
+BACKUPS = 8
 
 def paths(primary):
     p = Path(primary).resolve()

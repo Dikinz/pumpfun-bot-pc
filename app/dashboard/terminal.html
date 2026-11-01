@@ -207,7 +207,8 @@ if(c==='load'){el.innerHTML='загрузка…';return}
 if(c==='err0'){el.innerHTML='<span class=dn>нет связи с dashboard — повтор через '+retryS()+' с</span>';return}
 const got=S.demo?'демо':'получено '+Math.max(0,Math.round((Date.now()-S.okO)/1000))+' с назад';
 const aa=A&&O&&isN(A.generated_ts)&&isN(O.generated_ts)?Math.max(0,O.generated_ts-A.generated_ts):null;
-el.innerHTML=`данные <span class=m>${hms(O&&O.generated_ts)}</span> · ${got} · <span class="${!S.demo&&aOld()?'warn':''}">снимок /api ${isN(aa)?age(aa)+' назад':D}</span>`}
+const frz=A&&A.frozen===true&&g(O,'primary.runtime.frozen')!==false&&isN(A.as_of);
+el.innerHTML=(frz?`данные на <span class=m>${hms(A.as_of)}</span> <span class=warn>(заморожено)</span> · снимок <span class=m>${hms(O&&O.generated_ts)}</span>`:`данные <span class=m>${hms(O&&O.generated_ts)}</span>`)+` · ${got} · <span class="${!S.demo&&aOld()?'warn':''}">снимок /api ${isN(aa)?age(aa)+' назад':D}</span>`}
 function rBans(){const c=conn(),O=S.O,A=S.A,h=[];
 if(c==='lost')h.push(['r','Нет связи с dashboard — показаны последние данные ('+Math.round((Date.now()-S.okO)/1000)+' с назад) · повтор через '+retryS()+' с']);
 const al=O?alerts():[];if(al.length)h.push(['r','⚠ '+al[0]+(al.length>1?' (+'+(al.length-1)+')':'')]);
@@ -243,8 +244,8 @@ rows.push('-',['RPC-регулятор',ru(rpc.status)],['Лимит',(isN(rpc.r
 ['Ожидают итога',nv(rpc.pending_outcomes)],['Приоритет выхода',isN(rpc.exit_priority_pending_v94)?rpc.exit_priority_pending_v94:D],
 ['Очистка',(isN(cl2.committed_files_pending)?cl2.committed_files_pending:D)+' / '+(isN(cl2.unresolved_outcomes)?cl2.unresolved_outcomes:D)],
 ['Восстановлен после сбоя',fr===true?'да':fr===false?'нет':D],'-',['Часы',ru(dt.state),dt.label],
-['Смещение',isN(ref.offset_median_ms)?ref.offset_median_ms+' ± '+nv(ref.uncertainty_max_ms)+' мс'+(dt.stale&&dt.state!=='NOT_CHECKED'?' <span class=warn>устар.</span>':''):D],
-['CPU / RAM',(isN(cpu)?cpu+' %':D)+' · '+(isN(ram)?ram+' MB':D)]);
+['Смещение',isN(ref.offset_median_ms)?ref.offset_median_ms.toFixed(1)+' ± '+(isN(ref.uncertainty_max_ms)?ref.uncertainty_max_ms.toFixed(1):D)+' мс'+(dt.stale&&dt.state!=='NOT_CHECKED'?' <span class=warn>устар.</span>':''):D],
+['CPU / RAM',(isN(cpu)?cpu.toFixed(1)+' %':D)+' · '+(isN(ram)?ram.toFixed(1)+' MB':D)]);
 let h=kv(rows);
 if(iss.length){h+='<hr><ul class=ul>'+iss.slice(0,3).map(i=>`<li title="${esc(i.detail||'')}">${bd(i.severity,sevC(i.severity))} ${esc(ruT(i.code))}</li>`).join('')+'</ul>'+(iss.length>3?cap('ещё '+(iss.length-3)+' → вкладка Диагностика'):'')}
 return ph('Состояние системы','',sd.status?bd(sd.status,sevC(sd.status)||(sd.status==='OK'?'up':'')):'')+h}

@@ -63,6 +63,7 @@ def test_error_record_never_contains_exception_secret(tmp_path):
 
 def test_bounded_journal_and_partial_line(tmp_path,monkeypatch):
     monkeypatch.setattr(sh,'MAX_LOG_BYTES',100)
+    monkeypatch.setattr(sh,'BACKUPS',2)  # run_20261101 fix raised the default; this case pins the original bound.
     primary=tmp_path/'test.db'
     for i in range(30):assert sh.event(primary,'TEST',n=i)
     p=sh.paths(primary)['journal']

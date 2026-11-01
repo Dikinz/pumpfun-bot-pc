@@ -32,13 +32,12 @@ h1{font-size:20px;margin:0 0 4px}
 </style>
 </head>
 <body>
-<h1>Карта тестирования v0.7.101.1 → Windows / Python 3.14</h1>
+<h1>Карта подготовки сборки по данным PAPER-прогона 01.11</h1>
 <div class="sub" id="sub">Загрузка…</div>
 <div class="flow" id="flow"></div>
 <script>
-const LABELS={qa_full:'QA: полный pytest (Windows 3.14)',bootstrap_check:'04_CHECK (bootstrap check)',recovery:'Controlled recovery',
-review_rpc:'Ревью надёжности RPC/процессов/STOP',review_product:'Ревью дашборда, учёта, инструкций',
-fix:'Исправления и регрессии',verify:'Связанные + полный набор + recovery',critic:'Независимый критик',final:'Итоговый отчёт и manifest'};
+const LABELS={an_recovery:'Разбор отказа recovery 14:25',an_run:'Механика PAPER-прогона',an_accounting:'Учёт, сделки, входы/выходы',an_terminal:'Терминал на реальных данных',
+fix:'Исправления и регрессии',verify:'Связанные + полный набор + recovery',critic:'Независимый критик',final:'Сборка: версия, ZIP, manifest, отчёт'};
 const ST={pending:'ожидает',running:'идёт',pass:'pass',fail:'fail',changes:'нужны правки'};
 function node(key,s,label){const st=s?s.state:'pending';
  return `<div class="node ${st}"><div class="t"><span>${label}</span><span class="s">${ST[st]||st}</span></div>`+
@@ -46,8 +45,8 @@ function node(key,s,label){const st=s?s.state:'pending';
 function esc(x){return String(x).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
 async function tick(){
  try{const r=await fetch('state.json?'+Date.now(),{cache:'no-store'});const d=await r.json();const S=d.stages||{};
-  let h='<div class="lane">1. Тесты и ревью (параллельно)</div><div class="row">'+
-   ['qa_full','bootstrap_check','recovery','review_rpc','review_product'].map(k=>node(k,S[k],LABELS[k])).join('')+'</div>';
+  let h='<div class="lane">1. Разбор данных пользователя (параллельно)</div><div class="row">'+
+   ['an_recovery','an_run','an_accounting','an_terminal'].map(k=>node(k,S[k],LABELS[k])).join('')+'</div>';
   const rounds=new Set();Object.keys(S).forEach(k=>{const m=k.match(/_r(\d+)$/);if(m)rounds.add(+m[1])});
   if(!rounds.size)rounds.add(1);
   [...rounds].sort((a,b)=>a-b).forEach(n=>{

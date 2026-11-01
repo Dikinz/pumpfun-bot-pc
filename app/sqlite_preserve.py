@@ -1,8 +1,11 @@
 """Offline evidence export. Never repairs or opens source databases in SQLite."""
-import argparse,base64,hashlib,json,os,shutil,sqlite3,tempfile,time,uuid,zipfile
+import argparse,base64,hashlib,json,os,re,shutil,sqlite3,tempfile,time,uuid,zipfile
 from pathlib import Path
 from contextlib import closing
 from sqlite_diagnostics import error
+
+# Current journal plus every rotated backup (.jsonl.1 .. .jsonl.N, see system_health.BACKUPS).
+ROTATED_JSONL=re.compile(r'\.jsonl(\.[0-9]{1,3})?$')
 
 def sha(p):
     h=hashlib.sha256()
@@ -56,7 +59,7 @@ def preserve(source,output,primary_name='clean_0762.db'):
     manifest=dict(schema='SQLITE_PRESERVATION_V66',status='EVIDENCE_ONLY',source_name=source.name,created_ts=time.time(),snapshot_consistency='UNPROVEN_RAW_COPY; stop all writers before capture',files=[],databases=[],errors=[],note='No source repair, no resume, no balance certification. Originals retained; analysis uses separate working copies.')
     raw=output/'raw';raw.mkdir()
     # Allowlisted local diagnostics only, never .env, keys, or arbitrary folder contents.
-    selected=[p for p in source.iterdir() if p.is_file() and p.name.startswith((Path(primary_name).stem,'clean_','program_cache_v57.db','time_check','monitor_selftest','target_amm','runtime_benchmark')) and (p.name.endswith(('.db','.db-wal','.db-shm','.json','.jsonl','.jsonl.1','.txt')))]
+    selected=[p for p in source.iterdir() if p.is_file() and p.name.startswith((Path(primary_name).stem,'clean_','program_cache_v57.db','time_check','monitor_selftest','target_amm','runtime_benchmark')) and (p.name.endswith(('.db','.db-wal','.db-shm','.json','.txt')) or ROTATED_JSONL.search(p.name))]
     for p in selected:
         try:
             before=sha(p);shutil.copyfile(p,raw/p.name);after=sha(p);copied=sha(raw/p.name)

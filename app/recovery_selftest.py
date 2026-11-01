@@ -6,10 +6,27 @@ from xml.etree import ElementTree as ET
 APP=Path(__file__).resolve().parent
 SUITE_TIMEOUT_S=600  # Entire offline suite only; no production deadline change.
 REPORT=APP.parent/'results/recovery_check_v89.json'
+LAST_ATTEMPT_NAME='recovery_last_attempt_v89.json'
+# Must equal BUILD_MANIFEST.json build_revision (checked by test_win314_run20261101).
+BUILD_REVISION='RUN_REVIEW_V1012'
+
+
+def write_last_attempt(report,status):
+    """Marker for the most recent attempt; never replaces or synthesizes the previous report."""
+    value=dict(schema='RECOVERY_LAST_ATTEMPT_V1012',status=status,version=report.get('version'),created_ts=report.get('created_ts'),
+        finished_ts=time.time(),passed=report.get('passed') is True,error_type=report.get('error_type'),
+        suite_elapsed_s=report.get('suite_elapsed_s_v86_1'),last_test_phase=report.get('last_test_phase_v86_1'),
+        failure_evidence_zip=report.get('failure_evidence_zip_v86_1'),
+        report_written=status!='INTERRUPTED',
+        note='INTERRUPTED attempts do not overwrite recovery_check_v89.json/acceptance_v90.json; those files describe an earlier attempt.' if status=='INTERRUPTED' else 'recovery_check_v89.json describes this attempt.')
+    try:
+        REPORT.parent.mkdir(parents=True,exist_ok=True)
+        __import__('runtime_control').atomic_json(REPORT.parent/LAST_ATTEMPT_NAME,value)
+    except Exception as exc:report['last_attempt_marker_error_v1012']=type(exc).__name__
 
 def main():
     import config
-    report=dict(schema='RECOVERY_SELFTEST_V89',build_revision='AGENT_REVIEW_V1011',version=config.VERSION,created_ts=time.time(),
+    report=dict(schema='RECOVERY_SELFTEST_V89',build_revision=BUILD_REVISION,version=config.VERSION,created_ts=time.time(),
         passed=False,scope='OFFLINE_DISPOSABLE_PAPER_CLOCK_INJECTION',os_clock_modified=False,
         windows_suspend_resume_proven=False,live_rpc_proven=False,
         note='Time reports and the market are injected test data. Test DBs are temporary; no existing trading DB is opened. The running bot is not paused or controlled.')
@@ -129,13 +146,27 @@ def main():
             review_cases=[c for c in report['tests'] if c['name'].startswith('test_review1011_')]
             report['agent_review_models_passed_v1011']=len(review_cases)==15 and all(c['outcome']=='PASSED' for c in review_cases)
             report['passed']=report['agent_review_models_passed_v1011'] and report['priority_models_passed_v101'] and report['overview_models_passed_v1001'] and report['review_models_passed_v100'] and report['transport_thread_models_passed_v992'] and report['rpc_outcome_read_models_passed_v991'] and report['monitor_publication_models_passed_v99'] and report['rpc_transport_models_passed_v99'] and report['reserve_hint_models_passed_v98'] and report['rpc_receipt_models_passed_v972'] and report['rpc_concurrency_evidence_v972'].get('passed') is True and report['saved_result_handle_models_passed_v971'] and (os.name!='nt' or report['saved_result_handles_windows_verified_v971']) and report['rpc_transient_models_passed_v97'] and report['review_models_passed_v96'] and report['rpc_cleanup_models_passed_v96'] and report['rpc_coordination_models_passed_v95'] and report['program_cache_freshness_passed_v95'] and report['candidate_rpc_models_passed_v94'] and report['cleanup_owner_models_passed_v93'] and report['io_models_passed_v87'] and report['monitor_state_models_passed_v86'] and report['late_spawn_ownership_model_passed_v85'] and report['cleanup_regressions_model_passed_v84'] and result.returncode==0 and bool(cases) and all(c['outcome']=='PASSED' or (os.name!='nt' and ((c in io_cases and c['name']=='test_io87_native_windows_control_state_replace_recovers_after_release') or c in reader_cases or c in native or c['name'] in ('test_windows_timeout_kills_descendants','test_saved_result_sell_cancels_live_tree[native_windows]','test_native_late_spawn_after_timeout_cleans_tree','test_native_late_owner_survives_stop_and_reaps_tree','test_actual_shutdown_does_not_kill_retained_monitor','test_native_known_launcher_owner_survives_delayed_signal','test_monitor_state_native_windows_sharing_violation_preserves_heartbeat')) and c['outcome']=='SKIPPED') for c in report['tests']) and report['curve_overflow_replay_v83']['passed'] and report['curve_overflow_replay_v83'].get('paper_ledger_unchanged') is True and report['scenario'].get('financial_integrity')=='OK' and report['monitor_admission'].get('unknown_result_status')=='RECOVERY_INVALIDATED'
+        except KeyboardInterrupt:
+            # Ctrl+C / console close: BaseException, previously recorded as error_type=None.
+            report.update(passed=False,error_type='KeyboardInterrupt',error='Interrupted by Ctrl+C or console close',
+                interruption_v1012='CONSOLE_CTRL_C_OR_USER_INTERRUPT',interrupted_v1012=True,
+                error_traceback_v86_1=traceback.format_exc())
         except Exception as exc:
             report.update(error_type=type(exc).__name__,error=str(exc),error_traceback_v86_1=traceback.format_exc())
         finally:
+            if report.get('interrupted_v1012'):report['interrupted_after_s_v1012']=report.get('suite_elapsed_s_v86_1')
             recovery_evidence.preserve(root,report,REPORT.parent)
+    if report.get('interrupted_v1012'):
+        write_last_attempt(report,'INTERRUPTED')
+        print('CONTROLLED PAPER RECOVERY: INTERRUPTED',flush=True)
+        print('Reason: INTERRUPTED (Ctrl+C) after',report.get('interrupted_after_s_v1012'),'seconds; previous report files were left unchanged.',flush=True)
+        if report.get('last_test_phase_v86_1'):print('Last test phase:',json.dumps(report['last_test_phase_v86_1'],ensure_ascii=True),flush=True)
+        if report.get('failure_evidence_zip_v86_1'):print('Partial evidence:',report['failure_evidence_zip_v86_1'],flush=True)
+        raise KeyboardInterrupt
     REPORT.parent.mkdir(parents=True,exist_ok=True)
     tmp=REPORT.with_suffix('.tmp');tmp.write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8');tmp.replace(REPORT)
     __import__('roadmap_progress').write_acceptance(report,REPORT)
+    write_last_attempt(report,'PASSED' if report['passed'] else 'FAILED')
     print('CONTROLLED PAPER RECOVERY: '+('PASS' if report['passed'] else 'FAILED'))
     print('Offline clock injection; no Windows suspension, clock modification or live RPC.')
     print('Report:',REPORT)

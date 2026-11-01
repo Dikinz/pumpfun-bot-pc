@@ -1,6 +1,6 @@
-Новые исправления независимого ревью: RELEASE_NOTES_v1011.md. Критерии дорожной карты сохранены.
+Исправления по запуску 01.11.2026 и порядок теста: RELEASE_NOTES_v1012.md (ранее RELEASE_NOTES_v1011.md). Критерии дорожной карты сохранены.
 
-v0.7.101.1 — RPC priority recovery
+v0.7.101.2 — RPC priority recovery + Windows run review fixes (01.11.2026)
 Read RELEASE_NOTES_v101.md / README_RU.txt.
 Fresh folder: install, settings, restore the complete stopped campaign if resuming, finish 04_CHECK.
 14_RPC_STATUS performs exact audited recovery and one guarded read-only genesis RPC.

@@ -86,8 +86,14 @@ def branch(c,primary,role,now):
     # diagnostic stays in state_read_error. After any start it remains an error.
     if (monitor_status=='STATE_READ_ERROR' and runtime_status.summary(c,now)['state']=='NOT_STARTED' and
             (monitor.get('state_read_error_v86') or {}).get('reason')=='MONITOR_STATE_MISSING'):monitor_status='NOT_STARTED'
+    monitor_heartbeat_age=observed_wall-heartbeat if isinstance(heartbeat,(int,float)) else None
+    raw_monitor_status=monitor_status
+    # Same rule as monitor_service.service_status: a RUNNING claim without a fresh
+    # heartbeat (>=16 s or none) is not shown as RUNNING in a frozen/stopped report.
+    if monitor_status=='RUNNING' and (monitor_heartbeat_age is None or monitor_heartbeat_age>=16):monitor_status='NO_HEARTBEAT'
     live=dict(loop_heartbeat_age_s=runtime.get('heartbeat_age_s'),market_data_age_s=age,monitor_status=monitor_status,
-        monitor_heartbeat_age_s=observed_wall-heartbeat if isinstance(heartbeat,(int,float)) else None,
+        monitor_status_raw_v1012=raw_monitor_status,
+        monitor_heartbeat_age_s=monitor_heartbeat_age,
         active_checks=len(active_ids) if isinstance(active_ids,list) else None,worker_limit=2,
         oldest_check_age_s=observed_wall-oldest if isinstance(oldest,(int,float)) else None,
         ownership_pending=ownership if type(ownership)==bool else None,
