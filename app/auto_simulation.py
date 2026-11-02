@@ -113,7 +113,7 @@ def experiment(data,out):
     with zipfile.ZipFile(tmp,'w',zipfile.ZIP_DEFLATED) as z:
         z.writestr('input.json',json.dumps(data))
         z.writestr('result.json',json.dumps(report))
-        if bundle:z.writestr('snapshot.json',json.dumps(bundle))
+        if bundle:z.writestr('snapshot.json',json.dumps(__import__('evidence_store').pack(bundle,out.parent)))
     tmp.replace(out/'evidence.zip')
     tmp=out/'result.tmp';tmp.write_text(json.dumps(report));tmp.replace(out/'result.json')
     return report
@@ -177,6 +177,7 @@ def export_evidence(db_path,folder='exports'):
             for name in ('diagnostic.zip','child_lifecycle_v73.json'):
                 f=ROOT/oid/name
                 if f.exists():z.write(f,oid+'/'+name)
+        __import__('evidence_store').export_blobs(z,ROOT)
         z.writestr('missing_evidence.json',json.dumps(missing))
     return target
 

@@ -5,7 +5,7 @@ import pytest,release_guard
 def release(root):
     app=root/'app';app.mkdir()
     p=app/'paper_branch.py';p.write_text('async def worker(primary,scenario=None):pass\n')
-    (root/'BUILD_MANIFEST.json').write_text(json.dumps(dict(version='v0.7.101.5',files={'app/paper_branch.py':hashlib.sha256(p.read_bytes()).hexdigest()})))
+    (root/'BUILD_MANIFEST.json').write_text(json.dumps(dict(version='v0.7.101.6',files={'app/paper_branch.py':hashlib.sha256(p.read_bytes()).hexdigest()})))
     return p
 
 def test_mixed_module_is_blocked_before_import(tmp_path):

@@ -96,7 +96,8 @@ def test_fresh_retry_result_settles_exactly_once(fresh):
         pm.finish(c,retry_job,result,now=time.time())
         assert retry.summary(c)['rows'][0]['status']=='RESULT_RETURNED'
     route.poll(main);route.poll(main)
-    assert not main.P and cap.cash(fresh)==pytest.approx(before+2.5)
+    from test_route_exit_v59 import WALLET_RECEIPT
+    assert not main.P and cap.cash(fresh)==pytest.approx(before+WALLET_RECEIPT)
     assert fresh.execute("SELECT COUNT(*) FROM trades WHERE side='SELL'").fetchone()[0]==1
     assert __import__('primary_integrity').summarize(fresh)['status']=='OK'
 

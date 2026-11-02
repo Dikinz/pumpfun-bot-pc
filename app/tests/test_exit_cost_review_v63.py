@@ -13,9 +13,12 @@ def test_balance_components_reconcile_without_double_counting_rent(fresh):
     before=cap.cash(fresh)
     report=review.build({'route':(config.DB,monitor_service.paths(config.DB)['db'])})
     x=report['rows'][0];a=x['settlement']['components']
-    assert x['setup_status']=='RECONCILED_ISOLATED'
-    assert x['net']==pytest.approx(a['trading_component']-a['entry_cost']-a['exit_fee_balance_residual']-a['local_transaction_fee']-a['token_account_setup']-a['volume_account_setup'])
-    assert x['setup_excluded_sensitivity_net']==pytest.approx(x['net']+.2)
+    # v0.7.101.6: ROUTE books the persistent-wallet model; the strict isolated sale still reconciles underneath.
+    assert x['setup_status']=='RECONCILED_WALLET_MODEL' and x['cost_model']==route_branch.COST_MODEL
+    assert x['strict_net']==pytest.approx(a['trading_component']-a['entry_cost']-a['exit_fee_balance_residual']-a['local_transaction_fee']-a['token_account_setup']-a['volume_account_setup'])
+    assert x['wallet_adjustment']==pytest.approx((1000000-route_branch.CLOSE_FEE_LAMPORTS)*100/1e9)  # first sale pays the volume account
+    assert x['net']==pytest.approx(x['strict_net']+x['wallet_adjustment'])
+    assert x['setup_excluded_sensitivity_net']==pytest.approx(x['strict_net']+.2)
     assert x['net']!=x['setup_excluded_sensitivity_net'] and cap.cash(fresh)==before
     assert report['totals']['route']['setup_reconciled']==1
 

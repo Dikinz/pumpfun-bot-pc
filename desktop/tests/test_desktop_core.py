@@ -157,6 +157,26 @@ def test_engine_lost_needs_confirmation_and_notifies_once(tmp_path):
     assert allowed(ctl.refresh(),'start')[0] is False and [e for e,_ in ctl.drain_events()]==['engine_lost']
     assert tray_state(ctl.refresh())=='red'
 
+def test_engine_lost_names_the_last_sign_of_life_of_this_run(tmp_path):
+    """02.11 23:59: the antivirus killed every bot process and the window at once; the next window says when."""
+    import time
+    lay=make_layout(tmp_path);procs=Procs();procs.rows={}
+    beat=lay.db.with_name('clean_0762_system_state.json')
+    assert 'антивирус' in C.TEXT['lost'] and '05_RESULTS' in C.TEXT['lost']
+    write_state(lay,phase='RUNNING',started_ts=2000.)
+    beat.write_text(json.dumps(dict(status='RUNNING',heartbeat_ts=1999.)),encoding='utf-8')  # an earlier run: not shown
+    ctl=controller(lay,procs=procs);s=ctl.refresh()
+    assert s.lost_text==C.TEXT['lost'] and ctl.snapshot()['lost']==C.TEXT['lost']
+    write_state(lay,phase='RUNNING',token=OTHER,pid=77,started_ts=2000.)
+    beat.write_text(json.dumps(dict(status='RUNNING',heartbeat_ts=2500.)),encoding='utf-8')
+    ctl=controller(lay,procs=procs);s=ctl.refresh()
+    when=time.strftime('%d.%m.%Y %H:%M:%S',time.localtime(2500.))
+    assert s.lost_text==C.TEXT['lost']+C.TEXT['lost_seen'].format(when=when) and when in ctl.snapshot()['lost']
+    assert ctl.drain_events()==[('engine_lost',s.lost_text)]
+    beat.write_text('{broken',encoding='utf-8');assert ctl.refresh().lost_text==s.lost_text  # cached per run
+    write_state(lay,phase='RUNNING',token=TOKEN,pid=78,started_ts=3000.)
+    assert ctl.refresh().lost_text==C.TEXT['lost']  # unreadable state file: the plain warning
+
 # ---- matrix 2.4 ----
 def status(kind,busy=None,lost_acked=False,phase=None):
     return Status(kind,dict(phase=phase) if phase else {},busy=busy,lost_acked=lost_acked)

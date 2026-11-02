@@ -83,7 +83,7 @@ def test_gap_blocking_has_distinct_reason(fresh):
 
 def test_two_long_waiting_exits_release_both_slots_only_on_fresh_checks(fresh,monkeypatch):
     import route_branch,paper_capital
-    from test_route_exit_v59 import candidate,save_check
+    from test_route_exit_v59 import candidate,save_check,WALLET_RECEIPT
     fresh.executescript(route_branch.SCHEMA)
     tids=[]
     for n in range(2):
@@ -107,4 +107,4 @@ def test_two_long_waiting_exits_release_both_slots_only_on_fresh_checks(fresh,mo
     assert fresh.execute('SELECT COUNT(*) FROM positions').fetchone()[0]==0 and not main.P
     assert fresh.execute("SELECT COUNT(*) FROM trades WHERE side='SELL'").fetchone()[0]==2
     assert fresh.execute("SELECT COUNT(*) FROM paper_orders_v0720 WHERE side='SELL' AND status='PENDING'").fetchone()[0]==0
-    assert paper_capital.cash(fresh)==pytest.approx(before+5)
+    assert paper_capital.cash(fresh)==pytest.approx(before+2*WALLET_RECEIPT)

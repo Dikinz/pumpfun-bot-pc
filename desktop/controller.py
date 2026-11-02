@@ -14,7 +14,7 @@ Dropping a Controller leaves the engine untouched (it was started detached).
   C.HEALTH_MISS_LIMIT failed /health polls in a row, so one slow answer never enables Start.
 - A run that ends by itself (STOPPED, exit_code != 0, no stop requested) is reported once and keeps the tray red
   until acknowledged (MINOR 2). A start is never failed on time while the host lives (MINOR 3)."""
-import sys,threading,time
+import json,sys,threading,time
 from dataclasses import dataclass
 from pathlib import Path
 from . import constants as C,actions,logs
@@ -33,6 +33,7 @@ class Status:
     action:dict|None=None
     warning:str|None=None
     self_stop:dict|None=None  # {token, code, text} of an unacknowledged run that ended by itself
+    lost_text:str|None=None  # ENGINE_LOST warning with the last sign of life of this run, when known
     @property
     def own(self):return self.kind.startswith(C.OWN)
     @property
@@ -93,7 +94,7 @@ class Controller:
         self.engine_cmd=engine_cmd or (lambda token:actions.engine_argv(layout,token))
         self._popen=popen;self._startfile=startfile;self._lock=threading.RLock()
         self._start=None;self._stop=None;self._bg=None;self._lost_ack=None;self._lost_seen=None;self._orphan_seen=None
-        self._misses=0;self._last_health=None;self._self_stop_acked=set();self._self_stop_seen=None;self._lineage={}
+        self._misses=0;self._last_health=None;self._lost_texts={};self._self_stop_acked=set();self._self_stop_seen=None;self._lineage={}
         self.lineage_log=[]
         self.last_action=None;self.events=[];self.status=None
 
@@ -119,8 +120,8 @@ class Controller:
             status=Status(kind,state,alive,health)
             key=(state.get('token'),state.get('pid'))
             if kind==C.ENGINE_LOST:
-                status.lost_acked=self._lost_ack==key
-                if self._lost_seen!=key:self._lost_seen=key;self._event('engine_lost',C.TEXT['lost'])
+                status.lost_acked=self._lost_ack==key;status.lost_text=self._lost_message(key,state)
+                if self._lost_seen!=key:self._lost_seen=key;self._event('engine_lost',status.lost_text)
             if kind==C.ORPHAN_RUNNING and self._orphan_seen!=key:self._orphan_seen=key;self._event('orphan',C.TEXT['orphan'])
             self._track_start(status);self._track_stop(status);self._track_action(status);self._track_self_stop(status)
             status.busy=('start' if self._start and not self._start['done'] else 'stop' if self._stop and not self._stop['done'] else
@@ -128,6 +129,21 @@ class Controller:
             name=state.get('log_name')
             if name and logs.too_big(self.layout.logs/name):status.warning=C.TEXT['log_big'].format(name=name)
             self.status=status;return status
+
+    def _lost_message(self,key,state):
+        """C.TEXT['lost'] plus the last heartbeat the launcher sampler wrote for this run (v0.7.101.5: the antivirus
+        killed every bot process at once; the window died too, so the next window is the first to tell the user).
+        Cached per run; a heartbeat older than the run's start belongs to an earlier run and is not shown."""
+        if key not in self._lost_texts:
+            text=C.TEXT['lost']
+            try:
+                beat=json.loads(self.layout.db.with_name(self.layout.db.stem+'_system_state.json').read_text(encoding='utf-8')).get('heartbeat_ts')
+                started=state.get('started_ts')
+                if isinstance(beat,(int,float)) and isinstance(started,(int,float)) and beat>=started:
+                    text+=C.TEXT['lost_seen'].format(when=time.strftime('%d.%m.%Y %H:%M:%S',time.localtime(beat)))
+            except (OSError,ValueError,AttributeError,OverflowError):pass
+            self._lost_texts[key]=text
+        return self._lost_texts[key]
 
     def _descends(self,state,health):
         """Cached per (token, host pid, host create_time, dashboard pid): the answer of one run never changes.
@@ -172,7 +188,7 @@ class Controller:
         if st:
             if st['phase']=='FAILED':finish(False,'Запуск не удался: '+str(st.get('error_code')),st.get('error_code'))
             elif st['phase']=='STOPPED':finish(False,'Движок остановился до готовности (код '+str(st.get('exit_code'))+').')
-            elif status.kind==C.ENGINE_LOST:finish(False,C.TEXT['lost'])
+            elif status.kind==C.ENGINE_LOST:finish(False,status.lost_text)
             elif status.kind==C.ORPHAN_RUNNING:finish(False,C.TEXT['orphan'])
             elif st['phase']=='RUNNING' and op['health_ok']:finish(True,'Бот работает.')
         if not op['done'] and not st:
@@ -197,7 +213,7 @@ class Controller:
                 message=C.TEXT['stop_ok'] if code==0 else C.TEXT['stop_bad'].format(code=code))
             self._event('stop_done',op['message'])
         elif status.kind in (C.ENGINE_LOST,C.ORPHAN_RUNNING) or (not st and op['accepted']):
-            message=C.TEXT['orphan'] if status.kind==C.ORPHAN_RUNNING else C.TEXT['lost']
+            message=C.TEXT['orphan'] if status.kind==C.ORPHAN_RUNNING else status.lost_text or C.TEXT['lost']
             op.update(done=True,ok=False,exit_code=None,message=message);self._event('stop_done',op['message'])
         elif op['elapsed']>C.STOP_SLOW_S and not op['slow']:
             op['slow']=True;op['message']=C.TEXT['stop_slow'];self._event('stop_slow',op['message'])  # never kill
@@ -307,7 +323,7 @@ class Controller:
             s=self.refresh();state=s.state
             clean=lambda op:None if op is None else {k:v for k,v in op.items() if k not in ('spawned',)} | ({'log':str(op['log'])} if op.get('log') else {})
             return dict(kind=s.kind,text=s.text,phase=s.phase,paper=True,version=self.layout.version,port=self.layout.port,busy=s.busy,
-                tray=tray_state(s),title=title(s,self.layout.version),lost=C.TEXT['lost'] if s.kind==C.ENGINE_LOST else None,lost_acked=s.lost_acked,
+                tray=tray_state(s),title=title(s,self.layout.version),lost=s.lost_text if s.kind==C.ENGINE_LOST else None,lost_acked=s.lost_acked,
                 orphan=C.TEXT['orphan'] if s.kind==C.ORPHAN_RUNNING else None,self_stop=s.self_stop['text'] if s.self_stop else None,
                 last=dict(phase=state.get('phase'),exit_code=state.get('exit_code'),error_code=state.get('error_code'),
                     finished_ts=state.get('finished_ts'),started_ts=state.get('started_ts'),log_name=state.get('log_name')),

@@ -134,7 +134,8 @@ def test_priority_result_still_requires_fresh_valid_exact_amount_before_settleme
         r.update(scheduled_ts=job['scheduled_ts'],snapshot_received_ts=time.time(),net_status='NET_BELOW_FLOOR',minimum_net_lamports=30000000)
         pm.finish(c,job,r,now=time.time())
     route.poll(main);route.poll(main)
-    assert not main.P and cap.cash(fresh)==pytest.approx(before+2.5)
+    from test_route_exit_v59 import WALLET_RECEIPT
+    assert not main.P and cap.cash(fresh)==pytest.approx(before+WALLET_RECEIPT)
     assert fresh.execute("SELECT count(*) FROM trades WHERE side='SELL'").fetchone()[0]==1
     assert __import__('primary_integrity').summarize(fresh)['status']=='OK'
 

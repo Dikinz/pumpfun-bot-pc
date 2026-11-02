@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 import shared_lots as shared,main,config,database as db,paper_capital as cap,exit_quotes,execution_model as ex,route_branch
 from test_primary_integrity import fresh
-from test_route_exit_v59 import candidate,save_check
+from test_route_exit_v59 import candidate,save_check,WALLET_RECEIPT
 
 def entry(c,monkeypatch,dec=6):
     db.setm('matched_mode_v64',1)
@@ -85,7 +85,7 @@ def test_same_sell_signal_origin_and_verified_exit_release_slot_once(fresh,monke
         route_branch.poll(main);route_branch.poll(main);shared.sync(main,primary)
         assert not main.P and c.execute('SELECT COUNT(*) FROM positions').fetchone()[0]==0
         assert c.execute("SELECT COUNT(*) FROM trades WHERE side='SELL'").fetchone()[0]==1
-        assert cap.cash(c)==pytest.approx(before+2.5)
+        assert cap.cash(c)==pytest.approx(before+WALLET_RECEIPT)
         assert __import__('primary_integrity').summarize(c)['status']=='OK'
 
 def test_branch_cannot_create_independent_entries_or_sell_signals(monkeypatch):

@@ -122,13 +122,18 @@ def scenario(c,role,monitor=None):
                         row['settlement']['timing_ms']=dict(zip(('signal_to_scheduled_check','recorded_schedule_gap','simulation_worker','delivery'),[(b-a)*1000 for a,b in zip(ts,ts[1:])]))
                         row['settlement']['timing_note']='Recorded scheduled/start stamps can coincide; zero recorded gap is not proof of zero scheduler queue. Signal-to-check interval includes monitor cadence and unmeasured waiting.'
                 if component and component.get('accounting_status')=='RECONCILED' and row['net'] is not None:
-                    matches=all(math.isclose(a,b,abs_tol=1e-8,rel_tol=1e-9) for a,b in
-                      [(row['net'],component['pnl_units']),(settlement['receipt'],component['receipt_units']),
+                    # v0.7.101.6 ROUTE wallet model: the ledger differs from the strict isolated sale by the booked wallet adjustment.
+                    wallet=account.get('cost_model')
+                    try:adjust=float(account['receipt_units'])-float(account['strict_receipt_units']) if wallet else 0.
+                    except (KeyError,TypeError,ValueError):adjust=None
+                    matches=adjust is not None and all(math.isclose(a,b,abs_tol=1e-8,rel_tol=1e-9) for a,b in
+                      [(row['net'],component['pnl_units']+adjust),(settlement['receipt'],component['receipt_units']+adjust),
                        (settlement['gross'],component['pool_debit_units']),
                        (settlement['cost'],row['exit_cost'])])
-                    row['setup_status']='RECONCILED_ISOLATED' if matches else 'LEDGER_MISMATCH'
+                    row['setup_status']=('RECONCILED_WALLET_MODEL' if wallet else 'RECONCILED_ISOLATED') if matches else 'LEDGER_MISMATCH'
+                    if matches and wallet:row.update(cost_model=wallet,wallet_adjustment=adjust,strict_net=component['pnl_units'])
                     if matches:
-                        row['setup_excluded_sensitivity_net']=row['net']+component['token_account_setup']+component['volume_account_setup']
+                        row['setup_excluded_sensitivity_net']=component['pnl_units']+component['token_account_setup']+component['volume_account_setup']
                         row['sensitivity_note']='NOT_REALIZED_PNL_OR_WALLET_REPLAY; refund/reuse not proven; original ledger unchanged'
         rows.append(row)
     return rows
@@ -170,7 +175,7 @@ def build(paths,source=None):
             rows+=scenario(c,role,m)
     totals={}
     for role in paths:
-        subset=[r for r in rows if r['role']==role];reconciled=[r for r in subset if r['setup_status']=='RECONCILED_ISOLATED']
+        subset=[r for r in rows if r['role']==role];reconciled=[r for r in subset if r['setup_status'] in ('RECONCILED_ISOLATED','RECONCILED_WALLET_MODEL')]
         complete=all(r['net'] is not None for r in subset)
         totals[role]=dict(closed=len(subset),accounted=sum(r['net'] is not None for r in subset),net=sum(r['net'] for r in subset) if complete else None,
           before_signal=sum(r['attribution'].get('before_signal') or 0 for r in subset),

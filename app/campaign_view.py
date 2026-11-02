@@ -104,8 +104,15 @@ def branch(c,primary,role,now):
     if role=='route':
         wallet_settlements=(dict(r) for r in c.execute('SELECT details FROM branch_amm_settlements ORDER BY settled_ts'))
         model=__import__('cost_classes_v100').wallet_model(wallet_settlements,cap['closed_net'])
+        # v0.7.101.6: strict isolated sales before the switch, persistent-wallet sales after it; reported apart.
+        split={}
+        for r in c.execute("SELECT COALESCE(json_extract(details,'$.accounting.cost_model'),'STRICT_ISOLATED_V59') m,COUNT(*) n,"
+                "SUM(CAST(json_extract(details,'$.accounting.pnl_units') AS REAL)) pnl,SUM(CAST(COALESCE(json_extract(details,'$.accounting.strict_pnl_units'),json_extract(details,'$.accounting.pnl_units')) AS REAL)) strict "
+                "FROM branch_amm_settlements GROUP BY m"):
+            split[r['m']]=dict(closed=r['n'],booked_pnl=r['pnl'],strict_pnl=r['strict'])
+        model=dict(model,cost_models_v1016=split)
     risk=__import__('risk_watch_v1014').summary(c,nets,campaign['start_balance'] if campaign else config.START_BALANCE,fork,at,missing)
-    return dict(risk_watch_v1014=risk,persistent_wallet_model_v100=model,stressed_equity_v100=stressed,remainder_slot_exclusions_v100=__import__('remainder_reporting_v100').slot_exclusions(c),failure_v93=cause,cost_basis_v89=('ISOLATED_SELL_WITH_ACCOUNT_SETUP' if role=='route' else 'TICK_FEE_MODEL_WITHOUT_ACCOUNT_SETUP'),live_v87=live,runtime_perf=__import__('runtime_control').read(primary if role=='primary' else engine.path(primary)),first_gap=first_gap,resources=dict(cpu=meta.get('process_cpu_pct'),ram_mb=meta.get('process_ram_mb')),role=role,campaign=campaign,runtime=runtime,blocks=blocks,last_entry_result=last,capital=dict(available=cap['available'],cash=cap['net_cash'],principal=cap['open_principal'],status=cap['status']),
+    return dict(risk_watch_v1014=risk,persistent_wallet_model_v100=model,stressed_equity_v100=stressed,remainder_slot_exclusions_v100=__import__('remainder_reporting_v100').slot_exclusions(c),failure_v93=cause,cost_basis_v89=(__import__('route_branch').COST_MODEL if role=='route' else 'TICK_FEE_MODEL_WITHOUT_ACCOUNT_SETUP'),live_v87=live,runtime_perf=__import__('runtime_control').read(primary if role=='primary' else engine.path(primary)),first_gap=first_gap,resources=dict(cpu=meta.get('process_cpu_pct'),ram_mb=meta.get('process_ram_mb')),role=role,campaign=campaign,runtime=runtime,blocks=blocks,last_entry_result=last,capital=dict(available=cap['available'],cash=cap['net_cash'],principal=cap['open_principal'],status=cap['status']),
         new_closed=new_closed,carried_closed=carried_closed,entries=entries,closed=closed,wins=wins,net=None if missing else net_total,gross=gross,costs=None if missing else fees,
         accounting_missing=missing,closed_drawdown=None if missing else drawdown,positions=positions,trades=list(reversed(trades)),preentry=pending,timing=timing,
         matched_entry_counts=matched,verified_exits=settlements,verified_routes=route_counts,curve_exits=route_counts.get('PUMP_CURVE',0),amm_exits=route_counts.get('PUMP_AMM',0),unknown_route_exits=sum(n for route,n in route_counts.items() if route not in ('PUMP_CURVE','PUMP_AMM')),stop=stop,transport=transport,input_gap=meta.get('branch_input_gap')=='1' or transport_gap,

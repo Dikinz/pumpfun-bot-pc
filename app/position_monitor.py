@@ -129,25 +129,9 @@ def finish(c,job,r,archive=None,now=None):
 
 def pack_bundle(bundle,root=ROOT):
     # Deduplicate unchanged large program binaries; every sample remains replayable.
-    bundle=copy.deepcopy(bundle);folder=root/'blobs';folder.mkdir(parents=True,exist_ok=True)
-    for a in bundle['snapshot']['accounts'].values():
-        if a and len(json.dumps(a.get('data',[])))>100000:
-            raw=json.dumps(a['data']).encode();digest=hashlib.sha256(raw).hexdigest();path=folder/(digest+'.zlib')
-            if not path.exists():
-                tmp=path.with_suffix('.'+uuid.uuid4().hex+'.tmp');tmp.write_bytes(zlib.compress(raw));tmp.replace(path)
-            a['data']={'blob_sha256':digest}
-    return bundle
+    return __import__('evidence_store').pack(bundle,root)
 
-def unpack_bundle(bundle,root=ROOT):
-    bundle=copy.deepcopy(bundle)
-    for a in bundle['snapshot']['accounts'].values():
-        if a and isinstance(a.get('data'),dict):
-            digest=a['data']['blob_sha256']
-            if len(digest)!=64 or any(x not in '0123456789abcdef' for x in digest):raise ValueError('INVALID_BLOB_ID')
-            raw=zlib.decompress((root/'blobs'/(digest+'.zlib')).read_bytes())
-            if hashlib.sha256(raw).hexdigest()!=digest:raise ValueError('BLOB_HASH_MISMATCH')
-            a['data']=json.loads(raw)
-    return bundle
+def unpack_bundle(bundle,root=ROOT):return __import__('evidence_store').unpack(bundle,root)
 
 def reserve_evidence(bundle):
     import struct,local_simulation as lab
@@ -482,7 +466,7 @@ def export_evidence(db_path,folder='exports'):
             f=ROOT/r['id']/'evidence.zip'
             if f.exists():z.write(f,r['id']+'/evidence.zip')
             elif r['archive']:missing.append(r['id'])
-        for f in (ROOT/'blobs').glob('*.zlib'):z.write(f,'blobs/'+f.name)
+        __import__('evidence_store').export_blobs(z,ROOT)
         z.writestr('missing_evidence.json',json.dumps(missing))
     return target
 if __name__=='__main__':

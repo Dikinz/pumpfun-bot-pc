@@ -1,3 +1,4 @@
+v0.7.101.6 — ROUTE booked as a persistent wallet, evidence archives without program binaries, clearer desktop warning (03.11.2026). Add the whole bot folder to antivirus exclusions.
 Устойчивость SQLite в длинных прогонах и стоп-флаги наблюдения: RELEASE_NOTES_v1014.md (ранее RELEASE_NOTES_v1013.md). Критерии дорожной карты сохранены.
 
 v0.7.101.5 — diagnostics written off the event loop, atomic branch start file, desktop app 16_DESKTOP (02.11.2026)

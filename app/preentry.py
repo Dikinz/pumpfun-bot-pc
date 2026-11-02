@@ -123,7 +123,8 @@ def child(data,out,replay=None):
     report.update(finished_ts=time.time(),signal_ts=data['signal_ts'],paper_mutated=False,broadcast=False)
     with zipfile.ZipFile(out/'evidence.tmp','w',zipfile.ZIP_DEFLATED) as z:
         z.writestr('input.json',json.dumps(data));z.writestr('result.json',json.dumps(report))
-        if bundle:z.writestr('snapshot.json',json.dumps(bundle))
+        # Programs go to <evidence root>/blobs once (v0.7.101.6: ~17 MB per archive drew the antivirus).
+        if bundle:z.writestr('snapshot.json',json.dumps(__import__('evidence_store').pack(bundle,out.parent)))
     (out/'evidence.tmp').replace(out/'evidence.zip')
     (out/'result.tmp').write_text(json.dumps(report));(out/'result.tmp').replace(out/'result.json')
     return report
@@ -188,6 +189,7 @@ def export(db_path,folder='exports'):
             for name in ('diagnostic.zip','child_lifecycle_v73.json'):
                 f=ROOT/jid/name
                 if f.exists():z.write(f,jid+'/'+name)
+        __import__('evidence_store').export_blobs(z,ROOT)
         z.writestr('missing_evidence.json',json.dumps(missing))
     return target
 

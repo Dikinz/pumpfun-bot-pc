@@ -225,6 +225,7 @@ def export(db_path,folder):
             for name in ('evidence.zip','rpc_activity.json','diagnostic.zip','child_lifecycle_v73.json'):
                 if (out/name).exists():z.write(out/name,jid+'/'+name)
             if not (out/'evidence.zip').exists() and started is not None:missing.append(jid)
+        __import__('evidence_store').export_blobs(z,ROOT)
         z.writestr('missing_evidence.json',json.dumps(missing))
     return target
 

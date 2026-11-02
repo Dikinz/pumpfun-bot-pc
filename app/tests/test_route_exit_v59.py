@@ -6,6 +6,9 @@ import config,main,database as db,paper_capital as cap,route_branch as route,mon
 from test_primary_integrity import fresh
 from test_parallel_paper_v54 import opened
 
+# The candidate sale: strict isolated receipt (net - token rent) 2.5; v0.7.101.6 wallet model books net - close fee.
+STRICT_RECEIPT=2.5;WALLET_RECEIPT=(26000000-route.CLOSE_FEE_LAMPORTS)*100/1e9
+
 def candidate(tid,now=None):
     now=time.time() if now is None else now
     inv=dict(trade_id=tid,mint='m',size_usdc='3',sol_usdc='100',token_units='10',entry_sol_price='.003',raw_amount='10000000',decimals=6)
@@ -28,7 +31,7 @@ def save_check(fresh,row,job,r,inv):
 @pytest.mark.parametrize('kind',['curve','amm'])
 def test_real_poll_settles_without_tick_and_releases_slot(fresh,kind):
     tid=opened(fresh);fresh.executescript(route.SCHEMA);before=cap.cash(fresh)
-    if kind=='curve':row,j,r,inv=candidate(tid);receipt=2.5
+    if kind=='curve':row,j,r,inv=candidate(tid);receipt=WALLET_RECEIPT
     else:
         from test_amm_scenario_v53 import payload
         row,j,r,inv=payload();now=time.time();row.update(id='amm',trade_id=tid,started_ts=now-2,finished_ts=now-.1)
@@ -131,7 +134,7 @@ def test_curve_resolver_amount_without_jupiter_sizing(fresh):
     tid=opened(fresh);row,j,r,inv=candidate(tid);r['amount_decimals']=6
     inv=dict(inv,raw_amount=None,decimals=None);j['inventory']=dict(inv)
     decision,a=route.assess(fresh,row,j,r,time.time()-10,inv,time.time())
-    assert decision=='ELIGIBLE' and float(a['receipt_units'])==2.5
+    assert decision=='ELIGIBLE' and float(a['receipt_units'])==pytest.approx(WALLET_RECEIPT) and float(a['strict_receipt_units'])==STRICT_RECEIPT
     r['amount_decimals']=5
     assert route.assess(fresh,row,j,r,time.time()-10,inv,time.time())[0]=='AMOUNT_MISMATCH'
 
@@ -169,3 +172,26 @@ def test_route_export_retains_sqlite_and_monitor_evidence(fresh,tmp_path):
         assert 'route_monitor_evidence.zip' in z.namelist()
         assert route.path(config.DB).name in z.namelist()
         assert json.loads(z.read('summary.json'))['status']=='AVAILABLE'
+
+
+def test_route_wallet_model_refunds_token_rent_and_pays_the_volume_account_once(fresh):
+    """v0.7.101.6: 02.11 ROUTE lost -21.47 on 58 closes, 15.27 of it account setup charged on every sale."""
+    tid=opened(fresh);fresh.executescript(route.SCHEMA);row,j,r,inv=candidate(tid)
+    r['sale']['volume_account_rent_delta_lamports']=1500000;r['sale']['seller_net_sol_delta_lamports']=24500000
+    decision,a=route.assess(fresh,row,j,r,time.time()-10,inv,time.time())
+    assert decision=='ELIGIBLE' and a['cost_model']==route.COST_MODEL=='ROUTE_WALLET_MODEL_V1016'
+    assert float(a['strict_receipt_units'])==pytest.approx((24500000-1000000)*100/1e9)  # strict: net minus token rent
+    assert float(a['receipt_units'])==pytest.approx((24500000-5000)*100/1e9) and a['volume_rent_retained_lamports']==0  # first sale pays the volume account
+    assert float(a['pnl_units'])-float(a['strict_pnl_units'])==pytest.approx((1000000-5000)*100/1e9)
+    fresh.execute('INSERT INTO branch_amm_settlements VALUES(?,?,?,?,?,?,?,?)',('earlier','c0',1.,2.,2.8,2.5,.3,json.dumps(dict(route='PUMP_CURVE',accounting=dict(cost_model=route.COST_MODEL)))))
+    decision,a=route.assess(fresh,row,j,r,time.time()-10,inv,time.time())
+    assert decision=='ELIGIBLE' and a['volume_rent_retained_lamports']==1500000
+    assert float(a['receipt_units'])==pytest.approx((24500000-5000+1500000)*100/1e9)  # later sales reuse it
+    assert int(a['wallet_receipt_lamports'])<=-r['sale']['pool_sol_delta_lamports']
+
+def test_route_wallet_rows_are_reported_apart_and_not_adjusted_twice():
+    from cost_classes_v100 import wallet_model
+    strict={'details':{'route':'PUMP_CURVE','accounting':{'fx':100,'token_rent_lamports':2000000,'volume_rent_lamports':1000000}}}
+    wallet={'details':{'route':'PUMP_CURVE','accounting':{'fx':100,'token_rent_lamports':2000000,'volume_rent_lamports':1000000,'cost_model':route.COST_MODEL}}}
+    both=wallet_model([strict,strict,wallet,wallet],-2.);alone=wallet_model([strict,strict],-2.)
+    assert both['already_wallet_modelled']==2 and both['token_setup']==alone['token_setup'] and both['assume_empty_ata_close_cost_adjustment']==alone['assume_empty_ata_close_cost_adjustment']

@@ -257,7 +257,7 @@ class Shell:
     def _do_start(self):
         s=self.ctl.refresh()
         if s.kind==C.ENGINE_LOST and not s.lost_acked:
-            answer=self.confirm(TEXT['lost_title'],C.TEXT['lost']+TEXT['lost_ack'])
+            answer=self.confirm(TEXT['lost_title'],(s.lost_text or C.TEXT['lost'])+TEXT['lost_ack'])
             if answer is None:return self._asking_result()
             if not answer:return dict(ok=False,message=None,cancelled=True)
             r=self.ctl.confirm_lost();return dict(ok=r['ok'],message=TEXT['lost_acked'] if r['ok'] else r['message'],acknowledged=r['ok'])

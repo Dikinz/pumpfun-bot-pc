@@ -29,6 +29,27 @@ def configure():
     # BUYs keep original gates. SELL signals persist until a verified settlement.
     execution.eligible=lambda order,e,mono=None:False if order['side']=='SELL' else original(order,e,mono)
 
+COST_MODEL='ROUTE_WALLET_MODEL_V1016'
+CLOSE_FEE_LAMPORTS=5000  # one signature to close the emptied token account and take its rent back
+
+def wallet_account(c,account,route):
+    """v0.7.101.6: the ledger follows one persistent PAPER wallet instead of a fresh wallet per sale.
+    The token account rent comes back when the emptied account is closed (minus that transaction's fee);
+    the volume account is paid by the first sale of this model on a route and kept for the later ones.
+    The strict isolated values stay in the record (strict_*) for the sensitivity report."""
+    retained=c.execute("SELECT 1 FROM sqlite_master WHERE name='branch_amm_settlements'").fetchone() is not None and c.execute("SELECT 1 FROM branch_amm_settlements WHERE json_extract(details,'$.accounting.cost_model')=? AND json_extract(details,'$.route')=? LIMIT 1",(COST_MODEL,route)).fetchone() is not None
+    net=int(account['seller_net_lamports']);volume=int(account['volume_rent_lamports'] or 0)
+    lamports=net-CLOSE_FEE_LAMPORTS+(volume if retained else 0)
+    with localcontext() as ctx:
+        ctx.prec=60
+        fx=Decimal(account['fx']);receipt=Decimal(lamports)*fx/10**9
+        pnl=receipt-Decimal(account['size_units'])-Decimal(account['entry_cost_units'])
+    return dict(account,cost_model=COST_MODEL,strict_receipt_units=account['receipt_units'],strict_pnl_units=account['pnl_units'],
+        receipt_units=str(receipt),pnl_units=str(pnl),wallet_receipt_lamports=lamports,close_fee_lamports=CLOSE_FEE_LAMPORTS,
+        token_rent_refunded_lamports=int(account['token_rent_lamports']),volume_rent_retained_lamports=volume if retained else 0,
+        note='Persistent PAPER wallet: token rent refunded on close minus one close fee; volume account paid once per route. '
+            'Refund and wallet lifecycle are modelled, not proven on chain; priority/landing costs unknown. Strict isolated values in strict_*.')
+
 def assess(c,row,job,result,signal,inventory,now):
     import amm_exit_scenario as amm,signal_exit as se,exit_rules_v33 as costs
     if not __import__('recovery_gate').allowed(job):return 'RECOVERY_INVALIDATED',None
@@ -65,6 +86,8 @@ def assess(c,row,job,result,signal,inventory,now):
         if gross<=0 or receipt>gross:return 'ACCOUNTING_MISMATCH',None
         account=costs.accounting(c,job,result)
         if not account:return 'MISSING_ACCOUNTING',None
+        account=wallet_account(c,account,'PUMP_CURVE')
+        if int(account['wallet_receipt_lamports'])>gross:return 'ACCOUNTING_MISMATCH',None
         account['quote_received_lamports']=gross
         return 'ELIGIBLE',account
     except (KeyError,TypeError,ValueError,InvalidOperation,OverflowError):return 'INVALID_PAYLOAD',None

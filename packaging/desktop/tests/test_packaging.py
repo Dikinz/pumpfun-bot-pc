@@ -84,7 +84,7 @@ def test_update_check_mode_and_revision(tmp_path,capsys):
 def test_real_manifest_is_current():
     new,ch=um.update(ROOT)
     assert ch=={'changed':[],'added':[],'revision':None},ch
-    assert new['version']=='v0.7.101.5' and new['build_revision']=='RUN_REVIEW_V1015'
+    assert new['version']=='v0.7.101.6' and new['build_revision']=='RUN_REVIEW_V1016'
     assert (ROOT/'BUILD_MANIFEST.json').read_bytes()==um.render(new)
 
 # ---- build_portable.py ----
@@ -169,7 +169,7 @@ def test_iss_setup_is_per_user_in_localappdata():
         DisableDirPage='auto',ArchitecturesInstallIn64BitMode='x64compatible',CloseApplications='no')
     for k,v in expected.items():assert setup.get(k)==v,k
     assert setup['AppId']=='{{{#AppGuid}}' and re.search(r'#define AppGuid "[0-9A-F]{8}(-[0-9A-F]{4}){3}-[0-9A-F]{12}"',text)
-    assert '#define AppVersion "0.7.101.5"' in text
+    assert '#define AppVersion "0.7.101.6"' in text
     low=text.lower()
     for bad in ('{pf}','{commonpf}','{pf32}','{pf64}','{commonappdata}','{commondesktop}','admin','privilegesrequiredoverridesallowed','alwaysrestart'):
         assert bad not in low,bad
