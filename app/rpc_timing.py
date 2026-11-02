@@ -151,7 +151,7 @@ def preentry_summary(c):
     try:
         rows=[dict(r) for r in c.execute('SELECT p.*,t.queue_ms,t.run_ms,t.depth_start FROM preentry_v0729 p LEFT JOIN preentry_timing_v56 t ON p.job_id=t.job_id WHERE p.created_ts>=?',(start,))] if start is not None else []
     except sqlite3.OperationalError:return dict(available=False,note='Timing instrumentation absent; no historical timing invented.')
-    reports=[json.loads(r['result_json'] or '{}') for r in rows];counts={}
+    reports=[__import__('json_cache_v1014').loads(r['result_json'] or '{}') for r in rows];counts={}
     for r in rows:counts[r['status']]=counts.get(r['status'],0)+1
     return dict(available=True,run_started_ts=start,jobs=len(rows),statuses=counts,queue=distribution(r['queue_ms'] for r in rows),runtime=distribution(r['run_ms'] for r in rows),rpc=rpc_summary(reports),
         recent=[dict(job_id=r['job_id'],status=r['status'],queue_ms=r['queue_ms'],runtime_ms=r['run_ms'],depth_start=r['depth_start'],active_stage=(reports[i].get('rpc_timing') or {}).get('active_stage'),legacy_queue_wall_ms=(r['started_ts']-r['created_ts'])*1000 if r['started_ts'] is not None else None) for i,r in list(enumerate(rows))[-50:]],
@@ -160,4 +160,4 @@ def preentry_summary(c):
 def monitor_summary(c,start):
     if start is None:return dict(available=False,note='Primary run boundary unknown.')
     rows=[dict(r) for r in c.execute('SELECT status,result_json FROM position_checks_v0730 WHERE started_ts>=?',(start,))]
-    return dict(available=True,run_started_ts=start,jobs=len(rows),rpc=rpc_summary([json.loads(r['result_json'] or '{}') for r in rows]))
+    return dict(available=True,run_started_ts=start,jobs=len(rows),rpc=rpc_summary([__import__('json_cache_v1014').loads(r['result_json'] or '{}') for r in rows]))

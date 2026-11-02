@@ -15,7 +15,7 @@ def local_components(row, inventory, entry_cost):
     out=dict(check_id=row['id'],started_ts=row.get('started_ts'),available_ts=row.get('finished_ts'),
              status=row['status'],accounting_status='UNAVAILABLE')
     try:
-        r=json.loads(row.get('result_json') or '{}');job=json.loads(row.get('input_json') or '{}')
+        r=__import__('json_cache_v1014').loads(row.get('result_json') or '{}');job=__import__('json_cache_v1014').loads(row.get('input_json') or '{}')
         sale=r.get('sale') or {};inv=job.get('inventory') or {}
         out.update(snapshot_ts=r.get('snapshot_received_ts'),snapshot_slot=sale.get('snapshot_slot'),
                    snapshot_started_ts=r.get('snapshot_started_ts'),

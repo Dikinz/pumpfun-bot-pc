@@ -8,7 +8,7 @@ def expected_cost(c,tid):
       JOIN paper_orders_v0720 o ON o.order_id=p.order_id WHERE o.trade_id=? AND o.side='BUY'
       AND o.status='FILLED' AND p.status='USED' ''',(tid,)).fetchone()
     if not row or not row['finished_ts']<=row['fill_ts']<=row['valid_until']:return None
-    r=json.loads(row['result_json'] or '{}');budget=r.get('budget_lamports');delta=r.get('all_in_roundtrip_delta_lamports')
+    r=__import__('json_cache_v1014').loads(row['result_json'] or '{}');budget=r.get('budget_lamports');delta=r.get('all_in_roundtrip_delta_lamports')
     if r.get('status')!='ROUNDTRIP_EXECUTED' or r.get('net_gate')!='PASS' or type(budget)!=int or budget<=0 or type(delta)!=int:return None
     loss=max(0,-delta)
     if loss*10000>budget*1500:return None

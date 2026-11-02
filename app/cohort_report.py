@@ -24,7 +24,7 @@ def health(c,now=None):
     state='IDLE' if not positions else 'ERROR' if streak>=3 else 'STALE' if overdue else 'MIGRATION_LAB' if waiting else 'NO_RESULT' if not good else 'OK'
     return dict(completed=len(done),useful=sum(r['status'] in valid for r in done),errors_in_row=streak,
         technical_errors=sum(r['status'] in pm.TECHNICAL for r in done),migration_positions=waiting,
-        last_useful_age_s=age,state=state,last_diagnostic=json.loads(done[0]['result_json'] or '{}') if done else {})
+        last_useful_age_s=age,state=state,last_diagnostic=__import__('json_cache_v1014').loads(done[0]['result_json'] or '{}') if done else {})
 
 def summary(c,selected=None):
     base=capital.summary(c)

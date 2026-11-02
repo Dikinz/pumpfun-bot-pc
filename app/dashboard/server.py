@@ -17,6 +17,10 @@ DETAILS=(Path(__file__).parent/'details.html').read_bytes()
 TERMINAL=(Path(__file__).parent/'terminal.html').read_bytes()
 
 def snap():
+    # v0.7.101.4: one JSON parse per stored result for the whole snapshot (json_cache_v1014).
+    with __import__('json_cache_v1014').shared():return _snap()
+
+def _snap():
     with db.con() as c:
         c.execute('BEGIN')
         diag=diagnostics.summary(c)

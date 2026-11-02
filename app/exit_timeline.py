@@ -21,7 +21,7 @@ def summary(c,monitor=None,limit=100):
     monitor=monitor or {};history=monitor.get('history') or {};bytid={r['trade_id']:r for r in monitor.get('positions',[])}
     rows=[];all_closed=0;missing=0;before=after=cost_total=net=0.
     for r in c.execute('SELECT * FROM exit_audit_v45 ORDER BY rowid DESC'):
-        d=json.loads(r['data_json']);tid=r['trade_id']
+        d=__import__('json_cache_v1014').loads(r['data_json']);tid=r['trade_id']
         buy=dict(c.execute("SELECT * FROM trades WHERE trade_id=? AND side='BUY'",(tid,)).fetchone() or {})
         sell=dict(c.execute("SELECT * FROM trades WHERE trade_id=? AND side='SELL'",(tid,)).fetchone() or {})
         order=d.get('order') or {};fees=[dict(x) for x in c.execute('SELECT * FROM capital_ledger_v0721 WHERE trade_id=?',(tid,))]

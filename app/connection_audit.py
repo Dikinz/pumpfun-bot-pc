@@ -40,7 +40,7 @@ def streak(c,tid=None):
         # Local contention is neither a provider outage nor evidence of a
         # successful check. Keep it in diagnostics but out of remote backoff.
         if row['status'] in ('DATA_REJECTED','AMM_DATA_REJECTED','REQUEST_ERROR','AMM_REQUEST_ERROR'):
-            result=json.loads(row['result_json'] or '{}')
+            result=__import__('json_cache_v1014').loads(row['result_json'] or '{}')
             if (result.get('network_error') or {}).get('category')=='LOCAL_RPC_ADMISSION':continue
         if row['status'] not in pm.TECHNICAL:break
         if last is None:last=row
@@ -68,7 +68,7 @@ def observation_gaps(c,now):
         tid=buy['trade_id'];start=buy['ts'];sell=c.execute("SELECT ts FROM trades WHERE side='SELL' AND trade_id=?",(tid,)).fetchone();end=min(now,sell['ts']) if sell else now
         end=max(start,end);cursor=start;gaps=[];last=None
         for ch in c.execute('SELECT status,finished_ts,result_json FROM position_checks_v0730 WHERE trade_id=? AND finished_ts IS NOT NULL ORDER BY finished_ts',(tid,)):
-            t=ch['finished_ts'];r=json.loads(ch['result_json'] or '{}')
+            t=ch['finished_ts'];r=__import__('json_cache_v1014').loads(ch['result_json'] or '{}')
             if t<start or t>=end or ch['status'] not in valid:continue
             if not (0<=t-r.get('snapshot_received_ts',0)<=5 and 0<=t-r.get('scheduled_ts',0)<=25):continue
             ttl=90 if r.get('route')=='PUMP_AMM' else 30
@@ -89,8 +89,9 @@ def summary(c,now=None):
         r=retry(c,p['trade_id']);r.update(trade_id=p['trade_id'],mint=p['mint'],wait_s=max(0,(r['not_before_ts'] or now)-now));active.append(r)
     alerts=[dict(x) for x in c.execute('SELECT * FROM monitor_alerts_v0737 ORDER BY ts DESC LIMIT 50')]
     errors=[]
-    for r in c.execute('SELECT mint,finished_ts,result_json,status FROM position_checks_v0730 WHERE result_json IS NOT NULL ORDER BY finished_ts DESC LIMIT 300'):
-        d=json.loads(r['result_json']);network=d.get('network_error')
+    # Same 300 most recent checks; SQLite skips rows without a network error before Python parses 20+ KB each.
+    for r in c.execute("SELECT mint,finished_ts,result_json,status FROM (SELECT mint,finished_ts,result_json,status,id FROM position_checks_v0730 WHERE result_json IS NOT NULL ORDER BY finished_ts DESC LIMIT 300) WHERE json_extract(result_json,'$.network_error') IS NOT NULL ORDER BY finished_ts DESC"):
+        d=__import__('json_cache_v1014').loads(r['result_json']);network=d.get('network_error')
         if network:errors.append(dict(mint=r['mint'],ts=r['finished_ts'],status=r['status'],stage=d.get('error_stage') or d.get('progress',{}).get('stage'),error_code=d.get('error_code'),diagnostic=network))
         if len(errors)==20:break
     return dict(active=active,global_streak=streak(c)[0],warning=bool(active) and (streak(c)[0]>=3 or any(r['streak']>=3 for r in active)),alerts=alerts,recent_errors=errors,gaps=observation_gaps(c,now))

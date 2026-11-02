@@ -167,7 +167,7 @@ def summary(c,limit=100):
     counts=dict(c.execute('SELECT status,COUNT(*) FROM preentry_v0729 GROUP BY status'))
     rows=[]
     for row in c.execute('SELECT * FROM preentry_v0729 ORDER BY created_ts DESC LIMIT ?',(limit,)):
-        r=dict(row);r['result']=json.loads(r.pop('result_json') or '{}');r['input']=json.loads(r.pop('input_json'));r.pop('archive')
+        r=dict(row);r['result']=__import__('json_cache_v1014').loads(r.pop('result_json') or '{}');r['input']=__import__('json_cache_v1014').loads(r.pop('input_json'));r.pop('archive')
         r['approval_diagnostics']=entry_diagnostics.explanation(c,r['job_id']) if r['status']=='APPROVAL_EXPIRED' or (r['status']=='READY' and r['valid_until']<time.time()) else None
         rows.append(r)
     return dict(counts=counts,rows=rows,timing=rpc_timing.preentry_summary(c),max_loss_bps=MAX_LOSS_BPS,min_reserve_multiple=1,

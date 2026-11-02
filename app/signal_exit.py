@@ -53,7 +53,7 @@ def summary(c):
         if not signal:continue
         account=None
         try:
-            job=json.loads(row.get('input_json') or '{}');result=json.loads(row.get('result_json') or '{}')
+            job=__import__('json_cache_v1014').loads(row.get('input_json') or '{}');result=__import__('json_cache_v1014').loads(row.get('result_json') or '{}')
             if not isinstance(job,dict) or not isinstance(result,dict):raise ValueError('object required')
             decision=eligibility(row,job,result,signal['signal_ts'],closes.get(tid),inventory.get(tid))
             if decision=='ELIGIBLE':

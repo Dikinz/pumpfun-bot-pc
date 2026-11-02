@@ -123,3 +123,42 @@ def test_terminal_shows_risk_flags_and_sell_wait():
     t=(ROOT/'dashboard'/'terminal.html').read_text(encoding='utf-8')
     assert 'b.risk_watch_v1014' in t and "'Стоп-флаги'" in t and "'Ожидание продажи'" in t and 'входы не блокируются' in t
     assert len(t.encode('utf-8'))<64*1024
+
+def test_json_cache_parses_each_string_once_only_inside_a_snapshot():
+    import json_cache_v1014 as jc
+    raw='{"a":{"b":[1,2]}}'
+    assert jc.loads(raw) is not jc.loads(raw)  # outside: plain json.loads, as in every trading path
+    with jc.shared():
+        first=jc.loads(raw)
+        with jc.shared():assert jc.loads(raw) is first  # nested scope reuses the outer cache
+        assert jc.loads(raw) is first and jc.loads('{}')=={}
+        seen=[]
+        t=threading.Thread(target=lambda:seen.append(jc.loads(raw)));t.start();t.join()
+        assert seen[0]==first and seen[0] is not first  # other threads (e.g. /overview) are not shared
+    assert jc.loads(raw) is not first and jc._LOCAL.cache is None
+
+def test_api_snapshot_parses_check_results_once_and_never_mutates_them(fresh,monkeypatch):
+    import clean_campaign as campaign,monitor_service as ms,json_cache_v1014 as jc
+    from dashboard import server
+    campaign.ensure(fresh,config.DB)
+    result=json.dumps(dict(status='REQUEST_ERROR',network_error=dict(category='TIMEOUT',chain=[dict(control_v95=dict(stage='RPC'))]),
+        rpc_timing=dict(requests=[dict(stage='quote',method='getAccountInfo',status='ERROR',elapsed_ms=12.5,phases_ms=dict(send=1.0))]),snapshot_received_ts=time.time()-1,scheduled_ts=time.time()-2))
+    m=ms.connect()
+    try:
+        for i in range(3):
+            m.execute('INSERT INTO position_checks_v0730(id,trade_id,mint,scheduled_ts,started_ts,finished_ts,status,input_json,result_json) VALUES(?,?,?,?,?,?,?,?,?)',
+                ('c%d'%i,'t1','m1',time.time()-3,time.time()-2,time.time()-1,'REQUEST_ERROR','{"trade_id":"t1","mint":"m1"}',result))
+    finally:m.close()
+    calls=[];shared={}
+    original=json.loads
+    def counting(raw,*a,**k):
+        calls.append(raw);return original(raw,*a,**k)
+    loads=jc.loads
+    def tracking(raw):
+        obj=loads(raw)
+        if jc._LOCAL.cache is not None and isinstance(raw,str):shared[id(obj)]=(raw,obj)
+        return obj
+    monkeypatch.setattr(jc,'loads',tracking);monkeypatch.setattr(jc.json,'loads',counting)
+    snap=server.snap()
+    assert snap['monitor']['connection']['recent_errors'] and calls.count(result)==1
+    assert shared and all(json.dumps(o,sort_keys=True)==json.dumps(original(r),sort_keys=True) for r,o in shared.values())

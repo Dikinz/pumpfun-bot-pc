@@ -71,7 +71,7 @@ def summary(c):
         row=dict(raw);tid=row['trade_id'];sig=signals.get(tid)
         if not sig:continue
         try:
-            job=json.loads(row['input_json'] or '{}');result=json.loads(row['result_json'] or '{}')
+            job=__import__('json_cache_v1014').loads(row['input_json'] or '{}');result=__import__('json_cache_v1014').loads(row['result_json'] or '{}')
             if not isinstance(job,dict) or not isinstance(result,dict):raise ValueError()
             decision,account=assess(c,row,job,result,sig['signal_ts'],closes.get(tid),inventories.get(tid))
             if decision=='ELIGIBLE':

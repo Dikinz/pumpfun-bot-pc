@@ -11,7 +11,7 @@ def timing(finished,signal,closed):
     return 'BEFORE_CLOSE_NO_SIGNAL' if finite(closed) else 'OPEN_NO_SIGNAL'
 def obj(raw):
     try:
-        d=json.loads(raw or '{}')
+        d=__import__('json_cache_v1014').loads(raw or '{}')
         return (d,None) if isinstance(d,dict) else ({},'INVALID_JSON_OBJECT')
     except (TypeError,ValueError):return {},'INVALID_JSON'
 def summary(c,now=None):
