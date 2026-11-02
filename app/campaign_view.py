@@ -26,7 +26,7 @@ def branch(c,primary,role,now):
         positions.append(dict(r,**remainder,wait_diagnostic=wait_details.get(r['trade_id']),exit_decision=state,exit_executor='VERIFIED_ROUTE' if role=='route' else 'AMM_OR_TICK' if role=='amm' else 'TICK_BASELINE',age_s=max(0,at-r['opened_ts']),exit_reason=order['reason'] if order else None,exit_wait_s=wait,
             exit_overdue=wait is not None and wait>config.MAX_HOLD))
     new_closed=0;carried_closed=0
-    trades=deque(maxlen=12);missing=0;closed=0;gross=0.;fees=0.;net_total=0.;wins=0
+    trades=deque(maxlen=12);missing=0;closed=0;gross=0.;fees=0.;net_total=0.;wins=0;nets=[]
     cash=campaign['start_balance'] if campaign else config.START_BALANCE;peak=cash;equity=cash;drawdown=0.
     for r in c.execute("""SELECT t.trade_id,t.mint,t.ts,t.pnl,t.reason,t.hold,COALESCE(l.legs,0) legs,l.fees fees
       FROM trades t LEFT JOIN (SELECT trade_id,COUNT(*) legs,SUM(total_cost) fees FROM capital_ledger_v0721 GROUP BY trade_id) l
@@ -39,7 +39,7 @@ def branch(c,primary,role,now):
         r.update(net=net,cost=cost[1] if net is not None else None);trades.append(r);closed+=1;gross+=r['pnl']
         if net is None:missing+=1
         else:
-            net_total+=net;fees+=cost[1];wins+=net>0
+            net_total+=net;fees+=cost[1];wins+=net>0;nets.append((closed,net))
             equity+=net;peak=max(peak,equity);drawdown=max(drawdown,peak-equity)
     entries=c.execute("SELECT COUNT(*) FROM trades WHERE side='BUY' AND id>?",(fork,)).fetchone()[0]
     pending=dict(c.execute("SELECT status,COUNT(*) FROM preentry_v0729 GROUP BY status"))
@@ -104,7 +104,8 @@ def branch(c,primary,role,now):
     if role=='route':
         wallet_settlements=(dict(r) for r in c.execute('SELECT details FROM branch_amm_settlements ORDER BY settled_ts'))
         model=__import__('cost_classes_v100').wallet_model(wallet_settlements,cap['closed_net'])
-    return dict(persistent_wallet_model_v100=model,stressed_equity_v100=stressed,remainder_slot_exclusions_v100=__import__('remainder_reporting_v100').slot_exclusions(c),failure_v93=cause,cost_basis_v89=('ISOLATED_SELL_WITH_ACCOUNT_SETUP' if role=='route' else 'TICK_FEE_MODEL_WITHOUT_ACCOUNT_SETUP'),live_v87=live,runtime_perf=__import__('runtime_control').read(primary if role=='primary' else engine.path(primary)),first_gap=first_gap,resources=dict(cpu=meta.get('process_cpu_pct'),ram_mb=meta.get('process_ram_mb')),role=role,campaign=campaign,runtime=runtime,blocks=blocks,last_entry_result=last,capital=dict(available=cap['available'],cash=cap['net_cash'],principal=cap['open_principal'],status=cap['status']),
+    risk=__import__('risk_watch_v1014').summary(c,nets,campaign['start_balance'] if campaign else config.START_BALANCE,fork,at,missing)
+    return dict(risk_watch_v1014=risk,persistent_wallet_model_v100=model,stressed_equity_v100=stressed,remainder_slot_exclusions_v100=__import__('remainder_reporting_v100').slot_exclusions(c),failure_v93=cause,cost_basis_v89=('ISOLATED_SELL_WITH_ACCOUNT_SETUP' if role=='route' else 'TICK_FEE_MODEL_WITHOUT_ACCOUNT_SETUP'),live_v87=live,runtime_perf=__import__('runtime_control').read(primary if role=='primary' else engine.path(primary)),first_gap=first_gap,resources=dict(cpu=meta.get('process_cpu_pct'),ram_mb=meta.get('process_ram_mb')),role=role,campaign=campaign,runtime=runtime,blocks=blocks,last_entry_result=last,capital=dict(available=cap['available'],cash=cap['net_cash'],principal=cap['open_principal'],status=cap['status']),
         new_closed=new_closed,carried_closed=carried_closed,entries=entries,closed=closed,wins=wins,net=None if missing else net_total,gross=gross,costs=None if missing else fees,
         accounting_missing=missing,closed_drawdown=None if missing else drawdown,positions=positions,trades=list(reversed(trades)),preentry=pending,timing=timing,
         matched_entry_counts=matched,verified_exits=settlements,verified_routes=route_counts,curve_exits=route_counts.get('PUMP_CURVE',0),amm_exits=route_counts.get('PUMP_AMM',0),unknown_route_exits=sum(n for route,n in route_counts.items() if route not in ('PUMP_CURVE','PUMP_AMM')),stop=stop,transport=transport,input_gap=meta.get('branch_input_gap')=='1' or transport_gap,

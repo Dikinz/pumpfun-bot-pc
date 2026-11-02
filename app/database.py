@@ -94,6 +94,8 @@ def runtime_mode():
     con().execute('PRAGMA busy_timeout=250')
     con().runtime_busy_timeout_ms=250
     __import__('sqlite_diagnostics').record(config.DB,'RUNTIME_MODE',busy_timeout=250)
+    # v0.7.101.4: WAL checkpoints (the commit-path fsync) run off the market thread.
+    __import__('wal_checkpoint_v1014').start(config.DB,con())
 
 
 def init():

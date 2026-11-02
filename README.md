@@ -1,4 +1,4 @@
-# PUMPFUN BOT v0.7.101.3 (PAPER)
+# PUMPFUN BOT v0.7.101.4 (PAPER)
 
 Самостоятельная PAPER-сборка: реальные сделки не отправляются, ключи подписи не нужны.
 Актуальные инструкции: README_RU.txt (русский) и README.txt (English).

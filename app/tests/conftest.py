@@ -34,3 +34,12 @@ def native_reader_bindings_isolation():
     original.cache_clear()
     yield
     original.cache_clear()
+
+@pytest.fixture(autouse=True)
+def wal_checkpointer_isolation():
+    # v0.7.101.4: db.runtime_mode() starts a background WAL checkpoint thread with its own
+    # connection to config.DB; close it so no test keeps a temporary database open.
+    yield
+    import wal_checkpoint_v1014
+    if wal_checkpoint_v1014.ACTIVE is not None:
+        wal_checkpoint_v1014.ACTIVE.close();wal_checkpoint_v1014.ACTIVE=None

@@ -52,6 +52,11 @@ def publish(data,primary=None):
         data=dict(data,monitor_identity_v86=dict(pid=registry.pid,created_ts=registry.created,session=__import__('recovery_gate').admission().get('session')))
     __import__('state_io').atomic_json(paths(primary)['state'],data)
 
+def compact_heartbeat(state):
+    late=state.get('late_creation_v85') or {}
+    return dict({k:v for k,v in state.items() if k!='late_creation_v85'},compact_v1014=True,
+        late_creation_v85=dict(pending=late.get('pending'),owners=len(late.get('owners') or []),history=len(late.get('history') or [])))
+
 def journal(kind,details,primary=None,c=None):
     record=dict(ts=time.time(),kind=kind,**details);p=paths(primary)['journal'];p.parent.mkdir(parents=True,exist_ok=True)
     with p.open('a',encoding='utf-8') as f:f.write(json.dumps(record,ensure_ascii=False)+'\n')
@@ -104,7 +109,7 @@ async def run(primary,parent_pid,parent_created=None,stop_event=None):
         with __import__('recovery_gate').reader(primary),singleton(pths['lock']):
             with closing(connect(primary)) as c:
                 connection_opened=True
-                pm.recover(c);__import__('priority_exit').recover(c);start=time.time();last_mono=time.monotonic();last_wall=start;last_log=0;last_publish=0;warned=set();active={};last_alert_row=0;cleanup_failed=False;failure=None
+                pm.recover(c);__import__('priority_exit').recover(c);start=time.time();last_mono=time.monotonic();last_wall=start;last_log=0;last_full_log=0;last_publish=0;warned=set();active={};last_alert_row=0;cleanup_failed=False;failure=None
                 def parent_alive():
                     if stop_event is not None:return not stop_event.is_set()
                     if not parent_pid:return True
@@ -158,7 +163,12 @@ async def run(primary,parent_pid,parent_created=None,stop_event=None):
                               oldest_active_started_ts=min((job['scheduled_ts'] for task,job in active.values()),default=None),active_check=bool(active),active_check_ids=[job['id'] for task,job in active.values()],active_lanes=list(active),overdue=late)
                             if now-last_publish>=1 or now<last_publish:
                                 publish(state,primary);last_publish=now
-                            if now-last_log>=5:journal('HEARTBEAT',state,primary);last_log=now
+                            if now-last_log>=5:
+                                # v0.7.101.4: the full state (with late-creation history) is journalled once a minute;
+                                # the 5 s beats in between are compact. The state file still has everything every second.
+                                full=now-last_full_log>=60 or now<last_full_log
+                                journal('HEARTBEAT',state if full else compact_heartbeat(state),primary);last_log=now
+                                if full:last_full_log=now
                             for lane in ('exit0','exit1','initial','initial2','regular','regular2'):
                                 if registry.pending or lane in active or len(active)>=2:continue
                                 c.execute('BEGIN')

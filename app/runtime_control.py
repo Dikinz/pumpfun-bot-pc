@@ -137,7 +137,7 @@ class Probe:
         import counter_writer
         writer=counter_writer.ACTIVE.snapshot() if counter_writer.ACTIVE is not None else None
         return dict(schema='RUNTIME_V60',pid=os.getpid(),started_ts=self.started_ts,session=self.control[1] if self.control else None,ts=time.time(),state='PROBE_STOPPED' if self.closed.is_set() else 'RUNNING',
-            loop_pulse_age_s=lag,active_stage=self.stage,sql_v91=sql,diagnostic_writer_v92=writer,market_telemetry_v92=getattr(self,'market_telemetry_v92',None),stalls=self.stalls,first_stall=self.first_stack,latest_stall_v1012=self.latest_stall,samples=samples,**self.extra())
+            loop_pulse_age_s=lag,active_stage=self.stage,sql_v91=sql,diagnostic_writer_v92=writer,market_telemetry_v92=getattr(self,'market_telemetry_v92',None),wal_checkpoint_v1014=__import__('wal_checkpoint_v1014').status(),stalls=self.stalls,first_stall=self.first_stack,latest_stall_v1012=self.latest_stall,samples=samples,**self.extra())
     def watch(self):
         while not self.closed.wait(.5):
             try:

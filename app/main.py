@@ -1411,6 +1411,7 @@ async def heartbeat():
         for _m,_q in list(FAST_SHADOW_V3.items()):
             if wall-_q["started"] > config.FAST_SHADOW_MAX_SECONDS+5: FAST_SHADOW_V3.pop(_m,None)
         nowm=time.monotonic(); lag_ms=max(0.0,(nowm-expected)*1000.0); expected=nowm+1.0
+        __import__('wal_checkpoint_v1014').guard()
         exit_audit.checkpoint(db.con());runtime_status.beat(db.con());run_audit.beat(db.con());db.setm("heartbeat_ts",time.time());cleanup(force=True);ticks+=1
         try:
             if proc is None:proc=psutil.Process(os.getpid());proc.cpu_percent(None)
@@ -1560,4 +1561,5 @@ if __name__=="__main__":
         raise
 
     finally:
+        __import__('wal_checkpoint_v1014').close()
         __import__('shutdown_audit').closed(config.DB,'primary',run_audit.ACTIVE)

@@ -289,6 +289,7 @@ async def _worker(primary,ready=None,session=None,scenario=None):
             run_audit.beat(db.con(),status=final,force=True)
             db.setmany(dict(trade_stream_state=final,stream_state=final,branch_shutdown_state=final,
                 branch_shutdown_reason=stop_reason,branch_shutdown_ts=time.time(),branch_monitor_forced=int(monitor_forced)))
+        __import__('wal_checkpoint_v1014').close()
         __import__('shutdown_audit').closed(config.DB,'branch',session)
         engine.write_lifecycle(primary,dict(session=session,status=final,reason=stop_reason,run_id=run_audit.ACTIVE,
             monitor_forced=monitor_forced,failure_v81=branch_failure,pid=os.getpid(),ts=time.time()))
