@@ -42,6 +42,19 @@ def terminate_tree(child):
     try:child.wait(timeout=3)
     except subprocess.TimeoutExpired:child.kill();child.wait(timeout=3)
 
+def read_ready(ready,deadline):
+    """Tolerate an older worker's non-atomic write or a scanner holding the file: retry until the start deadline."""
+    while True:
+        try:return json.loads(ready.read_text(encoding='utf-8'))
+        except (OSError,ValueError):
+            if time.monotonic()>deadline:raise
+            time.sleep(.05)
+
+def drop_ready(ready):
+    for _ in range(20):
+        try:ready.unlink(missing_ok=True);return
+        except PermissionError:time.sleep(.05)
+
 class Publisher:
     def __init__(self,primary,module="paper_branch"):
         self.created_mono=time.monotonic();self.engine=__import__(module);self.module=module;self.first_gap=None;self.pending_bytes=0;self.peak_bytes=0;self.byte_lock=threading.Lock();self.last_status=0.;self.max_send_ms=0.
@@ -58,8 +71,8 @@ class Publisher:
                 terminate_tree(self.child);raise RuntimeError('BRANCH_START_TIMEOUT')
             time.sleep(.05)
         try:
-            self.worker_pid=bind_worker(self.child,json.loads(ready.read_text(encoding='utf-8')),self.session)
-        finally:ready.unlink(missing_ok=True)
+            self.worker_pid=bind_worker(self.child,read_ready(ready,deadline),self.session)
+        finally:drop_ready(ready)
         self.thread=threading.Thread(target=self.send,daemon=True);self.thread.start()
         self.watchdog=runtime_control.ChildWatchdog(self.session,self.worker_pid)
     def refresh_positions(self):

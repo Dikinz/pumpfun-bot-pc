@@ -312,6 +312,35 @@ async def create_simulation_process(args,out,trace):
     with (out/'child.log').open('wb') as log:
         return await asyncio.create_subprocess_exec(*args,stdin=asyncio.subprocess.DEVNULL,stdout=log,stderr=log,cwd=str(Path(__file__).resolve().parent))
 
+def save_diagnostics(result,out,proc,trace):
+    """Blocking file work after the child ended; runs in a worker thread, never on the event loop."""
+    try:
+        import rpc_timing
+        from windows_child import BackgroundChild
+        rpc_timing.attach(result,out)
+        try:result['progress']=json.loads((out/'progress.json').read_text())
+        except (OSError,ValueError):pass
+        result['child_returncode']=proc.returncode if proc else None
+        # URLs may contain credentials. Keep error types, stack locations and stage, redact URLs.
+        logpath=out/'child.log';clean=''
+        if logpath.exists():
+            with logpath.open('rb') as f:
+                f.seek(0,2);size=f.tell();f.seek(max(0,size-12000));tail=f.read(12000).decode(errors='replace')
+            clean=__import__('child_diagnostics').clean(tail,12000)
+            if not isinstance(proc,BackgroundChild) or proc.done.is_set():logpath.write_text(clean,encoding='utf-8')
+            result['child_log_tail']=clean[-3000:]
+        if result['status']=='CHILD_ERROR' and result.get('child_returncode') in (3221225786,-1073741510):
+            result['status']='INTERRUPTED_STOP'
+        (out/'diagnostic.json').write_text(json.dumps(result),encoding='utf-8')
+        with zipfile.ZipFile(out/'diagnostic.zip','w',zipfile.ZIP_DEFLATED) as z:
+            for name in ('input.json','progress.json','rpc_timing.json','child.log','diagnostic.json','child_lifecycle_v73.json'):
+                if name=='child.log' and logpath.exists():z.writestr(name,clean)
+                elif (out/name).exists():z.write(out/name,name)
+    except Exception as e:
+        trace.error('diagnostic_exception',e)
+        return e
+    return None
+
 async def launch_check(job,out,replay=None,timeout=None,child_script=None):
     """Same launch path for production and offline startup test. Never inherit stdin."""
     out=Path(out);out.mkdir(parents=True,exist_ok=True)
@@ -374,31 +403,9 @@ async def launch_check(job,out,replay=None,timeout=None,child_script=None):
         result=result or {'status':'WORKER_ERROR'}
         result['child_diagnostics_v73']=trace.snapshot()
         result=result or {'status':'WORKER_ERROR'}
-        try:
-            import rpc_timing
-            rpc_timing.attach(result,out)
-            try:result['progress']=json.loads((out/'progress.json').read_text())
-            except (OSError,ValueError):pass
-            result['child_returncode']=proc.returncode if proc else None
-            # URLs may contain credentials. Keep error types, stack locations and stage, redact URLs.
-            import re
-            logpath=out/'child.log';clean=''
-            if logpath.exists():
-                with logpath.open('rb') as f:
-                    f.seek(0,2);size=f.tell();f.seek(max(0,size-12000));tail=f.read(12000).decode(errors='replace')
-                clean=__import__('child_diagnostics').clean(tail,12000)
-                if not isinstance(proc,BackgroundChild) or proc.done.is_set():logpath.write_text(clean,encoding='utf-8')
-                result['child_log_tail']=clean[-3000:]
-            if result['status']=='CHILD_ERROR' and result.get('child_returncode') in (3221225786,-1073741510):
-                result['status']='INTERRUPTED_STOP'
-            (out/'diagnostic.json').write_text(json.dumps(result),encoding='utf-8')
-            with zipfile.ZipFile(out/'diagnostic.zip','w',zipfile.ZIP_DEFLATED) as z:
-                for name in ('input.json','progress.json','rpc_timing.json','child.log','diagnostic.json','child_lifecycle_v73.json'):
-                    if name=='child.log' and logpath.exists():z.writestr(name,clean)
-                    elif (out/name).exists():z.write(out/name,name)
-        except Exception as e:
-            trace.error('diagnostic_exception',e)
-            if cleanup_error is None:cleanup_error=e
+        # v0.7.101.5: a 17 s open() of diagnostic.zip (antivirus scan) on the event loop stopped the 02.11 run.
+        diagnostic_error=await asyncio.to_thread(save_diagnostics,result,out,proc,trace)
+        if diagnostic_error is not None and cleanup_error is None:cleanup_error=diagnostic_error
         if cleanup_error is not None:
             cleanup_error.child_diagnostics_v73=trace.data
             raise cleanup_error

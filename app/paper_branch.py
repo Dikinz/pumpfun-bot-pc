@@ -164,7 +164,9 @@ async def _worker(primary,ready=None,session=None,scenario=None):
     if exit_quotes.FX_STATUS!='READY':raise RuntimeError('BRANCH_FX_NOT_READY')
     monitor=None
     engine.write_lifecycle(primary,dict(session=session,status='RUNNING',pid=os.getpid(),ts=time.time()))
-    if ready:Path(ready).write_text(json.dumps(dict(session=session,pid=os.getpid())))
+    if ready:
+        # Atomic: the primary polls for the name and must never read a half-written file (v0.7.101.5).
+        part=Path(str(ready)+'.part');part.write_text(json.dumps(dict(session=session,pid=os.getpid())),encoding='utf-8');os.replace(part,ready)
     incoming=runtime_control.ByteInbox()
     input_state=runtime_control.InputState()
     probe=runtime_control.Probe(config.DB,extra=lambda:dict(input=input_state.snapshot(),queue_depth=incoming.qsize(),queue_payload_bytes=incoming.bytes),control=(target,session)).start()

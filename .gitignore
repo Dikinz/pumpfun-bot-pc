@@ -1,5 +1,6 @@
 # Runtime data, keys and local environments: never commit
 .venv/
+.venv-ui/
 app/.env
 *.env
 app/data/

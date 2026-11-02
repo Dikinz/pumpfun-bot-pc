@@ -1,6 +1,6 @@
 Устойчивость SQLite в длинных прогонах и стоп-флаги наблюдения: RELEASE_NOTES_v1014.md (ранее RELEASE_NOTES_v1013.md). Критерии дорожной карты сохранены.
 
-v0.7.101.4 — background WAL checkpoints, journal retention, observation-only risk flags (02.11.2026)
+v0.7.101.5 — diagnostics written off the event loop, atomic branch start file, desktop app 16_DESKTOP (02.11.2026)
 Read RELEASE_NOTES_v101.md / README_RU.txt.
 Fresh folder: install, settings, restore the complete stopped campaign if resuming, finish 04_CHECK.
 14_RPC_STATUS performs exact audited recovery and one guarded read-only genesis RPC.

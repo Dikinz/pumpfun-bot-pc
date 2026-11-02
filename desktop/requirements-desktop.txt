@@ -1,0 +1,37 @@
+# Window environment .venv-ui (Python 3.14.7, Windows x64). Installed by 16_DESKTOP.bat:
+#   .venv-ui\Scripts\python.exe -I -m pip install --require-hashes -r desktop\requirements-desktop.txt
+# Versions = pip freeze of the stage-1/WP3 test environment (pywebview 6.2.1 on .NET Framework 4.8.1 via
+# pythonnet, WebView2 runtime 156). Hashes = sha256 of the exact files pip downloaded for that environment
+# (cp314 win_amd64 / py3 wheels; proxy-tools has only an sdist on PyPI). Test-only packages (pytest and its
+# dependencies) are not listed: desktop tests run in the bot's .venv.
+# Updating a version: install into a fresh short-path venv, run desktop\tests, then replace version and hash.
+
+# pywebview and its Windows backend
+pywebview==6.2.1 \
+    --hash=sha256:9d07275f53894ab4d5e2e0e996227193e7187dec276d9b624dccbce029216b46
+bottle==0.13.4 \
+    --hash=sha256:045684fbd2764eac9cdeb824861d1551d113e8b683d8d26e296898d3dd99a12e
+proxy-tools==0.1.0 \
+    --hash=sha256:ccb3751f529c047e2d8a58440d86b205303cf0fe8146f784d1cbcd94f0a28010
+typing-extensions==4.16.0 \
+    --hash=sha256:481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8
+pythonnet==3.2.1 \
+    --hash=sha256:dd5668b74b0c903d9a24e1ba86f728fc490f8e919d56b3c24bf06739b9ee2b7f
+clr-loader==0.3.1 \
+    --hash=sha256:cbad189de20d202a7d621956b0fc38049e13c9bf7ca2923441eff725cd121aa1
+cffi==2.1.1 \
+    --hash=sha256:3222ba5d678f80a030e6afbcc33dc1ae5cb45facabb61cee2c7016b8432fde48
+pycparser==3.12 \
+    --hash=sha256:a076f3f489b39b43ed13563a1dafe42447445bec2e294154ec5c57fcdda4c85e
+
+# tray icon
+pystray==0.19.5 \
+    --hash=sha256:a0c2229d02cf87207297c22d86ffc57c86c227517b038c0d3c59df79295ac617
+pillow==13.0.0 \
+    --hash=sha256:f7cbb7a64e7ec664775195e4f81923bc8a93d9451b963f844e59118f63147a7a
+six==1.17.0 \
+    --hash=sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274
+
+# engine host liveness (pid + create_time)
+psutil==7.2.2 \
+    --hash=sha256:eb7e81434c8d223ec4a219b5fc1c47d0417b12be7ea866e24fb5ad6e84b3d988

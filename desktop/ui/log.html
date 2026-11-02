@@ -1,0 +1,40 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<title>Журнал · PAPER</title><style>
+:root{--bg:#0b0e11;--panel:#12161c;--panel2:#161b22;--line:#222a35;--line2:#2c3542;--tx:#e6e8eb;--tx2:#aab2bd;--mut:#8a93a0;--acc:#8b9cff;--up:#2ebd85;--dn:#f6465d;--warn:#f0b90b;--acc-bg:rgba(139,156,255,.12);--warn-bg:rgba(240,185,11,.12);--sans:"Segoe UI",system-ui,Arial,sans-serif;--mono:"Cascadia Mono",Consolas,ui-monospace,monospace;color-scheme:dark}
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--tx);font:13px/1.45 var(--sans);display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.paper{background:var(--acc-bg);color:var(--acc);border:1px solid var(--acc);border-radius:4px;padding:1px 8px;font-size:11px;font-weight:600}
+#name{font-family:var(--mono);font-size:12px;color:var(--tx2);overflow-wrap:anywhere}.sp{flex:1}
+button{font:inherit;color:var(--tx);background:var(--panel2);border:1px solid var(--line2);border-radius:5px;padding:4px 10px;cursor:pointer}
+button:hover{border-color:var(--acc)}button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+label{color:var(--tx2);font-size:12px;display:flex;gap:5px;align-items:center}
+.ban{padding:6px 14px;background:var(--warn-bg);color:var(--warn);border-bottom:1px solid var(--line);white-space:pre-wrap}
+.ban:empty{display:none}
+pre{flex:1;margin:0;overflow:auto;padding:10px 14px;font:12px/1.45 var(--mono);color:var(--tx2);white-space:pre-wrap;overflow-wrap:anywhere}
+</style></head><body>
+<div class="top"><b>Журнал</b><span class="paper">PAPER</span><span id="name">—</span><span class="sp"></span>
+<label><input type="checkbox" id="follow" checked>следить</label>
+<button id="bRes">Папка results</button><button id="bLogs">Папка журналов</button></div>
+<div class="ban" id="info"></div>
+<pre id="log">загрузка…</pre>
+<script>
+"use strict";
+var last=null;
+function api(){return window.pywebview&&window.pywebview.api?window.pywebview.api:null}
+function render(r){
+ if(!r)return;var pre=document.getElementById("log");
+ document.getElementById("name").textContent=r.name||"журнала нет";
+ var info=[],a=r.action;
+ if(a&&a.kind){info.push((a.kind==="results"?"Результаты (05)":"Проверка (04)")+": "+(a.done?(a.status+" — "+a.text):"выполняется"));if(a.evidence)info.push("Папка результатов: "+a.evidence)}
+ if(r.warning)info.push(r.warning);
+ document.getElementById("info").textContent=info.join("\n");
+ if(r.text!==last){var atEnd=pre.scrollTop+pre.clientHeight>=pre.scrollHeight-20;pre.textContent=r.text||"";last=r.text;
+  if(document.getElementById("follow").checked||atEnd)pre.scrollTop=pre.scrollHeight}
+}
+function poll(){var p=api();if(p)p.get_log().then(render).catch(function(){})}
+document.getElementById("bRes").addEventListener("click",function(){var p=api();if(p)p.open_results_folder()});
+document.getElementById("bLogs").addEventListener("click",function(){var p=api();if(p)p.open_logs()});
+window.addEventListener("pywebviewready",poll);setInterval(poll,2000);poll();
+</script></body></html>

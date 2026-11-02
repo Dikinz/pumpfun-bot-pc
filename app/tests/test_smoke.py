@@ -3,7 +3,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 import pathlib
 def test_config():
  import config
- assert config.VERSION=="v0.7.101.4" and config.PORT==8188 and config.DB=="data/clean_0762.db"
+ assert config.VERSION=="v0.7.101.5" and config.PORT==8188 and config.DB=="data/clean_0762.db"
  assert config.STRATEGY_FINALIZED and config.FINAL_PP_VARIANT=="PP_10_7"
  assert config.EXECUTION_SIM_ENABLED
 
@@ -74,7 +74,7 @@ def test_v0691_model_gate_import_before_runtime():
 
 def test_v0691_dashboard_port_label():
  import pathlib
- assert "v0.7.101.4" in pathlib.Path("dashboard/details.html").read_text(encoding='utf-8')
+ assert "v0.7.101.5" in pathlib.Path("dashboard/details.html").read_text(encoding='utf-8')
 
 
 def test_final_gate_validation_schema():
@@ -113,7 +113,7 @@ def test_v073_feature_lab_broad_entries():
 
 def test_v079_fast_recovery_signal_lab():
  import config, pathlib, database as db
- assert config.VERSION == "v0.7.101.4"
+ assert config.VERSION == "v0.7.101.5"
  assert config.PORT == 8188
  assert config.DB == "data/clean_0762.db"
  assert config.PRESSURE_GATE_ENABLED is False
@@ -128,7 +128,7 @@ def test_v079_fast_recovery_signal_lab():
  assert config.FAST_RECOVERY_SIGNAL_MIN_BASE_DELTA_PER_FAST == 0.05
  assert config.FAST_RECOVERY_SIGNAL_BIG_WORSE_USD == 0.30
  page=pathlib.Path("dashboard/details.html").read_text(encoding='utf-8')
- assert "v0.7.101.4" in page and "FAST RECOVERY SIGNAL LAB" not in page
+ assert "v0.7.101.5" in page and "FAST RECOVERY SIGNAL LAB" not in page
  assert "positionRows" in page and "monitorRows" in page
  main=pathlib.Path("main.py").read_text(encoding='utf-8')
  assert "fast_recovery_signal_start" in main and "fast_recovery_signal_tick" in main
@@ -176,7 +176,7 @@ def test_dashboard_socket_and_html_polling_hotfix():
 
 def test_v0711_config_and_schema():
  import config,database as db
- assert config.VERSION=="v0.7.101.4" and config.PORT==8188 and config.DB=="data/clean_0762.db"
+ assert config.VERSION=="v0.7.101.5" and config.PORT==8188 and config.DB=="data/clean_0762.db"
  assert config.FAST_REENTRY_ENABLED is True
  assert config.FAST_REENTRY_TARGET_FAST==300 and config.FAST_REENTRY_MIN_REENTRIES==80
  assert config.FAST_REENTRY_TRIGGER_RECOVERY_PCT==0.05
@@ -221,7 +221,7 @@ def test_v0711_env_and_launchers():
  assert "DATABASE_PATH=data/clean_0762.db" in env and "DASHBOARD_PORT=8188" in env
  assert "FAST_RECOVERY_RISK_ENABLED=false" in env and "FAST_REENTRY_ENABLED=true" in env
  root=pathlib.Path('..')
- assert {p.name for p in root.glob('*.bat')}=={'01_INSTALL.bat','02_SETTINGS.bat','03_START.bat','04_CHECK.bat','05_RESULTS.bat','06_AMM_CHECK.bat','07_REVIEW_SAVED_REPORT.bat','08_PRESERVE_DATA.bat','09_RECOVERY_CHECK.bat','10_TEST_AMM_STOP.bat','11_PERF_CHECK.bat','12_NETWORK_CHECK.bat','13_SPAWN_DIAGNOSTICS.bat','14_RPC_STATUS.bat','15_PAPER_FAULT_TEST.bat'}
+ assert {p.name for p in root.glob('*.bat')}=={'01_INSTALL.bat','02_SETTINGS.bat','03_START.bat','04_CHECK.bat','05_RESULTS.bat','06_AMM_CHECK.bat','07_REVIEW_SAVED_REPORT.bat','08_PRESERVE_DATA.bat','09_RECOVERY_CHECK.bat','10_TEST_AMM_STOP.bat','11_PERF_CHECK.bat','12_NETWORK_CHECK.bat','13_SPAWN_DIAGNOSTICS.bat','14_RPC_STATUS.bat','15_PAPER_FAULT_TEST.bat','16_DESKTOP.bat'}
  assert not list(pathlib.Path('.').glob('*.bat'))
 
 

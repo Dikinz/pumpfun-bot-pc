@@ -264,7 +264,7 @@ def stop_child(child, graceful=False,primary=None,primary_stalled=False):
         except psutil.Error:pass
     return dict(forced=True,exit_code=child.returncode,branch_direct_stop_v1012=branch_stop)
 
-def start(stop_condition=None):
+def start(stop_condition=None,open_browser=True):
     setup_env()
     import config,database as db,wallet_costs,monitor_service,system_health
     import release_guard
@@ -299,7 +299,7 @@ def start(stop_condition=None):
             flags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name=='nt' else 0
             children['bot']=subprocess.Popen([sys.executable,'main.py'],cwd=APP,creationflags=flags)
             children['monitor']=subprocess.Popen([sys.executable,'monitor_service.py','--parent-pid',str(children['bot'].pid),'--stdin-lifetime'],cwd=APP,stdin=subprocess.PIPE)
-            webbrowser.open('http://127.0.0.1:'+str(config.PORT))
+            if open_browser:webbrowser.open('http://127.0.0.1:'+str(config.PORT))
             print('PAPER startup requested. Trading readiness is checked inside the bot; inspect dashboard and subsequent messages. Ctrl+C once to stop.')
             recorder.sample(children,force=True);audit.capture(children)
             while children['bot'].poll() is None:
