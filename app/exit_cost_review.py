@@ -135,6 +135,12 @@ def scenario(c,role,monitor=None):
                     if matches:
                         row['setup_excluded_sensitivity_net']=component['pnl_units']+component['token_account_setup']+component['volume_account_setup']
                         row['sensitivity_note']='NOT_REALIZED_PNL_OR_WALLET_REPLAY; refund/reuse not proven; original ledger unchanged'
+                elif account.get('cost_model')=='ROUTE_WRITE_OFF_V1017' and row['net'] is not None:
+                    # v0.7.101.7: drained curve, no sale to reconcile; the ledger must book exactly the lost entry.
+                    try:matches=math.isclose(row['net'],float(account['pnl_units']),abs_tol=1e-8) and settlement['receipt']==0
+                    except (KeyError,TypeError,ValueError):matches=False
+                    row['setup_status']='WRITTEN_OFF_DRAINED_CURVE' if matches else 'LEDGER_MISMATCH'
+                    if matches:row.update(cost_model=account['cost_model'],strict_net=row['net'],setup_excluded_sensitivity_net=row['net'])
         rows.append(row)
     return rows
 
@@ -175,17 +181,18 @@ def build(paths,source=None):
             rows+=scenario(c,role,m)
     totals={}
     for role in paths:
-        subset=[r for r in rows if r['role']==role];reconciled=[r for r in subset if r['setup_status'] in ('RECONCILED_ISOLATED','RECONCILED_WALLET_MODEL')]
+        subset=[r for r in rows if r['role']==role];sold=[r for r in subset if r['setup_status'] in ('RECONCILED_ISOLATED','RECONCILED_WALLET_MODEL')]
+        reconciled=sold+[r for r in subset if r['setup_status']=='WRITTEN_OFF_DRAINED_CURVE']  # write-offs: no sale, no exit setup
         complete=all(r['net'] is not None for r in subset)
         totals[role]=dict(closed=len(subset),accounted=sum(r['net'] is not None for r in subset),net=sum(r['net'] for r in subset) if complete else None,
           before_signal=sum(r['attribution'].get('before_signal') or 0 for r in subset),
           after_signal=sum(r['attribution'].get('after_signal') or 0 for r in subset),
           attribution_missing=sum(r['attribution'].get('net') is None for r in subset),
-          setup_reconciled=len(reconciled),setup_coverage='COMPLETE' if subset and len(reconciled)==len(subset) else 'PARTIAL' if reconciled else 'UNKNOWN',
-          token_setup=sum(r['settlement']['components']['token_account_setup'] for r in reconciled) if reconciled else None,
-          volume_setup=sum(r['settlement']['components']['volume_account_setup'] for r in reconciled) if reconciled else None,
-          local_fee=sum(r['settlement']['components']['local_transaction_fee'] for r in reconciled) if reconciled else None,
-          balance_residual=sum(r['settlement']['components']['exit_fee_balance_residual'] for r in reconciled) if reconciled else None,
+          setup_reconciled=len(reconciled),written_off_v1017=len(reconciled)-len(sold),setup_coverage='COMPLETE' if subset and len(reconciled)==len(subset) else 'PARTIAL' if reconciled else 'UNKNOWN',
+          token_setup=sum(r['settlement']['components']['token_account_setup'] for r in sold) if sold else None,
+          volume_setup=sum(r['settlement']['components']['volume_account_setup'] for r in sold) if sold else None,
+          local_fee=sum(r['settlement']['components']['local_transaction_fee'] for r in sold) if sold else None,
+          balance_residual=sum(r['settlement']['components']['exit_fee_balance_residual'] for r in sold) if sold else None,
           setup_excluded_sensitivity_net=sum(r['setup_excluded_sensitivity_net'] for r in reconciled) if len(reconciled)==len(subset) and subset else None)
     return dict(schema='EXIT_COST_REVIEW_V63',source=source,scope='WHOLE_SAVED_CAMPAIGN',read_only=True,rows=rows,totals=totals,
       pairs=pairs([r for r in rows if r['role']=='primary'],[r for r in rows if r['role']=='route']),

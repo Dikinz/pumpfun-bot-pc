@@ -75,7 +75,7 @@ def filled(c,oid,trade_id,price,e):
     if c.execute("SELECT 1 FROM sqlite_master WHERE name='branch_amm_settlements' AND type='table'").fetchone():
         amm=c.execute('SELECT check_id,available_ts,details FROM branch_amm_settlements WHERE trade_id=?',(trade_id,)).fetchone()
         if amm and row['side']=='SELL':
-            c.execute("UPDATE paper_orders_v0720 SET status='FILLED',trade_id=?,fill_ts=?,fill_price=?,fill_signature=NULL,fill_provider_ts=NULL,wait_ms=?,note=? WHERE order_id=?",(trade_id,time.time(),price,(amm['available_ts']-row['signal_ts'])*1000,'LOCAL_CURVE_VERIFIED_NO_BROADCAST' if json.loads(amm['details']).get('route')=='PUMP_CURVE' else 'LOCAL_AMM_VERIFIED_NO_BROADCAST',oid))
+            c.execute("UPDATE paper_orders_v0720 SET status='FILLED',trade_id=?,fill_ts=?,fill_price=?,fill_signature=NULL,fill_provider_ts=NULL,wait_ms=?,note=? WHERE order_id=?",(trade_id,time.time(),price,(amm['available_ts']-row['signal_ts'])*1000,{'PUMP_CURVE':'LOCAL_CURVE_VERIFIED_NO_BROADCAST','DRAINED_CURVE_WRITE_OFF':'DRAINED_CURVE_WRITE_OFF_NO_SALE'}.get(json.loads(amm['details']).get('route'),'LOCAL_AMM_VERIFIED_NO_BROADCAST'),oid))
             return
     if not eligible(row,e):raise RuntimeError('Fill evidence is ineligible')
     c.execute("""UPDATE paper_orders_v0720 SET status='FILLED',trade_id=?,fill_ts=?,fill_price=?,fill_signature=?,fill_provider_ts=?,wait_ms=?,price_age_ms=?,provider_lag_ms=? WHERE order_id=?""",

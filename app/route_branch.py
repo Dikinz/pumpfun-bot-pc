@@ -50,6 +50,43 @@ def wallet_account(c,account,route):
         note='Persistent PAPER wallet: token rent refunded on close minus one close fee; volume account paid once per route. '
             'Refund and wallet lifecycle are modelled, not proven on chain; priority/landing costs unknown. Strict isolated values in strict_*.')
 
+WRITE_OFF='DRAINED_CURVE_WRITE_OFF'
+WRITE_OFF_COST_MODEL='ROUTE_WRITE_OFF_V1017'
+WRITE_OFF_AFTER_S=600.
+WRITE_OFF_MIN_CHECKS=3
+NO_EVIDENCE=('STALE_OR_PRE_SIGNAL','INVALID_TIMES','RECOVERY_INVALIDATED','INVALID_PAYLOAD')
+
+def drained_streak(c,tid,signal,available):
+    """v0.7.101.7: unbroken run of fresh empty-curve results after the exit signal (this one included).
+    Results without usable evidence neither extend nor break it. Returns (first available_ts, count)."""
+    start=available;n=1
+    for ts,decision in c.execute('SELECT available_ts,decision FROM route_exit_decisions_v59 WHERE trade_id=? AND available_ts>=? AND available_ts<? ORDER BY available_ts DESC',(tid,signal,available)):
+        if decision in NO_EVIDENCE:continue
+        if decision!='INSUFFICIENT_LIQUIDITY_OPEN':break
+        start=ts;n+=1
+    return start,n
+
+def write_off_account(c,row,job,result,start,checks):
+    """A drained curve cannot pay for the tokens (real SOL below the sale amount): zero receipt, the whole entry is lost.
+    quote_received_lamports is the real-reserve upper bound (at least 1 lamport for the ledger price), not a sale.
+    02.11–03.11.2026: two such positions held both ROUTE slots for 7–9 h and the branch stopped trading."""
+    inv=job.get('inventory') or {};reserves=result.get('reserves') or {}
+    if job.get('trade_id')!=row['trade_id'] or inv.get('trade_id')!=row['trade_id'] or inv.get('mint')!=row['mint']:return None
+    entry=c.execute("SELECT notional,total_cost FROM capital_ledger_v0721 WHERE trade_id=? AND side='BUY'",(row['trade_id'],)).fetchone()
+    spendable=reserves.get('spendable_lamports');upper=reserves.get('sell_gross_upper_lamports')
+    if not entry or type(spendable)!=int or type(upper)!=int or not 0<=spendable<upper:return None
+    with localcontext() as ctx:
+        ctx.prec=60
+        size=Decimal(str(inv['size_usdc']));fx=Decimal(str(inv['sol_usdc']));cost=Decimal(str(entry[1]))
+        if not all(v.is_finite() for v in (size,fx,cost)) or size<=0 or fx<=0 or size!=Decimal(str(entry[0])):return None
+        pnl=-size-cost
+    return dict(cost_model=WRITE_OFF_COST_MODEL,receipt_units='0',pnl_units=str(pnl),strict_receipt_units='0',strict_pnl_units=str(pnl),
+        size_units=str(size),entry_cost_units=str(cost),fx=str(fx),quote_received_lamports=max(1,spendable),
+        real_sol_lamports=reserves.get('real_sol_lamports'),spendable_lamports=spendable,sell_gross_upper_lamports=upper,
+        drained_since_ts=start,drained_checks=checks,
+        note='Curve real SOL below the sale amount on every fresh check for at least %d s after the exit signal: tokens unsellable. '
+            'Written off with zero receipt; the token account keeps the tokens, so no rent refund.'%WRITE_OFF_AFTER_S)
+
 def assess(c,row,job,result,signal,inventory,now):
     import amm_exit_scenario as amm,signal_exit as se,exit_rules_v33 as costs
     if not __import__('recovery_gate').allowed(job):return 'RECOVERY_INVALIDATED',None
@@ -117,6 +154,17 @@ def poll(main):
                 if decision=='ELIGIBLE':
                     if common.settle(main,row,a,row['id'],row['finished_ts'],dict(accounting=a,signal=sig,route=route,scenario='ROUTE_PAPER_V59'),route):decision='SETTLED'
                     else:decision='POSITION_OR_ORDER_CHANGED'
+            elif decision=='INSUFFICIENT_LIQUIDITY_OPEN':
+                # A curve that stays drained never pays; holding it forever froze the slot and hid the loss.
+                start,checks=drained_streak(local,tid,sig['signal_ts'],row['finished_ts'])
+                if checks>=WRITE_OFF_MIN_CHECKS and row['finished_ts']-start>=WRITE_OFF_AFTER_S:
+                    try:w=write_off_account(local,row,j,r,start,checks)
+                    except (KeyError,TypeError,ValueError,InvalidOperation):w=None
+                    if w:
+                        evidence=dict(source='local_curve_reserves',price_basis='REAL_RESERVE_UPPER_BOUND_NO_SALE',clock_status='LOCAL_RESERVE_EVIDENCE')
+                        settled=common.settle(main,row,w,row['id'],row['finished_ts'],dict(accounting=w,signal=sig,route=WRITE_OFF,scenario='ROUTE_PAPER_V59'),
+                            WRITE_OFF,reason='CURVE_WRITE_OFF',rate_source=WRITE_OFF,evidence=evidence)
+                        decision='WRITTEN_OFF' if settled else 'POSITION_OR_ORDER_CHANGED'
             local.execute('INSERT OR IGNORE INTO route_exit_decisions_v59 VALUES(?,?,?,?,?,?)',(row['id'],tid,row['mint'],row['finished_ts'],decision,route))
 
 def lifecycle_path(primary,transport=False):

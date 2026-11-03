@@ -53,6 +53,7 @@ def branch(c,primary,role,now):
     if c.execute("SELECT 1 FROM sqlite_master WHERE name='branch_amm_settlements'").fetchone():
         for row in c.execute("SELECT json_extract(details,'$.route') route,COUNT(*) n FROM branch_amm_settlements GROUP BY json_extract(details,'$.route')"):
             route_counts[row['route'] or 'UNKNOWN']=row['n']
+    write_offs=route_counts.pop(__import__('route_branch').WRITE_OFF,0)  # v0.7.101.7: losses on drained curves, not sales
     settlements=sum(route_counts.values())
     engine=__import__('route_branch') if role=='route' else paper_branch
     stop=engine.read_lifecycle(primary);transport=engine.read_lifecycle(primary,True)
@@ -115,7 +116,7 @@ def branch(c,primary,role,now):
     return dict(risk_watch_v1014=risk,persistent_wallet_model_v100=model,stressed_equity_v100=stressed,remainder_slot_exclusions_v100=__import__('remainder_reporting_v100').slot_exclusions(c),failure_v93=cause,cost_basis_v89=(__import__('route_branch').COST_MODEL if role=='route' else 'TICK_FEE_MODEL_WITHOUT_ACCOUNT_SETUP'),live_v87=live,runtime_perf=__import__('runtime_control').read(primary if role=='primary' else engine.path(primary)),first_gap=first_gap,resources=dict(cpu=meta.get('process_cpu_pct'),ram_mb=meta.get('process_ram_mb')),role=role,campaign=campaign,runtime=runtime,blocks=blocks,last_entry_result=last,capital=dict(available=cap['available'],cash=cap['net_cash'],principal=cap['open_principal'],status=cap['status']),
         new_closed=new_closed,carried_closed=carried_closed,entries=entries,closed=closed,wins=wins,net=None if missing else net_total,gross=gross,costs=None if missing else fees,
         accounting_missing=missing,closed_drawdown=None if missing else drawdown,positions=positions,trades=list(reversed(trades)),preentry=pending,timing=timing,
-        matched_entry_counts=matched,verified_exits=settlements,verified_routes=route_counts,curve_exits=route_counts.get('PUMP_CURVE',0),amm_exits=route_counts.get('PUMP_AMM',0),unknown_route_exits=sum(n for route,n in route_counts.items() if route not in ('PUMP_CURVE','PUMP_AMM')),stop=stop,transport=transport,input_gap=meta.get('branch_input_gap')=='1' or transport_gap,
+        matched_entry_counts=matched,verified_exits=settlements,write_offs_v1017=write_offs,verified_routes=route_counts,curve_exits=route_counts.get('PUMP_CURVE',0),amm_exits=route_counts.get('PUMP_AMM',0),unknown_route_exits=sum(n for route,n in route_counts.items() if route not in ('PUMP_CURVE','PUMP_AMM')),stop=stop,transport=transport,input_gap=meta.get('branch_input_gap')=='1' or transport_gap,
         stream=dict(state=meta.get('trade_stream_state'),age_s=max(0,at-last_market) if last_market>0 else None))
 
 def roadmap(primary,amm,route=None):
@@ -145,7 +146,7 @@ def overview(primary=None):
         try:
             with closing(sqlite3.connect(route_branch.path(primary).as_uri()+'?mode=ro',uri=True,timeout=.5)) as c:
                 c.execute('BEGIN');route=branch(c,primary,'route',now)
-                route['verified_routes']=dict(c.execute("SELECT json_extract(details,'$.route'),COUNT(*) FROM branch_amm_settlements GROUP BY json_extract(details,'$.route')"))
+                route['verified_routes']=dict(c.execute("SELECT json_extract(details,'$.route'),COUNT(*) FROM branch_amm_settlements WHERE json_extract(details,'$.route') IS NOT ? GROUP BY json_extract(details,'$.route')",(route_branch.WRITE_OFF,)))
                 route['exit_decisions']=dict(c.execute('SELECT decision,COUNT(*) FROM route_exit_decisions_v59 GROUP BY decision'))
             if not p['campaign'] or not route['campaign'] or route['campaign']['id']!=p['campaign']['id']:route=dict(status='CAMPAIGN_MISMATCH')
         except (sqlite3.Error,clean_campaign.CampaignError,ValueError):route=dict(status='BRANCH_REPORT_ERROR')

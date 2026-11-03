@@ -6,6 +6,9 @@ from pathlib import Path
 SCHEMA='''CREATE TABLE IF NOT EXISTS capital_settings_v0721(k TEXT PRIMARY KEY,v REAL);
 CREATE TABLE IF NOT EXISTS capital_ledger_v0721(trade_id TEXT,side TEXT,ts REAL,notional REAL,pool_rate REAL,pool_fee REAL,route_fee REAL,fixed_cost REAL,total_cost REAL,cash_delta REAL,rate_source TEXT,PRIMARY KEY(trade_id,side));'''
 
+# SELL rows booked from a branch settlement (gross, receipt, cost); v0.7.101.7 adds the drained-curve write-off.
+SETTLED_SOURCES=('AMM_VERIFIED_ISOLATED','CURVE_VERIFIED_ISOLATED','DRAINED_CURVE_WRITE_OFF')
+
 def init(c,start):
     c.executemany('INSERT OR IGNORE INTO capital_settings_v0721 VALUES(?,?)',[('start',start),('route_rate',.0025),('fixed_per_fill',.005),('entry_pool_cap',.03)])
 
@@ -59,12 +62,12 @@ def summary(c):
     for r in c.execute(query):
         total+=r['total_cost'];pool_total+=r['pool_fee'];route_total+=r['route_fee'];fixed_total+=r['fixed_cost']
         if r['audit_closed'] is not None:closed_cost+=r['total_cost']
-        missing_rate+=r['rate_source'] not in ('provider','AMM_VERIFIED_ISOLATED','CURVE_VERIFIED_ISOLATED')
+        missing_rate+=r['rate_source'] not in ('provider',)+SETTLED_SOURCES
         expected=r['audit_size'] if r['audit_buy'] is not None and r['side']=='BUY' else r['audit_size']*r['audit_price']/r['audit_entry'] if r['audit_buy'] is not None and r['audit_trade'] is not None else None
         close=lambda a,b: a is not None and b is not None and math.isclose(a,b,rel_tol=1e-9,abs_tol=1e-9)
         if not close(expected,r['notional']):issue('Notional mismatch')
         if not close(r['total_cost'],r['pool_fee']+r['route_fee']+r['fixed_cost']):issue('Cost sum mismatch')
-        special=r['rate_source'] in ('AMM_VERIFIED_ISOLATED','CURVE_VERIFIED_ISOLATED')
+        special=r['rate_source'] in SETTLED_SOURCES
         if special:
             a=dict(gross=r['settle_gross'],receipt=r['settle_receipt'],cost=r['settle_cost']) if r['settle_gross'] is not None else None
             if not a or r['side']!='SELL' or not close(r['notional'],a['gross']) or not close(r['total_cost'],a['cost']) or not close(r['cash_delta'],a['receipt']) or not close(a['gross']-a['receipt'],a['cost']):issue('AMM settlement mismatch')

@@ -77,7 +77,7 @@ def seed(primary,target=None):
                 c.execute("INSERT OR IGNORE INTO branch_info VALUES('created_ts',?)",(str(time.time()),))
     return target
 
-def settle(main,row,account,check_id,available,details,route="PUMP_AMM"):
+def settle(main,row,account,check_id,available,details,route="PUMP_AMM",reason=None,rate_source=None,evidence=None):
     """Single transaction with the original sell side effects and reconciled costs."""
     import database as db,paper_capital as cap
     tid=row['trade_id'];mint=row['mint'];c=db.con();q=main.P.get(mint)
@@ -96,8 +96,8 @@ def settle(main,row,account,check_id,available,details,route="PUMP_AMM"):
             pending=c.execute("SELECT order_id FROM paper_orders_v0720 WHERE trade_id=? AND side='SELL' AND status='PENDING'",(tid,)).fetchone()
             if not pending:return False
             c.execute('INSERT INTO branch_amm_settlements VALUES(?,?,?,?,?,?,?,?)',(tid,check_id,available,time.time(),gross,receipt,cost,json.dumps(details)))
-            main.sell(mint,price,'CURVE_VERIFIED_EXIT' if route=='PUMP_CURVE' else 'AMM_VERIFIED_EXIT',_fill=True,_order_id=pending[0],_settlement_evidence=dict(source='local_curve' if route=='PUMP_CURVE' else 'local_amm',price_basis='POOL_QUOTE_CREDIT',received_ts=available,provider_ts=None,signature=None,clock_status='LOCAL_SIMULATION',pool=details.get('pool'),check_id=check_id))
-            c.execute("UPDATE capital_ledger_v0721 SET pool_rate=0,pool_fee=0,route_fee=0,fixed_cost=?,total_cost=?,cash_delta=?,rate_source=? WHERE trade_id=? AND side='SELL'",(cost,cost,receipt,'CURVE_VERIFIED_ISOLATED' if route=='PUMP_CURVE' else 'AMM_VERIFIED_ISOLATED',tid))
+            main.sell(mint,price,reason or ('CURVE_VERIFIED_EXIT' if route=='PUMP_CURVE' else 'AMM_VERIFIED_EXIT'),_fill=True,_order_id=pending[0],_settlement_evidence=dict(dict(source='local_curve' if route=='PUMP_CURVE' else 'local_amm',price_basis='POOL_QUOTE_CREDIT',received_ts=available,provider_ts=None,signature=None,clock_status='LOCAL_SIMULATION',pool=details.get('pool'),check_id=check_id),**(evidence or {})))
+            c.execute("UPDATE capital_ledger_v0721 SET pool_rate=0,pool_fee=0,route_fee=0,fixed_cost=?,total_cost=?,cash_delta=?,rate_source=? WHERE trade_id=? AND side='SELL'",(cost,cost,receipt,rate_source or ('CURVE_VERIFIED_ISOLATED' if route=='PUMP_CURVE' else 'AMM_VERIFIED_ISOLATED'),tid))
             cap.rebalance(c)
     except BaseException:
         main.P.clear();main.P.update(before);raise
