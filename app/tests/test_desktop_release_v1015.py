@@ -115,7 +115,7 @@ def test_manifest_lists_every_shipped_desktop_file():
 
 def test_manifest_has_no_excluded_zone_and_keeps_the_release_identity():
     m=manifest();files=m['files']
-    assert m['version']==release_guard.VERSION=='v0.7.101.7' and m['build_revision']=='RUN_REVIEW_V1017'
+    assert m['version']==release_guard.VERSION=='v0.7.101.8' and m['build_revision']=='RUN_REVIEW_V1018'
     for name in files:
         parts=name.split('/')
         assert parts[0] not in ('packaging','results','dist') and not parts[0].startswith('.venv'),name
@@ -128,7 +128,7 @@ def test_manifest_hashes_are_lf_normalised_and_the_tree_verifies():
         path=ROOT/name;raw=path.read_bytes()
         expected=hashlib.sha256(raw.replace(b'\r\n',b'\n') if path.suffix.lower() in release_guard.TEXT_SUFFIXES else raw).hexdigest()
         assert files[name]==expected,name
-    assert release_guard.verify(ROOT)['version']=='v0.7.101.7'
+    assert release_guard.verify(ROOT)['version']=='v0.7.101.8'
     # desktop/release_check rule: no desktop/**/*.py outside the manifest
     extra=[p.relative_to(ROOT).as_posix() for p in DESKTOP.rglob('*.py') if '__pycache__' not in p.parts and p.relative_to(ROOT).as_posix() not in files]
     assert extra==[]

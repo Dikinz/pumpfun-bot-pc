@@ -56,17 +56,18 @@ WRITE_OFF_AFTER_S=600.
 WRITE_OFF_MIN_CHECKS=3
 NO_EVIDENCE=('STALE_OR_PRE_SIGNAL','INVALID_TIMES','RECOVERY_INVALIDATED','INVALID_PAYLOAD')
 
-def drained_streak(c,tid,signal,available):
+def drained_streak(c,tid,signal,available,table='route_exit_decisions_v59'):
     """v0.7.101.7: unbroken run of fresh empty-curve results after the exit signal (this one included).
-    Results without usable evidence neither extend nor break it. Returns (first available_ts, count)."""
+    Results without usable evidence neither extend nor break it. Returns (first available_ts, count).
+    v0.7.101.8: PRIMARY keeps the same history in its own table (primary_write_off)."""
     start=available;n=1
-    for ts,decision in c.execute('SELECT available_ts,decision FROM route_exit_decisions_v59 WHERE trade_id=? AND available_ts>=? AND available_ts<? ORDER BY available_ts DESC',(tid,signal,available)):
+    for ts,decision in c.execute('SELECT available_ts,decision FROM '+table+' WHERE trade_id=? AND available_ts>=? AND available_ts<? ORDER BY available_ts DESC',(tid,signal,available)):
         if decision in NO_EVIDENCE:continue
         if decision!='INSUFFICIENT_LIQUIDITY_OPEN':break
         start=ts;n+=1
     return start,n
 
-def write_off_account(c,row,job,result,start,checks):
+def write_off_account(c,row,job,result,start,checks,cost_model=WRITE_OFF_COST_MODEL):
     """A drained curve cannot pay for the tokens (real SOL below the sale amount): zero receipt, the whole entry is lost.
     quote_received_lamports is the real-reserve upper bound (at least 1 lamport for the ledger price), not a sale.
     02.11–03.11.2026: two such positions held both ROUTE slots for 7–9 h and the branch stopped trading."""
@@ -80,19 +81,26 @@ def write_off_account(c,row,job,result,start,checks):
         size=Decimal(str(inv['size_usdc']));fx=Decimal(str(inv['sol_usdc']));cost=Decimal(str(entry[1]))
         if not all(v.is_finite() for v in (size,fx,cost)) or size<=0 or fx<=0 or size!=Decimal(str(entry[0])):return None
         pnl=-size-cost
-    return dict(cost_model=WRITE_OFF_COST_MODEL,receipt_units='0',pnl_units=str(pnl),strict_receipt_units='0',strict_pnl_units=str(pnl),
+    return dict(cost_model=cost_model,receipt_units='0',pnl_units=str(pnl),strict_receipt_units='0',strict_pnl_units=str(pnl),
         size_units=str(size),entry_cost_units=str(cost),fx=str(fx),quote_received_lamports=max(1,spendable),
         real_sol_lamports=reserves.get('real_sol_lamports'),spendable_lamports=spendable,sell_gross_upper_lamports=upper,
         drained_since_ts=start,drained_checks=checks,
         note='Curve real SOL below the sale amount on every fresh check for at least %d s after the exit signal: tokens unsellable. '
             'Written off with zero receipt; the token account keeps the tokens, so no rent refund.'%WRITE_OFF_AFTER_S)
 
+def unusable(row,job,result,signal,now):
+    """Why a monitor result cannot be used for this exit signal now (None when it can)."""
+    import signal_exit as se
+    if not __import__('recovery_gate').allowed(job):return 'RECOVERY_INVALIDATED'
+    f=se.finite;start=row.get('started_ts');end=row.get('finished_ts');snap=result.get('snapshot_received_ts');scheduled=job.get('scheduled_ts')
+    if not all(f(x) for x in (start,end,snap,signal,now,scheduled)):return 'INVALID_TIMES'
+    if not signal<=scheduled<=start<=snap<=end<=now or now-snap>5 or now-end>5 or end-scheduled>25:return 'STALE_OR_PRE_SIGNAL'
+    return None
+
 def assess(c,row,job,result,signal,inventory,now):
     import amm_exit_scenario as amm,signal_exit as se,exit_rules_v33 as costs
-    if not __import__('recovery_gate').allowed(job):return 'RECOVERY_INVALIDATED',None
-    f=se.finite;start=row.get('started_ts');end=row.get('finished_ts');snap=result.get('snapshot_received_ts');scheduled=job.get('scheduled_ts')
-    if not all(f(x) for x in (start,end,snap,signal,now,scheduled)):return 'INVALID_TIMES',None
-    if not signal<=scheduled<=start<=snap<=end<=now or now-snap>5 or now-end>5 or end-scheduled>25:return 'STALE_OR_PRE_SIGNAL',None
+    code=unusable(row,job,result,signal,now)
+    if code:return code,None
     if job.get('route')=='PUMP_AMM':return amm.assess(c,row,job,result,signal,None,inventory)
     if job.get('route')!='PUMP_CURVE' or result.get('route','PUMP_CURVE')!='PUMP_CURVE':return 'UNKNOWN_ROUTE',None
     if result.get('reserves',{}).get('status')=='INSUFFICIENT_REAL_RESERVES':return 'INSUFFICIENT_LIQUIDITY_OPEN',None

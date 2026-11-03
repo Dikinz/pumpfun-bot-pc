@@ -125,6 +125,11 @@ def observe(c,mint,price,e,mono=None,context=None):
         s['last']=pt;s['signatures'].append(sig);count(c,variant,'ACCEPTED')
         if context is not None:candidate_lab.observe(c,variant,mint,price,candidate,s,dict(context,original_lag_ms=(e or {}).get("provider_lag_ms")))
 
+def forget(mint):
+    """v0.7.101.8: drop both variants when the bot drops the mint. main ignores its later trades, so the
+    entry was dead weight until the 8192 LRU cap: about 10 KB each, +94 MB in PRIMARY and +83 MB in ROUTE over the 03–04.11 run."""
+    for variant in ('STRICT_0','SHADOW_100'):STATES.pop((variant,mint),None)
+
 def summary(c,limit=100):
     config=c.execute('SELECT * FROM clock_config_v0740 WHERE id=1').fetchone()
     refs=[]

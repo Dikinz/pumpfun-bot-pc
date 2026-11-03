@@ -74,7 +74,7 @@ def scenario(c,role,monitor=None):
         tid=buy['trade_id'];sell=one(c,"SELECT * FROM trades WHERE trade_id=? AND side='SELL'",(tid,))
         if not sell:continue
         order=one(c,"SELECT * FROM paper_orders_v0720 WHERE trade_id=? AND side='SELL' ORDER BY rowid DESC LIMIT 1",(tid,))
-        entry_order=one(c,"SELECT fill_signature FROM paper_orders_v0720 WHERE trade_id=? AND side='BUY' AND status='FILLED'",(tid,))
+        entry_order=one(c,"SELECT fill_signature,snapshot FROM paper_orders_v0720 WHERE trade_id=? AND side='BUY' AND status='FILLED'",(tid,))
         audit=one(c,'SELECT data_json FROM exit_audit_v45 WHERE trade_id=?',(tid,))
         payload=decoded(audit.get('data_json'));signal=payload.get('order') or order
         costs=[dict(r) for r in c.execute('SELECT * FROM capital_ledger_v0721 WHERE trade_id=?',(tid,))]
@@ -85,7 +85,9 @@ def scenario(c,role,monitor=None):
         eligible=[e for e in events if e.get('eligibility')=='ELIGIBLE' and finite(e.get('wall_ts')) and finite(signal.get('signal_ts')) and e['wall_ts']>=signal['signal_ts']]
         first_eligible=min(eligible,key=lambda e:e['wall_ts']) if eligible else None
         monotonic_ms=payload.get('signal_to_fill_monotonic_ms')
+        buyers=__import__('buyers_watch_v1018').entry_buyers(entry_order.get('snapshot')) if entry_order.get('snapshot') else None
         row=dict(role=role,trade_id=tid,mint=buy['mint'],entry_ts=buy['ts'],entry_price=buy['price'],size=buy['size'],
+          entry_buyers=buyers,buyers_filter_v1018=None if buyers is None else 'WOULD_SKIP' if buyers<__import__('buyers_watch_v1018').THRESHOLD else 'WOULD_ENTER',
           entry_signature=entry_order.get('fill_signature'),inventory=inv,signal_ts=signal.get('signal_ts'),signal_price=signal.get('signal_price'),
           fill_ts=sell['ts'],fill_price=sell['price'],reason=sell['reason'],gross=sell['pnl'],
           entry_cost=fees.get('BUY',{}).get('total_cost'),exit_cost=fees.get('SELL',{}).get('total_cost'),
@@ -135,8 +137,8 @@ def scenario(c,role,monitor=None):
                     if matches:
                         row['setup_excluded_sensitivity_net']=component['pnl_units']+component['token_account_setup']+component['volume_account_setup']
                         row['sensitivity_note']='NOT_REALIZED_PNL_OR_WALLET_REPLAY; refund/reuse not proven; original ledger unchanged'
-                elif account.get('cost_model')=='ROUTE_WRITE_OFF_V1017' and row['net'] is not None:
-                    # v0.7.101.7: drained curve, no sale to reconcile; the ledger must book exactly the lost entry.
+                elif account.get('cost_model') in ('ROUTE_WRITE_OFF_V1017','PRIMARY_WRITE_OFF_V1018') and row['net'] is not None:
+                    # v0.7.101.7 ROUTE, v0.7.101.8 PRIMARY: drained curve, no sale to reconcile; the ledger must book exactly the lost entry.
                     try:matches=math.isclose(row['net'],float(account['pnl_units']),abs_tol=1e-8) and settlement['receipt']==0
                     except (KeyError,TypeError,ValueError):matches=False
                     row['setup_status']='WRITTEN_OFF_DRAINED_CURVE' if matches else 'LEDGER_MISMATCH'
@@ -213,6 +215,7 @@ def write(report,folder):
         flat.append(dict(role=r['role'],mint=r['mint'],trade_id=r['trade_id'],reason=r['reason'],signal_ts=r['signal_ts'],fill_ts=r['fill_ts'],
           entry_price_sol=r['entry_price'],signal_price_sol=r['signal_price'],fill_price_sol=r['fill_price'],
           signal_to_fill_ms=r['signal_to_fill_ms'],gross=r['gross'],net=r['net'],entry_cost=r['entry_cost'],exit_cost=r['exit_cost'],
+          entry_buyers=r.get('entry_buyers'),buyers_filter_v1018=r.get('buyers_filter_v1018'),
           before_signal=a.get('before_signal'),after_signal=a.get('after_signal'),token_setup=component.get('token_account_setup'),
           volume_setup=component.get('volume_account_setup'),local_fee=component.get('local_transaction_fee'),
           residual=component.get('exit_fee_balance_residual'),setup_status=r['setup_status'],

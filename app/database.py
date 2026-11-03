@@ -131,6 +131,7 @@ def init():
         c.executescript(position_monitor.SCHEMA)
         c.executescript(wallet_costs.SCHEMA)
         c.executescript(price_exit_trial.SCHEMA)
+        c.executescript(__import__('primary_write_off').SCHEMA)  # v0.7.101.8: drained-curve write-off
         paper_capital.init(c,config.START_BALANCE)
         c.executescript("""
         CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY,v TEXT);

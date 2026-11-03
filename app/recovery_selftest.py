@@ -8,7 +8,7 @@ SUITE_TIMEOUT_S=600  # Entire offline suite only; no production deadline change.
 REPORT=APP.parent/'results/recovery_check_v89.json'
 LAST_ATTEMPT_NAME='recovery_last_attempt_v89.json'
 # Must equal BUILD_MANIFEST.json build_revision (checked by test_win314_run20261101).
-BUILD_REVISION='RUN_REVIEW_V1017'
+BUILD_REVISION='RUN_REVIEW_V1018'
 
 
 def write_last_attempt(report,status):

@@ -3,9 +3,10 @@ import asyncio,json,sqlite3,time,sys,os,queue,threading
 from pathlib import Path
 from contextlib import closing
 
-SCHEMA='''CREATE TABLE IF NOT EXISTS branch_info(k TEXT PRIMARY KEY,v TEXT);
-CREATE TABLE IF NOT EXISTS branch_amm_settlements(trade_id TEXT PRIMARY KEY,check_id TEXT UNIQUE,available_ts REAL,settled_ts REAL,gross REAL,receipt REAL,cost REAL,details TEXT);
+SETTLEMENTS='''CREATE TABLE IF NOT EXISTS branch_amm_settlements(trade_id TEXT PRIMARY KEY,check_id TEXT UNIQUE,available_ts REAL,settled_ts REAL,gross REAL,receipt REAL,cost REAL,details TEXT);
 '''
+SCHEMA='''CREATE TABLE IF NOT EXISTS branch_info(k TEXT PRIMARY KEY,v TEXT);
+'''+SETTLEMENTS
 
 def path(primary):
     p=Path(primary).resolve();return p.with_name(p.stem+'_amm_paper.db')

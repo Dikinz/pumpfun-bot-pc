@@ -1025,7 +1025,7 @@ def cleanup(force=False):
             fast_reentry_finalize(m,"REENTRY_TIMEOUT","WATCHDOG_LAST",now)
     for k in list(PASS_PIN):
         if PASS_PIN[k]<=now:PASS_PIN.pop(k,None)
-    for old in [k for k,v in S.items() if k not in P and k not in protected and k not in cost_evidence.WATCH and k not in SHADOW_AB and k not in FAST_SHADOW_V3 and k not in FAST_RECOVERY_30 and k not in FAST_RECOVERY_SIGNAL and k not in FAST_RECOVERY_RISK and k not in FAST_REENTRY and k not in observation.ACTIVE and PASS_PIN.get(k,0)<=now and now-v["born"]>config.TTL]:S.pop(old,None);ACTIVE.pop(old,None);FIRST_TRADE_SEEN.discard(old);SUB_OK_MINTS.discard(old);PASS_SEEN.discard(old)
+    for old in [k for k,v in S.items() if k not in P and k not in protected and k not in cost_evidence.WATCH and k not in SHADOW_AB and k not in FAST_SHADOW_V3 and k not in FAST_RECOVERY_30 and k not in FAST_RECOVERY_SIGNAL and k not in FAST_RECOVERY_RISK and k not in FAST_REENTRY and k not in observation.ACTIVE and PASS_PIN.get(k,0)<=now and now-v["born"]>config.TTL]:S.pop(old,None);ACTIVE.pop(old,None);FIRST_TRADE_SEEN.discard(old);SUB_OK_MINTS.discard(old);PASS_SEEN.discard(old);clock_lab.forget(old)
     db.setm("active_subscriptions",len(ACTIVE))
 
 async def pumpportal_discovery(q):
@@ -1051,7 +1051,7 @@ async def pumpportal_discovery(q):
                         if len(S)>config.MAX_CANDIDATES:
                             for oldm in list(S.keys()):
                                 if oldm not in P and not execution.pending(db.con(),oldm,"BUY") and oldm not in cost_evidence.WATCH and oldm not in ACTIVE and PASS_PIN.get(oldm,0)<=time.time():
-                                    S.pop(oldm,None); FIRST_TRADE_SEEN.discard(oldm); SUB_OK_MINTS.discard(oldm); PASS_SEEN.discard(oldm)
+                                    S.pop(oldm,None); FIRST_TRADE_SEEN.discard(oldm); SUB_OK_MINTS.discard(oldm); PASS_SEEN.discard(oldm); clock_lab.forget(oldm)
                                     if len(S)<=config.MAX_CANDIDATES: break
                         try:q.put_nowait(m)
                         except asyncio.QueueFull:db.inc("sub_queue_dropped")
@@ -1436,7 +1436,7 @@ async def heartbeat():
             now=time.time(); target=max(100,config.MAX_CANDIDATES//2)
             for m in sorted([m for m in S if m not in P and not execution.pending(db.con(),m,"BUY") and m not in cost_evidence.WATCH and m not in FAST_RECOVERY_30 and m not in observation.ACTIVE], key=lambda x:S[x].get("born",now)):
                 if len(S)<=target: break
-                S.pop(m,None);ACTIVE.pop(m,None);PASS_PIN.pop(m,None);FIRST_TRADE_SEEN.discard(m);SUB_OK_MINTS.discard(m);PASS_SEEN.discard(m)
+                S.pop(m,None);ACTIVE.pop(m,None);PASS_PIN.pop(m,None);FIRST_TRADE_SEEN.discard(m);SUB_OK_MINTS.discard(m);PASS_SEEN.discard(m);clock_lab.forget(m)
             gc.collect();db.inc("memory_cleanups");db.setm("memory_state","CLEANUP")
         else: db.setm("memory_state","OK" if rss is not None else "UNKNOWN")
         if rss is not None and rss>=config.MEMORY_HARD_LIMIT_MB: db.setm("memory_state","HARD_LIMIT")
@@ -1508,6 +1508,8 @@ async def run():
                 monitor_publication_v99=json.dumps(supervision['publication_v99'])))
             await asyncio.sleep(1)
     tasks.append(('amm_branch_watch',branch_watch()))
+    # v0.7.101.8: a SELL on a curve that stays drained is written off as in ROUTE (this module, not a copy of it).
+    tasks.append(('primary_write_off',__import__('primary_write_off').worker(__import__('sys').modules[__name__],config.DB)))
     running=[asyncio.create_task(system_health.supervise(name,task,config.DB,allow_return=name=='clock_reference')) for name,task in tasks]
     counter_sink=__import__('counter_writer').start(config.DB,session=run_audit.ACTIVE)
     try:

@@ -3,7 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().with_name(".env"))
 
-VERSION="v0.7.101.7"
+VERSION="v0.7.101.8"
 EXECUTION_MODE=os.getenv("EXECUTION_MODE","paper").strip().lower()
 if EXECUTION_MODE!="paper":raise RuntimeError("Main strategy live adapter is not validated; EXECUTION_MODE must remain paper.")
 DB=os.getenv("DATABASE_PATH","data/clean_0762.db")

@@ -3,7 +3,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 import pathlib
 def test_config():
  import config
- assert config.VERSION=="v0.7.101.7" and config.PORT==8188 and config.DB=="data/clean_0762.db"
+ assert config.VERSION=="v0.7.101.8" and config.PORT==8188 and config.DB=="data/clean_0762.db"
  assert config.STRATEGY_FINALIZED and config.FINAL_PP_VARIANT=="PP_10_7"
  assert config.EXECUTION_SIM_ENABLED
 
@@ -74,7 +74,7 @@ def test_v0691_model_gate_import_before_runtime():
 
 def test_v0691_dashboard_port_label():
  import pathlib
- assert "v0.7.101.7" in pathlib.Path("dashboard/details.html").read_text(encoding='utf-8')
+ assert "v0.7.101.8" in pathlib.Path("dashboard/details.html").read_text(encoding='utf-8')
 
 
 def test_final_gate_validation_schema():
@@ -113,7 +113,7 @@ def test_v073_feature_lab_broad_entries():
 
 def test_v079_fast_recovery_signal_lab():
  import config, pathlib, database as db
- assert config.VERSION == "v0.7.101.7"
+ assert config.VERSION == "v0.7.101.8"
  assert config.PORT == 8188
  assert config.DB == "data/clean_0762.db"
  assert config.PRESSURE_GATE_ENABLED is False
@@ -128,7 +128,7 @@ def test_v079_fast_recovery_signal_lab():
  assert config.FAST_RECOVERY_SIGNAL_MIN_BASE_DELTA_PER_FAST == 0.05
  assert config.FAST_RECOVERY_SIGNAL_BIG_WORSE_USD == 0.30
  page=pathlib.Path("dashboard/details.html").read_text(encoding='utf-8')
- assert "v0.7.101.7" in page and "FAST RECOVERY SIGNAL LAB" not in page
+ assert "v0.7.101.8" in page and "FAST RECOVERY SIGNAL LAB" not in page
  assert "positionRows" in page and "monitorRows" in page
  main=pathlib.Path("main.py").read_text(encoding='utf-8')
  assert "fast_recovery_signal_start" in main and "fast_recovery_signal_tick" in main
@@ -176,7 +176,7 @@ def test_dashboard_socket_and_html_polling_hotfix():
 
 def test_v0711_config_and_schema():
  import config,database as db
- assert config.VERSION=="v0.7.101.7" and config.PORT==8188 and config.DB=="data/clean_0762.db"
+ assert config.VERSION=="v0.7.101.8" and config.PORT==8188 and config.DB=="data/clean_0762.db"
  assert config.FAST_REENTRY_ENABLED is True
  assert config.FAST_REENTRY_TARGET_FAST==300 and config.FAST_REENTRY_MIN_REENTRIES==80
  assert config.FAST_REENTRY_TRIGGER_RECOVERY_PCT==0.05
