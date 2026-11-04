@@ -66,8 +66,8 @@ async def supervise(name, coroutine, primary, allow_return=False):
     import asyncio
     try:
         await coroutine
-    except (asyncio.CancelledError,__import__('runtime_control').RequestedStop):
-        raise
+    except (asyncio.CancelledError,KeyboardInterrupt,__import__('runtime_control').RequestedStop):
+        raise  # v0.7.101.9: Ctrl+Break/stop arrives as KeyboardInterrupt; 04.11.2026 it was logged as UNHANDLED_ERROR
     except BaseException as exc:
         failure(primary,name,exc);raise
     else:

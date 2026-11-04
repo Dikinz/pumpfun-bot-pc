@@ -124,6 +124,10 @@ def branch(c,primary,role,now):
         matched_entry_counts=matched,verified_exits=settlements,write_offs_v1017=write_offs,verified_routes=route_counts,curve_exits=route_counts.get('PUMP_CURVE',0),amm_exits=route_counts.get('PUMP_AMM',0),unknown_route_exits=sum(n for route,n in route_counts.items() if route not in ('PUMP_CURVE','PUMP_AMM')),stop=stop,transport=transport,input_gap=meta.get('branch_input_gap')=='1' or transport_gap,
         stream=dict(state=meta.get('trade_stream_state'),age_s=max(0,at-last_market) if last_market>0 else None))
 
+def exit_routes(c):
+    """v0.7.101.9: routes the ROUTE exit checks took; any PUMP_AMM means a position migrated (roadmap_progress.amm_exit)."""
+    return dict(c.execute('SELECT route,COUNT(*) FROM route_exit_decisions_v59 WHERE route IS NOT NULL GROUP BY route'))
+
 def roadmap(primary,amm,route=None):
     a=amm if amm and amm.get('role')=='amm' else {};baseline=primary or a;closed=baseline.get('new_closed',baseline.get('closed',0))
     r=route or {};counts=r.get('verified_routes',{})
@@ -153,6 +157,7 @@ def overview(primary=None):
                 c.execute('BEGIN');route=branch(c,primary,'route',now)
                 route['verified_routes']=dict(c.execute("SELECT json_extract(details,'$.route'),COUNT(*) FROM branch_amm_settlements WHERE json_extract(details,'$.route') IS NOT ? GROUP BY json_extract(details,'$.route')",(route_branch.WRITE_OFF,)))
                 route['exit_decisions']=dict(c.execute('SELECT decision,COUNT(*) FROM route_exit_decisions_v59 GROUP BY decision'))
+                route['exit_routes_v1019']=exit_routes(c)
             if not p['campaign'] or not route['campaign'] or route['campaign']['id']!=p['campaign']['id']:route=dict(status='CAMPAIGN_MISMATCH')
         except (sqlite3.Error,clean_campaign.CampaignError,ValueError):route=dict(status='BRANCH_REPORT_ERROR')
     alerts=[]

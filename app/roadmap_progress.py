@@ -24,13 +24,25 @@ def acceptance():
     except (OSError,ValueError,AttributeError):return {}
 
 
+AMM_NOT_NEEDED_MIN_CLOSED=100
+
+def amm_exit(route,counts):
+    """v0.7.101.9, path B chosen by the user 04.11.2026: a verified AMM exit, or proof the strategy never needs one —
+    at least 100 ROUTE closes in this campaign and no exit check ever took the AMM route (no position migrated).
+    02–04.11.2026: 178 PRIMARY and 148 ROUTE positions, held up to 2 min, never migrated. Returns the basis or None."""
+    if counts.get('PUMP_AMM',0)>0:return 'VERIFIED'
+    routes=route.get('exit_routes_v1019')
+    if not isinstance(routes,dict) or route.get('unknown_route_exits'):return None
+    if route.get('new_closed',0)>=AMM_NOT_NEEDED_MIN_CLOSED and set(routes)<={'PUMP_CURVE'} and not route.get('positions'):return 'NOT_NEEDED_NO_MIGRATION'
+    return None
+
 def build(stages,primary,amm,route,rpc,accepted=None):
     a=amm or {};r=route or {};accepted=acceptance() if accepted is None else accepted
     counts=r.get('verified_routes') or {}
     gates=[('Нативные проверки Windows',accepted.get('version')==config.VERSION and accepted.get('passed') is True and accepted.get('native_windows_verified') is True),
            ('RPC работает под общим лимитом',rpc.get('status')=='READY' and sum(e.get('started',0) for e in rpc.get('endpoints',[]))>0),
            ('Проверенный Curve-выход',counts.get('PUMP_CURVE',0)>0),
-           ('Проверенный AMM-выход',counts.get('PUMP_AMM',0)>0),
+           ('AMM-выход (или не нужен)',amm_exit(r,counts)),
            ('Все входы ROUTE закрыты без разрыва',r.get('entries',0)>0 and r.get('closed')==r.get('entries') and not r.get('positions') and not r.get('input_gap') and r.get('runtime',{}).get('state')!='FAILED' and not r.get('live_v87',{}).get('ownership_pending') and not (r.get('runtime_perf',{}).get('diagnostic_writer_v92') or {}).get('diagnostic_gap_v94'))]
     closed=max(0,primary.get('new_closed',a.get('new_closed',0)));collection=min(100,closed)
     percentages=[sum(bool(v) for _,v in gates)*20,round(collection*.5),0,0]
@@ -38,7 +50,7 @@ def build(stages,primary,amm,route,rpc,accepted=None):
     for index,stage in enumerate(stages):
         row=dict(stage,percent=percentages[index],estimate_kind='EVIDENCE_CHECKLIST')
         if index==0:
-            row['checkpoints']=[dict(title=t,passed=bool(v)) for t,v in gates]
+            row['checkpoints']=[dict(title=t,passed=bool(v),**({'basis':v} if isinstance(v,str) else {})) for t,v in gates]
             row['progress']=f"Подтверждено {sum(bool(v) for _,v in gates)}/{len(gates)} контрольных пунктов"
             row.pop('estimate_percent',None)
         elif index==1:

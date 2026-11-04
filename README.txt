@@ -1,4 +1,5 @@
-v0.7.101.8 — PRIMARY writes off a SELL on a drained curve by the ROUTE rule; buyers-at-entry check in observation mode (04.11.2026): RELEASE_NOTES_v1018.md.
+v0.7.101.9 — stage 1 checkpoint "AMM exit (or not needed)", clean stop log (04.11.2026): RELEASE_NOTES_v1019.md.
+Previous v0.7.101.8 — PRIMARY writes off a SELL on a drained curve by the ROUTE rule; buyers-at-entry check in observation mode (04.11.2026): RELEASE_NOTES_v1018.md.
 Previous v0.7.101.7 — ROUTE writes off positions on drained curves (zero receipt) instead of holding both slots forever (03.11.2026): RELEASE_NOTES_v1017.md. Add the whole bot folder to antivirus exclusions.
 Устойчивость SQLite в длинных прогонах и стоп-флаги наблюдения: RELEASE_NOTES_v1014.md (ранее RELEASE_NOTES_v1013.md). Критерии дорожной карты сохранены.
 

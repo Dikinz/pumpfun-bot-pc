@@ -328,8 +328,8 @@ def test_win314_details_page_has_no_ukrainian_text():
 
 # ============================================================ round 2 (fix_r2) ===
 # ------------------------------------------------------------------ CR1-01 ---
-# v0.7.101.8: the previous build is now v0.7.101.7 (the user's 03–04.11 desktop PAPER night run).
-PREVIOUS_BUILD=dict(version='v0.7.101.7',build_revision='RUN_REVIEW_V1017')
+# v0.7.101.9: the previous build is now v0.7.101.8 (the user's 04.11 desktop PAPER day run).
+PREVIOUS_BUILD=dict(version='v0.7.101.8',build_revision='RUN_REVIEW_V1018')
 
 
 def test_win314_new_build_identity_is_bumped_and_consistent():

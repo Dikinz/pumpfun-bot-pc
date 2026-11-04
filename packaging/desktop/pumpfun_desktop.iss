@@ -1,8 +1,8 @@
 ﻿; PumpFun PAPER bot: per-user installer script for Inno Setup 6 (desktop spec 8). Not shipped.
 ; Prepared only: Inno Setup is not installed on the build PC; compiling is a manual step (stage 5).
 ;   1) python -I packaging\desktop\build_portable.py --out C:\pfbuild     (builds and verifies the ZIP)
-;   2) extract that ZIP into C:\pfbuild  ->  C:\pfbuild\pumpfun_bot_v0.7.101.8_desktop
-;   3) ISCC.exe /DStageDir=C:\pfbuild\pumpfun_bot_v0.7.101.8_desktop packaging\desktop\pumpfun_desktop.iss
+;   2) extract that ZIP into C:\pfbuild  ->  C:\pfbuild\pumpfun_bot_v0.7.101.9_desktop
+;   3) ISCC.exe /DStageDir=C:\pfbuild\pumpfun_bot_v0.7.101.9_desktop packaging\desktop\pumpfun_desktop.iss
 ; Current user only: no elevation, no service, no autostart, no registry writes except the uninstall
 ; entry Inno keeps under HKCU. Update in place: same folder; app\data, app\.env and results stay.
 ; Before every install/uninstall the bot of that folder must be stopped (launcher lock, monitor lock, the
@@ -21,7 +21,7 @@
 #define AppVersion "0.7.101.6"
 #define AppGuid "6F1C2A4E-5B3D-4E8A-9C71-2D0F4B6A8E15"
 #ifndef StageDir
-  #define StageDir "..\..\dist\pumpfun_bot_v0.7.101.8_desktop"
+  #define StageDir "..\..\dist\pumpfun_bot_v0.7.101.9_desktop"
 #endif
 
 [Setup]

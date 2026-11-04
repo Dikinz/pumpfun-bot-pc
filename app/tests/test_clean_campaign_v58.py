@@ -81,7 +81,7 @@ def test_front_page_and_light_api_separate_from_engineering(tmp_path):
                     break
                 except OSError:time.sleep(.1)
             else:log.seek(0);raise AssertionError(log.read())
-            assert o['primary']['positions']==[] and o['version']=='v0.7.101.8'
+            assert o['primary']['positions']==[] and o['version']=='v0.7.101.9'
             # v0.7.101.4: the trading terminal is the main page; the summary page is /classic.
             with urllib.request.urlopen(f'http://127.0.0.1:{port}/') as r:main_page=r.read().decode()
             with urllib.request.urlopen(f'http://127.0.0.1:{port}/terminal') as r:assert r.read().decode()==main_page
