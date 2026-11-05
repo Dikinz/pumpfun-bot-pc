@@ -1,4 +1,5 @@
-v0.7.101.10 — a drained curve closes at the value a real position would get (instead of a zero write-off); stage 1 "AMM exit (or not needed)" may be proven by the PRIMARY monitor (05.11.2026): RELEASE_NOTES_v10110.md.
+v0.7.101.11 — fixes the v0.7.101.10 recovery check (dashboard overview payload over its size budget: a not-started monitor shipped its full file-path diagnostic); trading logic unchanged (05.11.2026): RELEASE_NOTES_v10111.md.
+Previous v0.7.101.10 — a drained curve closes at the value a real position would get (instead of a zero write-off); stage 1 "AMM exit (or not needed)" may be proven by the PRIMARY monitor (05.11.2026): RELEASE_NOTES_v10110.md.
 Previous v0.7.101.9 — stage 1 checkpoint "AMM exit (or not needed)", clean stop log (04.11.2026): RELEASE_NOTES_v1019.md.
 Previous v0.7.101.8 — PRIMARY writes off a SELL on a drained curve by the ROUTE rule; buyers-at-entry check in observation mode (04.11.2026): RELEASE_NOTES_v1018.md.
 Previous v0.7.101.7 — ROUTE writes off positions on drained curves (zero receipt) instead of holding both slots forever (03.11.2026): RELEASE_NOTES_v1017.md. Add the whole bot folder to antivirus exclusions.

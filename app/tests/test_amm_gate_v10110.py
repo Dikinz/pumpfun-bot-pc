@@ -68,3 +68,35 @@ def test_monitor_routes_cover_closed_positions_only(fresh):
     from contextlib import closing
     with closing(monitor_service.connect()) as m:m.execute("UPDATE position_checks_v0730 SET status='REQUEST_ERROR',result_json='{}'")
     assert campaign_view.monitor_routes(fresh,config.DB)==dict(closed=1,checked=0,routes={'PUMP_CURVE':1},completed_checks=0)
+
+def test_overview_uses_monitor_evidence_without_shipping_it(fresh,monkeypatch):
+    # 05.11.2026 recovery check: the extra key pushed the overview payload over its 18000-character budget.
+    tid=opened(fresh);fresh.executescript(route.SCHEMA)
+    row,j,r,inv=drained(tid);save_check(fresh,row,j,r,inv);pw.poll(main)
+    seen=[]
+    real=rp.amm_exit
+    monkeypatch.setattr(rp,'amm_exit',lambda route,counts,primary=None:seen.append(dict(primary or {}).get('monitor_routes_v10110')) or real(route,counts,primary))
+    data=campaign_view.overview(config.DB)
+    assert seen and seen[0] is not None and 'monitor_routes_v10110' not in data['primary']
+
+def missing_state(path):
+    message="[WinError 2] Не удается найти указанный файл.: '"+path+"'"
+    return dict(status='STATE_READ_ERROR',state_read_error_v86=dict(reason='MONITOR_STATE_MISSING',path=path,error_type='FileNotFoundError',errno=2,winerror=2,
+        strerror='Не удается найти указанный файл.',exception=dict(chain=[dict(error_type='FileNotFoundError',message=message,errno=2,winerror=2)])))
+
+def test_missing_monitor_state_before_start_keeps_the_overview_light(fresh,monkeypatch):
+    # v0.7.101.11, 05.11.2026 recovery check: before the first start the missing monitor state shipped its path and the
+    # localized Windows message twice; with a Cyrillic user name that alone overflows the 18000-character budget.
+    import json,monitor_service
+    path='C:\\Users\\Пользователь\\Desktop\\pumpfun_bot_v0.7.101.11_desktop\\app\\data\\position_monitor_v0730_state.json'
+    monkeypatch.setattr(monitor_service,'read_state',lambda primary:missing_state(path))
+    data=campaign_view.overview(config.DB);live=data['primary']['live_v87']
+    assert live['monitor_status']=='NOT_STARTED' and live['state_read_error']==dict(reason='MONITOR_STATE_MISSING',error_type='FileNotFoundError',errno=2,winerror=2)
+    assert len(json.dumps(data))<18000
+    # After any start the same read is an error and keeps the full diagnostic.
+    now=time.time()
+    for k,v in (('runtime_started_ts_v41',now-60),('runtime_updated_ts_v41',now),('runtime_state_v41','RUNNING')):
+        fresh.execute('INSERT OR REPLACE INTO meta(k,v) VALUES(?,?)',(k,str(v)))
+    fresh.commit()
+    live=campaign_view.overview(config.DB)['primary']['live_v87']
+    assert live['monitor_status']=='STATE_READ_ERROR' and live['state_read_error']==missing_state(path)['state_read_error_v86']

@@ -86,11 +86,16 @@ def branch(c,primary,role,now):
     # Default meta value '0' means no market data yet, not data from 1970.
     last_market=float(meta.get('trade_last_market_ts') or 0)
     age=observed_wall-last_market if last_market>0 else None
-    monitor_status=monitor.get('status')
+    monitor_status=monitor.get('status');read_error=monitor.get('state_read_error_v86')
     # A missing state file before the first start is not a read failure; the raw
     # diagnostic stays in state_read_error. After any start it remains an error.
     if (monitor_status=='STATE_READ_ERROR' and runtime_status.summary(c,now)['state']=='NOT_STARTED' and
-            (monitor.get('state_read_error_v86') or {}).get('reason')=='MONITOR_STATE_MISSING'):monitor_status='NOT_STARTED'
+            (read_error or {}).get('reason')=='MONITOR_STATE_MISSING'):
+        monitor_status='NOT_STARTED'
+        # v0.7.101.11: not an error, so the overview keeps the codes without the file path and the localized Windows
+        # message (each twice, ~1 KB escaped with a Cyrillic user name). 05.11.2026 the recovery check failed on the
+        # 18000-character overview budget. A read error after any start keeps the full diagnostic.
+        read_error={k:v for k,v in read_error.items() if k not in ('path','strerror','exception')}
     monitor_heartbeat_age=observed_wall-heartbeat if isinstance(heartbeat,(int,float)) else None
     raw_monitor_status=monitor_status
     # Same rule as monitor_service.service_status: a RUNNING claim without a fresh
@@ -102,7 +107,7 @@ def branch(c,primary,role,now):
         active_checks=len(active_ids) if isinstance(active_ids,list) else None,worker_limit=2,
         oldest_check_age_s=observed_wall-oldest if isinstance(oldest,(int,float)) else None,
         ownership_pending=ownership if type(ownership)==bool else None,
-        state_read_error=monitor.get('state_read_error_v86'))
+        state_read_error=read_error)
     stressed=None
     if role=='route':stressed=__import__('remainder_reporting_v100').stress(c,__import__('monitor_service').paths(engine.path(primary))['db'],at,cap)
     model=None
@@ -198,6 +203,9 @@ def overview(primary=None):
     if rpc_control['status']=='PENDING':alerts.append('RPC: результаты ожидают записи; новые запросы ждут обработки журнала')
     if rpc_control['status'] in ('BLOCKED','UNAVAILABLE'):alerts.append('RPC: служебное состояние не подтверждено, новые запросы заблокированы — открыть диагностику')
     progress=__import__('roadmap_progress').build(roadmap(p,a,route),p,a,route,rpc_control)
+    # v0.7.101.10: the monitor evidence only feeds the stage 1 gate above; the dashboard never shows it and the
+    # overview payload stays under its size budget (test_overview_v1001).
+    p.pop('monitor_routes_v10110',None)
     # Criteria are rendered from roadmap; repeating the full text in the
     # progress cards costs >4K escaped characters even on an empty campaign.
     stages=progress['stages']
