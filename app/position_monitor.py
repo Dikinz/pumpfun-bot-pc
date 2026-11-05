@@ -142,8 +142,12 @@ def reserve_evidence(bundle):
     spendable=max(0,curve['lamports']-rent-curve['creator_fee_held']-curve['protocol_fee_held'])
     amount=int(bundle['amount']);den=curve['virtual_token']+amount
     gross=(amount*curve['virtual_sol']+den-1)//den
+    # v0.7.101.10: curve state and the sale with our own PAPER buy included (curve_floor_v10110).
+    floor=__import__('curve_floor_v10110').gross_lamports(curve['virtual_sol'],curve['virtual_token'],curve['real_token'],amount)
     return dict(real_sol_lamports=curve['real_sol'],spendable_lamports=spendable,rent_lamports=rent,
       held_fees_lamports=curve['creator_fee_held']+curve['protocol_fee_held'],sell_gross_upper_lamports=gross,
+      virtual_sol_lamports=curve['virtual_sol'],virtual_token_raw=curve['virtual_token'],real_token_raw=curve['real_token'],
+      amount_raw=amount,paper_inventory_gross_lamports=floor,
       status='INSUFFICIENT_REAL_RESERVES' if min(curve['real_sol'],spendable)<gross else 'RESERVES_COVER_GROSS')
 
 def stage(out,name):

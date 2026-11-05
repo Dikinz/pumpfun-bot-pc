@@ -6,8 +6,9 @@ from pathlib import Path
 SCHEMA='''CREATE TABLE IF NOT EXISTS capital_settings_v0721(k TEXT PRIMARY KEY,v REAL);
 CREATE TABLE IF NOT EXISTS capital_ledger_v0721(trade_id TEXT,side TEXT,ts REAL,notional REAL,pool_rate REAL,pool_fee REAL,route_fee REAL,fixed_cost REAL,total_cost REAL,cash_delta REAL,rate_source TEXT,PRIMARY KEY(trade_id,side));'''
 
-# SELL rows booked from a branch settlement (gross, receipt, cost); v0.7.101.7 adds the drained-curve write-off.
-SETTLED_SOURCES=('AMM_VERIFIED_ISOLATED','CURVE_VERIFIED_ISOLATED','DRAINED_CURVE_WRITE_OFF')
+# SELL rows booked from a branch settlement (gross, receipt, cost); v0.7.101.7 adds the drained-curve write-off,
+# v0.7.101.10 the drained-curve model exit (curve_floor_v10110).
+SETTLED_SOURCES=('AMM_VERIFIED_ISOLATED','CURVE_VERIFIED_ISOLATED','DRAINED_CURVE_WRITE_OFF','PAPER_INVENTORY_CURVE_FLOOR')
 
 def init(c,start):
     c.executemany('INSERT OR IGNORE INTO capital_settings_v0721 VALUES(?,?)',[('start',start),('route_rate',.0025),('fixed_per_fill',.005),('entry_pool_cap',.03)])

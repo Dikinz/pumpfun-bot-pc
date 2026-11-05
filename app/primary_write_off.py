@@ -39,8 +39,11 @@ def poll(main):
             decision=classify(row,j,r,sig['signal_ts'],time.time())
         except (ValueError,TypeError,KeyError,AttributeError):decision='INVALID_PAYLOAD';j={};r={}
         if decision==DRAINED:
+            # v0.7.101.10: a real position would be in the curve and sell at the model value (curve_floor_v10110).
+            floor=__import__('curve_floor_v10110').settle(main,local,row,j,r,sig,'PRIMARY')
+            if floor is not None:decision='FLOOR_SETTLED' if floor else 'POSITION_OR_ORDER_CHANGED'
             start,checks=route.drained_streak(local,tid,sig['signal_ts'],row['finished_ts'],TABLE)
-            if checks>=route.WRITE_OFF_MIN_CHECKS and row['finished_ts']-start>=route.WRITE_OFF_AFTER_S:
+            if floor is None and checks>=route.WRITE_OFF_MIN_CHECKS and row['finished_ts']-start>=route.WRITE_OFF_AFTER_S:
                 try:w=route.write_off_account(local,row,j,r,start,checks,COST_MODEL)
                 except (KeyError,TypeError,ValueError,InvalidOperation):w=None
                 if w:

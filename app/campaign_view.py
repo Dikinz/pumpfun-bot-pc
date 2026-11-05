@@ -57,6 +57,7 @@ def branch(c,primary,role,now):
         for row in c.execute("SELECT json_extract(details,'$.route') route,COUNT(*) n FROM branch_amm_settlements GROUP BY json_extract(details,'$.route')"):
             route_counts[row['route'] or 'UNKNOWN']=row['n']
     write_offs=route_counts.pop(__import__('route_branch').WRITE_OFF,0)  # v0.7.101.7: losses on drained curves, not sales
+    floor_exits=route_counts.pop(__import__('curve_floor_v10110').ROUTE,0)  # v0.7.101.10: modelled drained-curve exits, not verified sales
     settlements=sum(route_counts.values())
     engine=__import__('route_branch') if role=='route' else paper_branch
     stop=engine.read_lifecycle(primary);transport=engine.read_lifecycle(primary,True)
@@ -121,8 +122,29 @@ def branch(c,primary,role,now):
     return dict(risk_watch_v1014=risk,buyers_watch_v1018=buyers,persistent_wallet_model_v100=model,stressed_equity_v100=stressed,remainder_slot_exclusions_v100=__import__('remainder_reporting_v100').slot_exclusions(c),failure_v93=cause,cost_basis_v89=(__import__('route_branch').COST_MODEL if role=='route' else 'TICK_FEE_MODEL_WITHOUT_ACCOUNT_SETUP'),live_v87=live,runtime_perf=__import__('runtime_control').read(primary if role=='primary' else engine.path(primary)),first_gap=first_gap,resources=dict(cpu=meta.get('process_cpu_pct'),ram_mb=meta.get('process_ram_mb')),role=role,campaign=campaign,runtime=runtime,blocks=blocks,last_entry_result=last,capital=dict(available=cap['available'],cash=cap['net_cash'],principal=cap['open_principal'],status=cap['status']),
         new_closed=new_closed,carried_closed=carried_closed,entries=entries,closed=closed,wins=wins,net=None if missing else net_total,gross=gross,costs=None if missing else fees,
         accounting_missing=missing,closed_drawdown=None if missing else drawdown,positions=positions,trades=list(reversed(trades)),preentry=pending,timing=timing,
-        matched_entry_counts=matched,verified_exits=settlements,write_offs_v1017=write_offs,verified_routes=route_counts,curve_exits=route_counts.get('PUMP_CURVE',0),amm_exits=route_counts.get('PUMP_AMM',0),unknown_route_exits=sum(n for route,n in route_counts.items() if route not in ('PUMP_CURVE','PUMP_AMM')),stop=stop,transport=transport,input_gap=meta.get('branch_input_gap')=='1' or transport_gap,
+        matched_entry_counts=matched,verified_exits=settlements,write_offs_v1017=write_offs,curve_floor_exits_v10110=floor_exits,verified_routes=route_counts,curve_exits=route_counts.get('PUMP_CURVE',0),amm_exits=route_counts.get('PUMP_AMM',0),unknown_route_exits=sum(n for route,n in route_counts.items() if route not in ('PUMP_CURVE','PUMP_AMM')),stop=stop,transport=transport,input_gap=meta.get('branch_input_gap')=='1' or transport_gap,
         stream=dict(state=meta.get('trade_stream_state'),age_s=max(0,at-last_market) if last_market>0 else None))
+
+def monitor_routes(c,primary):
+    """v0.7.101.10: PRIMARY monitor evidence for stage 1 "AMM exit not needed" (roadmap_progress.amm_exit).
+    Route of every check of a closed campaign position and any curve-completion status. 05.11.2026: ROUTE ran out of
+    PAPER cash at 63 closes, so ROUTE alone could never reach the 100-close proof."""
+    target=__import__('monitor_service').paths(primary)['db']
+    if not target.exists():return None
+    closed={r[0] for r in c.execute("SELECT trade_id FROM trades WHERE side='SELL'")}
+    routes={};checked=set();completed=0
+    try:
+        with closing(sqlite3.connect(target.as_uri()+'?mode=ro',uri=True,timeout=.5)) as m:
+            m.execute('BEGIN')
+            # Every scheduled route counts (any AMM job defeats the proof); a position counts as checked only when a
+            # result decoded its pool (reserves present), never on a cancelled, failed or still running check.
+            for tid,route,status,decoded in m.execute("SELECT trade_id,json_extract(input_json,'$.route'),status,json_extract(result_json,'$.reserves') IS NOT NULL FROM position_checks_v0730"):
+                if tid not in closed:continue
+                routes[route or 'UNKNOWN']=routes.get(route or 'UNKNOWN',0)+1
+                if decoded:checked.add(tid)
+                completed+=status in ('POOL_COMPLETED','CURVE_COMPLETED_NEW_POOL_UNCHECKED')
+    except sqlite3.Error:return None
+    return dict(closed=len(closed),checked=len(checked),routes=routes,completed_checks=completed)
 
 def exit_routes(c):
     """v0.7.101.9: routes the ROUTE exit checks took; any PUMP_AMM means a position migrated (roadmap_progress.amm_exit)."""
@@ -141,7 +163,7 @@ def roadmap(primary,amm,route=None):
 def overview(primary=None):
     primary=primary or config.DB;now=time.time()
     with closing(sqlite3.connect(Path(primary).resolve().as_uri()+'?mode=ro',uri=True,timeout=.5)) as c:
-        c.execute('BEGIN');p=branch(c,primary,'primary',now)
+        c.execute('BEGIN');p=branch(c,primary,'primary',now);p['monitor_routes_v10110']=monitor_routes(c,primary)
     target=paper_branch.path(primary);a=None
     if target.exists():
         try:
@@ -155,7 +177,7 @@ def overview(primary=None):
         try:
             with closing(sqlite3.connect(route_branch.path(primary).as_uri()+'?mode=ro',uri=True,timeout=.5)) as c:
                 c.execute('BEGIN');route=branch(c,primary,'route',now)
-                route['verified_routes']=dict(c.execute("SELECT json_extract(details,'$.route'),COUNT(*) FROM branch_amm_settlements WHERE json_extract(details,'$.route') IS NOT ? GROUP BY json_extract(details,'$.route')",(route_branch.WRITE_OFF,)))
+                route['verified_routes']=dict(c.execute("SELECT json_extract(details,'$.route'),COUNT(*) FROM branch_amm_settlements WHERE COALESCE(json_extract(details,'$.route'),'') NOT IN (?,?) GROUP BY json_extract(details,'$.route')",(route_branch.WRITE_OFF,__import__('curve_floor_v10110').ROUTE)))
                 route['exit_decisions']=dict(c.execute('SELECT decision,COUNT(*) FROM route_exit_decisions_v59 GROUP BY decision'))
                 route['exit_routes_v1019']=exit_routes(c)
             if not p['campaign'] or not route['campaign'] or route['campaign']['id']!=p['campaign']['id']:route=dict(status='CAMPAIGN_MISMATCH')

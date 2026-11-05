@@ -163,9 +163,12 @@ def poll(main):
                     if common.settle(main,row,a,row['id'],row['finished_ts'],dict(accounting=a,signal=sig,route=route,scenario='ROUTE_PAPER_V59'),route):decision='SETTLED'
                     else:decision='POSITION_OR_ORDER_CHANGED'
             elif decision=='INSUFFICIENT_LIQUIDITY_OPEN':
-                # A curve that stays drained never pays; holding it forever froze the slot and hid the loss.
+                # v0.7.101.10: a real position would be in the curve and sell at the model value (curve_floor_v10110).
+                floor=__import__('curve_floor_v10110').settle(main,local,row,j,r,sig,'ROUTE_PAPER_V59')
+                if floor is not None:decision='FLOOR_SETTLED' if floor else 'POSITION_OR_ORDER_CHANGED'
+                # Old results without curve state: a curve that stays drained never pays; holding it forever froze the slot and hid the loss.
                 start,checks=drained_streak(local,tid,sig['signal_ts'],row['finished_ts'])
-                if checks>=WRITE_OFF_MIN_CHECKS and row['finished_ts']-start>=WRITE_OFF_AFTER_S:
+                if floor is None and checks>=WRITE_OFF_MIN_CHECKS and row['finished_ts']-start>=WRITE_OFF_AFTER_S:
                     try:w=write_off_account(local,row,j,r,start,checks)
                     except (KeyError,TypeError,ValueError,InvalidOperation):w=None
                     if w:
