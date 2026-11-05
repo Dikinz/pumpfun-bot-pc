@@ -146,6 +146,8 @@ def legacy_results():
     import paper_branch
     paper_branch.export(config.DB,folder)
     __import__('route_branch').export(config.DB,folder)
+    try:__import__('amm_observer').export(config.DB,folder)  # v0.7.102.0: observation-only data, never blocks the package
+    except Exception as exc:(folder/'amm_observer_summary.json').write_text(json.dumps(dict(state='EXPORT_ERROR',error_type=type(exc).__name__)),encoding='utf-8')
     __import__('runtime_control').export(config.DB,folder)
     __import__('aggregate_export').export(config.DB,folder)
     review=__import__('exit_cost_review').current(config.DB,folder)

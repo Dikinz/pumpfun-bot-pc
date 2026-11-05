@@ -48,6 +48,8 @@ def _snap():
         try:result['execution_readiness']=__import__('execution_lab').status()
         except Exception:result['execution_readiness']=dict(mode='PAPER',status='READINESS_REPORT_ERROR',main_strategy_live_routing=False)
         result['route_paper']=__import__('route_branch').report(config.DB)
+        try:result['amm_observer']=__import__('amm_observer').summary(config.DB)
+        except Exception:result['amm_observer']=dict(state='REPORT_ERROR')
         result['overview']=__import__('campaign_view').overview(config.DB)
         return result
 

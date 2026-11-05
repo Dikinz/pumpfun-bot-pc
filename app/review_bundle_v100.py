@@ -15,11 +15,15 @@ def report_time(data):
     return None,None
 
 def export(folder,max_volume_bytes=DEFAULT_VOLUME_BYTES):
-    folder=Path(folder);items=[];errors=[]
+    folder=Path(folder);items=[];errors=[];oversize=[]
     for path in sorted(folder.glob('*.json')):
         if path.name.startswith('review_bundle'):continue
         try:
-            if path.stat().st_size>MAX_REPORT_BYTES:raise ValueError('REPORT_OVERSIZE')
+            # v0.7.102.0: a report above the in-memory limit is streamed into its own volume
+            # unparsed (exported by this package), instead of failing the whole package.
+            if path.stat().st_size>MAX_REPORT_BYTES:
+                oversize.append(dict(source_name=path.name,name=path.name,sha256=sha(path),bytes=path.stat().st_size,timestamp_field=None,report_ts=None,
+                    oversize_streamed=True,json_validated=False));continue
             raw=path.read_bytes();data=json.loads(raw);field,ts=report_time(data)
             name=path.stem+('__'+stamp(ts) if ts is not None else '')+'.json'
             items.append((dict(source_name=path.name,name=name,sha256=hashlib.sha256(raw).hexdigest(),bytes=len(raw),timestamp_field=field,report_ts=ts),raw))
@@ -35,11 +39,17 @@ def export(folder,max_volume_bytes=DEFAULT_VOLUME_BYTES):
         if current and len(archive(current+[item]))>max_volume_bytes:batches.append(current);current=[]
         current.append(item)
     if current:batches.append(current)
-    result=dict(schema='REVIEW_BUNDLE_V100',files=[meta for meta,raw in items],volumes=[],errors=errors,note='Only JSON reports. Filenames use the report timestamp, not export time. Missing timestamps are explicit; original report bytes preserved.')
+    result=dict(schema='REVIEW_BUNDLE_V100',files=[meta for meta,raw in items]+oversize,volumes=[],errors=errors,note='Only JSON reports. Filenames use the report timestamp, not export time. Missing timestamps are explicit; original report bytes preserved. Reports above the in-memory limit are streamed unparsed into their own volume (oversize_streamed).')
     for i,batch in enumerate(batches,1):
         path=folder/('review_bundle_%03d.zip'%i)
         path.write_bytes(archive(batch))
         result['volumes'].append(dict(name=path.name,bytes=path.stat().st_size,sha256=sha(path),oversize_single_report=len(batch)==1 and path.stat().st_size>max_volume_bytes))
+    for j,meta in enumerate(oversize,len(batches)+1):
+        path=folder/('review_bundle_%03d.zip'%j)
+        with zipfile.ZipFile(path,'w',zipfile.ZIP_DEFLATED) as z:
+            z.write(folder/meta['source_name'],meta['name'])
+            z.writestr('REVIEW_MANIFEST.json',json.dumps(dict(schema='REVIEW_BUNDLE_V100',files=[meta]),indent=2))
+        result['volumes'].append(dict(name=path.name,bytes=path.stat().st_size,sha256=sha(path),oversize_single_report=True,streamed_report=meta['source_name']))
     (folder/'review_bundle_manifest.json').write_text(json.dumps(result,indent=2),encoding='utf-8')
     return result
 

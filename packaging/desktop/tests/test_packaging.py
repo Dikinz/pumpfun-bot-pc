@@ -84,7 +84,7 @@ def test_update_check_mode_and_revision(tmp_path,capsys):
 def test_real_manifest_is_current():
     new,ch=um.update(ROOT)
     assert ch=={'changed':[],'added':[],'revision':None},ch
-    assert new['version']=='v0.7.101.11' and new['build_revision']=='RUN_REVIEW_V10111'
+    assert new['version']=='v0.7.102.0' and new['build_revision']=='AMM_OBSERVER_V10200'
     assert (ROOT/'BUILD_MANIFEST.json').read_bytes()==um.render(new)
 
 # ---- build_portable.py ----

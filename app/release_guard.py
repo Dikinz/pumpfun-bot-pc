@@ -1,7 +1,7 @@
 """Standard-library-only validation before importing any bot module."""
 import hashlib,json,socket
 from pathlib import Path
-VERSION='v0.7.101.11'
+VERSION='v0.7.102.0'
 TEXT_SUFFIXES=frozenset({'.py','.bat','.json','.md','.txt','.xml','.html','.example'})
 
 def lf_digest(path):

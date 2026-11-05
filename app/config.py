@@ -3,7 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().with_name(".env"))
 
-VERSION="v0.7.101.11"
+VERSION="v0.7.102.0"
 EXECUTION_MODE=os.getenv("EXECUTION_MODE","paper").strip().lower()
 if EXECUTION_MODE!="paper":raise RuntimeError("Main strategy live adapter is not validated; EXECUTION_MODE must remain paper.")
 DB=os.getenv("DATABASE_PATH","data/clean_0762.db")
@@ -381,3 +381,10 @@ if not 0<=GENESIS_CACHE_TTL_S<=21600:raise ValueError("GENESIS_CACHE_TTL_S must 
 
 # Optional independent AMM PAPER process; targeted AMM check is separate.
 AMM_BRANCH_ENABLED=os.getenv("AMM_BRANCH_ENABLED","0")=="1"
+
+# v0.7.102.0: AMM observer (amm_observer.py), observation only: no entries, orders or PAPER balance.
+# off | counts (pool/action counters only) | observe (also migrations, AMM trades, pool reads, Jupiter quotes).
+AMM_OBSERVER_MODE=os.getenv("AMM_OBSERVER_MODE","observe").strip().lower()
+# Observer share inside the common RPC admission (requests per second, 0 < x <= 1); not a trading limit.
+AMM_OBSERVER_RPC_RATE=float(os.getenv("AMM_OBSERVER_RPC_RATE","0.2"))
+AMM_OBSERVER_JUPITER=os.getenv("AMM_OBSERVER_JUPITER","1")=="1"

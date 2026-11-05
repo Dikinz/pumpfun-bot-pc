@@ -85,6 +85,19 @@ def test_after_corruption_is_compared_without_repair(tmp_path):
     r=a.finish({},{});assert r['comparison']==[dict(database=p.name,before='OK',after='CORRUPT')]
     assert not r['integrity_phases_ok'] and p.read_bytes()==b'bad database'
 
+def test_database_created_during_run_is_absent_before_and_must_be_ok_after(tmp_path):
+    # v0.7.102.0: the AMM observer creates <primary>_amm_observer.db on its first start.
+    p=db(tmp_path);a=audit.Audit(p);a.before=audit.probe(p,'before')
+    new=p.with_name(p.stem+'_amm_observer.db')
+    with sqlite3.connect(new) as c:c.execute('create table t(x)')
+    r=a.finish({},{})
+    assert dict(database=new.name,before='ABSENT_BEFORE',after='OK') in r['comparison'] and r['integrity_phases_ok']
+    broken=p.with_name(p.stem+'_other_new.db');broken.write_bytes(b'broken')
+    r=a.finish({},{})
+    assert dict(database=broken.name,before='ABSENT_BEFORE',after='CORRUPT') in r['comparison'] and not r['integrity_phases_ok']
+    # Without a completed before-probe of the primary nothing is ABSENT_BEFORE (test_missing_primary_... covers the rest).
+    a.before=dict(databases=[]);assert {x['before'] for x in a.finish({},{})['comparison']}=={'NOT_MEASURED'}
+
 def test_live_wal_probe_does_not_commit_writer_transaction(tmp_path):
     p=db(tmp_path)
     with sqlite3.connect(p,isolation_level=None) as c:

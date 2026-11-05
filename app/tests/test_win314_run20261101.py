@@ -328,8 +328,8 @@ def test_win314_details_page_has_no_ukrainian_text():
 
 # ============================================================ round 2 (fix_r2) ===
 # ------------------------------------------------------------------ CR1-01 ---
-# v0.7.101.11: the previous build is now v0.7.101.10 (built 05.11; its recovery check failed on the overview payload size).
-PREVIOUS_BUILD=dict(version='v0.7.101.10',build_revision='RUN_REVIEW_V10110')
+# v0.7.102.0: the previous build is now v0.7.101.11 (05.11; ran the campaign to 104 closes).
+PREVIOUS_BUILD=dict(version='v0.7.101.11',build_revision='RUN_REVIEW_V10111')
 
 
 def test_win314_new_build_identity_is_bumped_and_consistent():

@@ -118,8 +118,11 @@ class Audit:
         after=collect(self.primary,'after')
         confirmed=observed_exited and acks and expected_connections<={r['pid'] for r in rows}
         b={r['database']:r for r in (self.before or {}).get('databases',[])};a={r['database']:r for r in after.get('databases',[])}
-        comparison=[dict(database=n,before=b.get(n,{}).get('status','NOT_MEASURED'),after=a.get(n,{}).get('status','NOT_MEASURED')) for n in sorted(set(a)|set(b))]
-        integrity_ok=self.primary.name in a and self.primary.name in b and bool(comparison) and all(r['before']=='OK' and r['after']=='OK' for r in comparison)
+        # v0.7.102.0: a database first created during this run (e.g. the AMM observer's) had no file when the
+        # completed before-probe ran; it is ABSENT_BEFORE and must be OK after. The primary still needs both phases.
+        missing='ABSENT_BEFORE' if self.primary.name in b else 'NOT_MEASURED'
+        comparison=[dict(database=n,before=b.get(n,{}).get('status',missing),after=a.get(n,{}).get('status','NOT_MEASURED')) for n in sorted(set(a)|set(b))]
+        integrity_ok=self.primary.name in a and self.primary.name in b and bool(comparison) and all(r['before'] in ('OK','ABSENT_BEFORE') and r['after']=='OK' for r in comparison)
         result=dict(runtime_roles=runtime_roles,integrity_phases_ok=integrity_ok,expected_connection_pids=sorted(expected_connections),schema='SHUTDOWN_AUDIT_V68',session=self.session,started_ts=self.started,ts=time.time(),processes=rows,observation_errors=self.errors,
           stop_results=stops,connections=connections,counter_writers=counters,expected_runtime_pids=sorted(expected_workers),observed_processes_exited=observed_exited,
           writer_acks_complete=acks,all_observed_writers_finished=confirmed,after_is_after_confirmed_writers=confirmed,
