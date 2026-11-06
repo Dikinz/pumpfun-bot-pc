@@ -12,7 +12,7 @@ from collections import OrderedDict, deque
 import stream_diagnostics
 import websockets,config,database as db
 import model_gate
-import amm_observer
+import amm_observer,lp_observer
 import branch_transport
 import runtime_control
 import observation_lab as observation
@@ -1277,6 +1277,7 @@ async def pumpapi_trades(q):
                         if not isinstance(x,dict):continue
                         probe.provider(x,now)
                         amm_observer.tap(x,now)  # v0.7.102.0: O(1) observer tap, before the action and curve-pool filters
+                        lp_observer.tap(x,now)  # v0.7.103.0: O(1) LP recorder tap (three venue labels only)
                         action=str(x.get("action") or x.get("txType") or "").lower()
                         if action not in ("buy","sell"):continue
                         if str(x.get("pool") or "").lower()!=config.PUMPAPI_POOL:
@@ -1516,6 +1517,7 @@ async def run():
     counter_sink=__import__('counter_writer').start(config.DB,session=run_audit.ACTIVE)
     # v0.7.102.0: observation only, own database and threads; start/stop never raise into the engine.
     await asyncio.to_thread(amm_observer.start,config.DB)
+    await asyncio.to_thread(lp_observer.start,config.DB)  # v0.7.103.0: same contract as the AMM observer
     try:
         await asyncio.gather(*running)
     finally:
@@ -1527,8 +1529,10 @@ async def run():
                 with db.atomic():execution.cancel_unfilled_buys_on_stop(db.con())
         finally:
             observer_stop=await asyncio.to_thread(amm_observer.stop)
+            lp_stop=await asyncio.to_thread(lp_observer.stop)
             try:
                 if observer_stop:system_health.event(config.DB,'AMM_OBSERVER_STOPPED',state=observer_stop.get('state'),threads_alive=observer_stop.get('threads_alive'))
+                if lp_stop:system_health.event(config.DB,'LP_OBSERVER_STOPPED',state=lp_stop.get('state'),threads_alive=lp_stop.get('threads_alive'))
             except Exception:pass
             await __import__('counter_writer').stop(counter_sink)
             try:
@@ -1571,6 +1575,6 @@ if __name__=="__main__":
         raise
 
     finally:
-        amm_observer.stop()  # idempotent; covers exits that bypass run()'s own cleanup
+        amm_observer.stop();lp_observer.stop()  # idempotent; covers exits that bypass run()'s own cleanup
         __import__('wal_checkpoint_v1014').close()
         __import__('shutdown_audit').closed(config.DB,'primary',run_audit.ACTIVE)

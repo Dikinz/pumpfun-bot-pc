@@ -1,0 +1,812 @@
+{
+ "prereg_sha256": "45bb5458f968c55e1dd5ec65ef26c8ae1f8ad0eb5cd5e2d2c91e530c92d42684",
+ "symbols": [
+  "1000SHIBUSDT",
+  "ADAUSDT",
+  "ALGOUSDT",
+  "ATOMUSDT",
+  "AVAXUSDT",
+  "BCHUSDT",
+  "BNBUSDT",
+  "BTCUSDT",
+  "DOGEUSDT",
+  "DOTUSDT",
+  "ETHUSDT",
+  "LINKUSDT",
+  "LTCUSDT",
+  "LUNAUSDT",
+  "MATICUSDT",
+  "NEARUSDT",
+  "SOLUSDT",
+  "TRXUSDT",
+  "UNIUSDT",
+  "XRPUSDT"
+ ],
+ "variants": {
+  "T_1h": {
+   "discovery": {
+    "n": 15090,
+    "mean_r": -0.07879584813420576,
+    "win_rate": 0.3009277667329357,
+    "median_hold_h": 16.0,
+    "long_share": 0.5072895957587806,
+    "total_r": -1189.0293483451649
+   },
+   "holdout": {
+    "n": 9066,
+    "mean_r": -0.042042550275365353,
+    "win_rate": 0.29913964262078097,
+    "median_hold_h": 16.0,
+    "long_share": 0.4955879108757997,
+    "total_r": -381.1577607964623
+   },
+   "holdout_stress": {
+    "n": 9066,
+    "mean_r": -0.1538014212500574,
+    "win_rate": 0.28105007721155967,
+    "median_hold_h": 16.0,
+    "long_share": 0.4955879108757997,
+    "total_r": -1394.3636850530206
+   },
+   "holdout_nofund": {
+    "n": 9066,
+    "mean_r": -0.0355094209845147,
+    "win_rate": 0.3013456871828811,
+    "median_hold_h": 16.0,
+    "long_share": 0.4955879108757997,
+    "total_r": -321.92841064561026
+   },
+   "funding_share_of_costs": 0.08717301096005137,
+   "liq_before_stop_share": {
+    "10x": 0.00044120891242003087,
+    "15x": 0.006066622545775425
+   },
+   "stop_distance_median_pct": 2.0775231575655604,
+   "mean_r_by_year": {
+    "2022": {
+     "n": 5145,
+     "mean_r": -0.10029653421613896
+    },
+    "2023": {
+     "n": 4918,
+     "mean_r": -0.1177306114744098
+    },
+    "2024": {
+     "n": 5027,
+     "mean_r": -0.018699926909087432
+    },
+    "2025": {
+     "n": 5129,
+     "mean_r": -0.037469004306814366
+    },
+    "2026": {
+     "n": 3937,
+     "mean_r": -0.048000822379174864
+    }
+   },
+   "exit_kinds": {
+    "stop": 3706,
+    "rule": 5349,
+    "end": 11
+   },
+   "portfolio_holdout": {
+    "start": 300.0,
+    "end": 92.65499964793607,
+    "taken": 2075,
+    "skipped": 6991,
+    "max_drawdown": 0.7398318783167261,
+    "mean_month_usd": -9.015000015307113,
+    "worst_month_usd": -31.870818037421017,
+    "months": 23
+   },
+   "delayed": {
+    "n": 9066,
+    "mean_r": -0.04749412056867285,
+    "win_rate": 0.2983675270240459,
+    "median_hold_h": 15.75,
+    "long_share": 0.4955879108757997,
+    "total_r": -430.58169707558807
+   },
+   "delayed_ms": 900000,
+   "bootstrap_p": 0.8244,
+   "random": {
+    "reps": 200,
+    "mean_of_means": -0.08142258206970146,
+    "p95": -0.05250113834891556,
+    "p_random": 0.01990049751243781
+   },
+   "checks": {
+    "1_trades_ge_150": true,
+    "2_mean_r_pos_p_lt_alpha": false,
+    "3_stress_mean_r_pos": false,
+    "4_p_random_lt_0.05": true,
+    "5_delayed_mean_r_pos": false,
+    "6_discovery_mean_r_pos": false
+   },
+   "passed": false
+  },
+  "T_4h": {
+   "discovery": {
+    "n": 3640,
+    "mean_r": 0.1264514607818178,
+    "win_rate": 0.3362637362637363,
+    "median_hold_h": 68.0,
+    "long_share": 0.5203296703296704,
+    "total_r": 460.28331724581676
+   },
+   "holdout": {
+    "n": 2336,
+    "mean_r": -0.04708694992645898,
+    "win_rate": 0.3069349315068493,
+    "median_hold_h": 57.91666666666667,
+    "long_share": 0.4931506849315068,
+    "total_r": -109.99511502820818
+   },
+   "holdout_stress": {
+    "n": 2336,
+    "mean_r": -0.0995615565170751,
+    "win_rate": 0.2983732876712329,
+    "median_hold_h": 57.91666666666667,
+    "long_share": 0.4931506849315068,
+    "total_r": -232.57579602388745
+   },
+   "holdout_nofund": {
+    "n": 2336,
+    "mean_r": -0.03650671969846332,
+    "win_rate": 0.3099315068493151,
+    "median_hold_h": 57.91666666666667,
+    "long_share": 0.4931506849315068,
+    "total_r": -85.27969721561031
+   },
+   "funding_share_of_costs": 0.2414519405685244,
+   "liq_before_stop_share": {
+    "10x": 0.013270547945205479,
+    "15x": 0.16095890410958905
+   },
+   "stop_distance_median_pct": 4.279566456733266,
+   "mean_r_by_year": {
+    "2022": {
+     "n": 1272,
+     "mean_r": 0.01457122871997363
+    },
+    "2023": {
+     "n": 1169,
+     "mean_r": 0.146319361516014
+    },
+    "2024": {
+     "n": 1199,
+     "mean_r": 0.22577262777463716
+    },
+    "2025": {
+     "n": 1284,
+     "mean_r": -0.07463727958592746
+    },
+    "2026": {
+     "n": 1052,
+     "mean_r": -0.013460882167183781
+    }
+   },
+   "exit_kinds": {
+    "stop": 998,
+    "rule": 1325,
+    "end": 13
+   },
+   "portfolio_holdout": {
+    "start": 300.0,
+    "end": 242.22317368041047,
+    "taken": 525,
+    "skipped": 1811,
+    "max_drawdown": 0.3163762566299483,
+    "mean_month_usd": -2.512035926938683,
+    "worst_month_usd": -19.728965289591642,
+    "months": 23
+   },
+   "delayed": {
+    "n": 2336,
+    "mean_r": -0.07380142454818206,
+    "win_rate": 0.2962328767123288,
+    "median_hold_h": 55.75,
+    "long_share": 0.4931506849315068,
+    "total_r": -172.4001277445533
+   },
+   "delayed_ms": 900000,
+   "bootstrap_p": 0.7184,
+   "random": {
+    "reps": 200,
+    "mean_of_means": -0.0466288223850176,
+    "p95": 0.01028996050439131,
+    "p_random": 0.46766169154228854
+   },
+   "checks": {
+    "1_trades_ge_150": true,
+    "2_mean_r_pos_p_lt_alpha": false,
+    "3_stress_mean_r_pos": false,
+    "4_p_random_lt_0.05": false,
+    "5_delayed_mean_r_pos": false,
+    "6_discovery_mean_r_pos": true
+   },
+   "passed": false
+  },
+  "T_1D": {
+   "discovery": {
+    "n": 624,
+    "mean_r": 0.3486269364177359,
+    "win_rate": 0.32211538461538464,
+    "median_hold_h": 384.0,
+    "long_share": 0.5,
+    "total_r": 217.5432083246672
+   },
+   "holdout": {
+    "n": 368,
+    "mean_r": -0.03649101263993519,
+    "win_rate": 0.3342391304347826,
+    "median_hold_h": 384.0,
+    "long_share": 0.47554347826086957,
+    "total_r": -13.428692651496151
+   },
+   "holdout_stress": {
+    "n": 368,
+    "mean_r": -0.05498909010783893,
+    "win_rate": 0.3233695652173913,
+    "median_hold_h": 384.0,
+    "long_share": 0.47554347826086957,
+    "total_r": -20.235985159684727
+   },
+   "holdout_nofund": {
+    "n": 368,
+    "mean_r": -0.01868149603729411,
+    "win_rate": 0.3423913043478261,
+    "median_hold_h": 384.0,
+    "long_share": 0.47554347826086957,
+    "total_r": -6.8747905417242325
+   },
+   "funding_share_of_costs": 0.6071751876800281,
+   "liq_before_stop_share": {
+    "10x": 0.7092391304347826,
+    "15x": 0.9103260869565217
+   },
+   "stop_distance_median_pct": 11.692516061041381,
+   "mean_r_by_year": {
+    "2022": {
+     "n": 211,
+     "mean_r": -0.1171881497066541
+    },
+    "2023": {
+     "n": 196,
+     "mean_r": 0.6866638984113359
+    },
+    "2024": {
+     "n": 217,
+     "mean_r": 0.49623863513432903
+    },
+    "2025": {
+     "n": 200,
+     "mean_r": -0.22535883075575305
+    },
+    "2026": {
+     "n": 168,
+     "mean_r": 0.1883516279741337
+    }
+   },
+   "exit_kinds": {
+    "stop": 125,
+    "rule": 228,
+    "end": 15
+   },
+   "portfolio_holdout": {
+    "start": 300.0,
+    "end": 301.4755319873464,
+    "taken": 85,
+    "skipped": 283,
+    "max_drawdown": 0.05987434513400691,
+    "mean_month_usd": 0.06415356466724523,
+    "worst_month_usd": -7.538645546413772,
+    "months": 23
+   },
+   "delayed": {
+    "n": 368,
+    "mean_r": -0.010815117207178643,
+    "win_rate": 0.33695652173913043,
+    "median_hold_h": 380.0,
+    "long_share": 0.47554347826086957,
+    "total_r": -3.979963132241741
+   },
+   "delayed_ms": 14400000,
+   "bootstrap_p": 0.6242,
+   "random": {
+    "reps": 200,
+    "mean_of_means": -0.03448832598652019,
+    "p95": 0.0928368355697953,
+    "p_random": 0.47761194029850745
+   },
+   "checks": {
+    "1_trades_ge_150": true,
+    "2_mean_r_pos_p_lt_alpha": false,
+    "3_stress_mean_r_pos": false,
+    "4_p_random_lt_0.05": false,
+    "5_delayed_mean_r_pos": false,
+    "6_discovery_mean_r_pos": true
+   },
+   "passed": false
+  },
+  "M_1h": {
+   "discovery": {
+    "n": 34722,
+    "mean_r": -0.17819836561754338,
+    "win_rate": 0.4440124416796267,
+    "median_hold_h": 5.333333333333333,
+    "long_share": 0.5154368987961523,
+    "total_r": -6187.403650972341
+   },
+   "holdout": {
+    "n": 19651,
+    "mean_r": -0.18248075588311818,
+    "win_rate": 0.4377385374790087,
+    "median_hold_h": 5.25,
+    "long_share": 0.5075568673349957,
+    "total_r": -3585.9293338591556
+   },
+   "holdout_stress": {
+    "n": 19651,
+    "mean_r": -0.3337413542775782,
+    "win_rate": 0.42506742659406643,
+    "median_hold_h": 5.25,
+    "long_share": 0.5075568673349957,
+    "total_r": -6558.351352908689
+   },
+   "holdout_nofund": {
+    "n": 19651,
+    "mean_r": -0.18493657881702408,
+    "win_rate": 0.4371278815327464,
+    "median_hold_h": 5.25,
+    "long_share": 0.5075568673349957,
+    "total_r": -3634.18871033334
+   },
+   "funding_share_of_costs": 0.029718514407327475,
+   "liq_before_stop_share": {
+    "10x": 0.0009159839193934151,
+    "15x": 0.003205943717876953
+   },
+   "stop_distance_median_pct": 1.5777695186133553,
+   "mean_r_by_year": {
+    "2022": {
+     "n": 11555,
+     "mean_r": -0.1669555145440874
+    },
+    "2023": {
+     "n": 11699,
+     "mean_r": -0.18106136110656723
+    },
+    "2024": {
+     "n": 11468,
+     "mean_r": -0.18660584381144749
+    },
+    "2025": {
+     "n": 10668,
+     "mean_r": -0.1678365916866412
+    },
+    "2026": {
+     "n": 8983,
+     "mean_r": -0.19987182163487338
+    }
+   },
+   "exit_kinds": {
+    "stop": 10647,
+    "rule": 8997,
+    "end": 7
+   },
+   "portfolio_holdout": {
+    "start": 300.0,
+    "end": 0.9736368607617993,
+    "taken": 5997,
+    "skipped": 13654,
+    "max_drawdown": 0.9969605889752544,
+    "mean_month_usd": -13.001146223445136,
+    "worst_month_usd": -74.73871757946941,
+    "months": 23
+   },
+   "delayed": {
+    "n": 19651,
+    "mean_r": -0.18093122967097267,
+    "win_rate": 0.44725459264159584,
+    "median_hold_h": 5.583333333333333,
+    "long_share": 0.5075568673349957,
+    "total_r": -3555.4795942642836
+   },
+   "delayed_ms": 900000,
+   "bootstrap_p": 1.0,
+   "random": {
+    "reps": 200,
+    "mean_of_means": -0.14175792332767734,
+    "p95": -0.13425980438504617,
+    "p_random": 1.0
+   },
+   "checks": {
+    "1_trades_ge_150": true,
+    "2_mean_r_pos_p_lt_alpha": false,
+    "3_stress_mean_r_pos": false,
+    "4_p_random_lt_0.05": false,
+    "5_delayed_mean_r_pos": false,
+    "6_discovery_mean_r_pos": false
+   },
+   "passed": false
+  },
+  "M_4h": {
+   "discovery": {
+    "n": 8677,
+    "mean_r": -0.15652342065831107,
+    "win_rate": 0.42019131036072377,
+    "median_hold_h": 20.0,
+    "long_share": 0.5015558372709462,
+    "total_r": -1358.153721052165
+   },
+   "holdout": {
+    "n": 4955,
+    "mean_r": -0.08299305429909098,
+    "win_rate": 0.4468213925327952,
+    "median_hold_h": 20.0,
+    "long_share": 0.49767911200807263,
+    "total_r": -411.23058405199583
+   },
+   "holdout_stress": {
+    "n": 4955,
+    "mean_r": -0.1529535184010906,
+    "win_rate": 0.4441977800201816,
+    "median_hold_h": 20.0,
+    "long_share": 0.49767911200807263,
+    "total_r": -757.8846836774039
+   },
+   "holdout_nofund": {
+    "n": 4955,
+    "mean_r": -0.08741864148676069,
+    "win_rate": 0.44661957618567105,
+    "median_hold_h": 20.0,
+    "long_share": 0.49767911200807263,
+    "total_r": -433.1593685668992
+   },
+   "funding_share_of_costs": 0.09479498804434963,
+   "liq_before_stop_share": {
+    "10x": 0.005852674066599395,
+    "15x": 0.051059535822401615
+   },
+   "stop_distance_median_pct": 3.290875345987336,
+   "mean_r_by_year": {
+    "2022": {
+     "n": 2816,
+     "mean_r": -0.18091617029520096
+    },
+    "2023": {
+     "n": 2938,
+     "mean_r": -0.11513556442583432
+    },
+    "2024": {
+     "n": 2923,
+     "mean_r": -0.17462384441251372
+    },
+    "2025": {
+     "n": 2706,
+     "mean_r": -0.08277796757365612
+    },
+    "2026": {
+     "n": 2249,
+     "mean_r": -0.08325184695317138
+    }
+   },
+   "exit_kinds": {
+    "stop": 2680,
+    "rule": 2264,
+    "end": 11
+   },
+   "portfolio_holdout": {
+    "start": 300.0,
+    "end": 173.8889493190836,
+    "taken": 1469,
+    "skipped": 3486,
+    "max_drawdown": 0.47526986274976746,
+    "mean_month_usd": -5.4830891600398335,
+    "worst_month_usd": -23.757166004301634,
+    "months": 23
+   },
+   "delayed": {
+    "n": 4955,
+    "mean_r": -0.05143307790816959,
+    "win_rate": 0.45731584258324925,
+    "median_hold_h": 20.833333333333332,
+    "long_share": 0.49767911200807263,
+    "total_r": -254.85090103498032
+   },
+   "delayed_ms": 900000,
+   "bootstrap_p": 0.991,
+   "random": {
+    "reps": 200,
+    "mean_of_means": -0.06095867220757974,
+    "p95": -0.04570146131231874,
+    "p_random": 0.9850746268656716
+   },
+   "checks": {
+    "1_trades_ge_150": true,
+    "2_mean_r_pos_p_lt_alpha": false,
+    "3_stress_mean_r_pos": false,
+    "4_p_random_lt_0.05": false,
+    "5_delayed_mean_r_pos": false,
+    "6_discovery_mean_r_pos": false
+   },
+   "passed": false
+  },
+  "M_1D": {
+   "discovery": {
+    "n": 1509,
+    "mean_r": -0.1713423002663215,
+    "win_rate": 0.39430086149768057,
+    "median_hold_h": 114.58333333333333,
+    "long_share": 0.4254473161033797,
+    "total_r": -258.5555311018791
+   },
+   "holdout": {
+    "n": 799,
+    "mean_r": -0.00038004426705467434,
+    "win_rate": 0.4818523153942428,
+    "median_hold_h": 128.58333333333334,
+    "long_share": 0.46808510638297873,
+    "total_r": -0.3036553693766848
+   },
+   "holdout_stress": {
+    "n": 799,
+    "mean_r": -0.02661176667856984,
+    "win_rate": 0.4818523153942428,
+    "median_hold_h": 128.58333333333334,
+    "long_share": 0.46808510638297873,
+    "total_r": -21.262801576177303
+   },
+   "holdout_nofund": {
+    "n": 799,
+    "mean_r": -0.006919508757457015,
+    "win_rate": 0.4806007509386733,
+    "median_hold_h": 128.58333333333334,
+    "long_share": 0.46808510638297873,
+    "total_r": -5.528687497208155
+   },
+   "funding_share_of_costs": 0.3178483548741301,
+   "liq_before_stop_share": {
+    "10x": 0.39424280350438046,
+    "15x": 0.7909887359198998
+   },
+   "stop_distance_median_pct": 8.41236138771555,
+   "mean_r_by_year": {
+    "2022": {
+     "n": 437,
+     "mean_r": -0.09568469575761387
+    },
+    "2023": {
+     "n": 529,
+     "mean_r": -0.18805497327203133
+    },
+    "2024": {
+     "n": 543,
+     "mean_r": -0.2159488732871037
+    },
+    "2025": {
+     "n": 408,
+     "mean_r": 0.07006072609887301
+    },
+    "2026": {
+     "n": 391,
+     "mean_r": -0.0738834568228053
+    }
+   },
+   "exit_kinds": {
+    "stop": 395,
+    "rule": 390,
+    "end": 14
+   },
+   "portfolio_holdout": {
+    "start": 300.0,
+    "end": 279.85315337494706,
+    "taken": 256,
+    "skipped": 543,
+    "max_drawdown": 0.13533348379241794,
+    "mean_month_usd": -0.8759498532631826,
+    "worst_month_usd": -24.287100990659606,
+    "months": 23
+   },
+   "delayed": {
+    "n": 799,
+    "mean_r": 0.03594089604070885,
+    "win_rate": 0.5006257822277848,
+    "median_hold_h": 140.0,
+    "long_share": 0.46808510638297873,
+    "total_r": 28.716775936526375
+   },
+   "delayed_ms": 14400000,
+   "bootstrap_p": 0.4844,
+   "random": {
+    "reps": 200,
+    "mean_of_means": -0.026005767887657426,
+    "p95": 0.008491680125358978,
+    "p_random": 0.12935323383084577
+   },
+   "checks": {
+    "1_trades_ge_150": true,
+    "2_mean_r_pos_p_lt_alpha": false,
+    "3_stress_mean_r_pos": false,
+    "4_p_random_lt_0.05": false,
+    "5_delayed_mean_r_pos": true,
+    "6_discovery_mean_r_pos": false
+   },
+   "passed": false
+  },
+  "T_1W": {
+   "discovery": {
+    "n": 106,
+    "mean_r": 0.13170833938416585,
+    "win_rate": 0.3867924528301887,
+    "median_hold_h": 3360.0,
+    "long_share": 0.5188679245283019,
+    "total_r": 13.961083974721578
+   },
+   "holdout": {
+    "n": 52,
+    "mean_r": -0.3730513192141474,
+    "win_rate": 0.28846153846153844,
+    "median_hold_h": 1965.0833333333335,
+    "long_share": 0.46153846153846156,
+    "total_r": -19.398668599135664
+   },
+   "holdout_stress": {
+    "n": 52,
+    "mean_r": -0.3790788323243369,
+    "win_rate": 0.28846153846153844,
+    "median_hold_h": 1965.0833333333335,
+    "long_share": 0.46153846153846156,
+    "total_r": -19.71209928086552
+   },
+   "holdout_nofund": {
+    "n": 52,
+    "mean_r": -0.3688381226846858,
+    "win_rate": 0.3269230769230769,
+    "median_hold_h": 1965.0833333333335,
+    "long_share": 0.46153846153846156,
+    "total_r": -19.179582379603662
+   },
+   "funding_share_of_costs": 0.8650164283020096,
+   "liq_before_stop_share": {
+    "10x": 1.0,
+    "15x": 1.0
+   },
+   "stop_distance_median_pct": 33.578941530240456,
+   "mean_r_by_year": {
+    "2022": {
+     "n": 31,
+     "mean_r": 0.022170841205078808
+    },
+    "2023": {
+     "n": 36,
+     "mean_r": 0.4847836552395217
+    },
+    "2024": {
+     "n": 39,
+     "mean_r": -0.1071390690066319
+    },
+    "2025": {
+     "n": 26,
+     "mean_r": -0.4059701652003716
+    },
+    "2026": {
+     "n": 26,
+     "mean_r": -0.3401324732279233
+    }
+   },
+   "exit_kinds": {
+    "stop": 20,
+    "rule": 24,
+    "end": 8
+   },
+   "portfolio_holdout": {
+    "start": 300.0,
+    "end": 298.37609876246154,
+    "taken": 14,
+    "skipped": 38,
+    "max_drawdown": 0.022206272071366606,
+    "mean_month_usd": -0.16239012375384274,
+    "worst_month_usd": -3.0839171326054995,
+    "months": 10
+   },
+   "delayed": {
+    "n": 52,
+    "mean_r": -0.37217095736279915,
+    "win_rate": 0.3076923076923077,
+    "median_hold_h": 1961.0833333333335,
+    "long_share": 0.46153846153846156,
+    "total_r": -19.352889782865557
+   },
+   "delayed_ms": 14400000
+  },
+  "M_1W": {
+   "discovery": {
+    "n": 202,
+    "mean_r": -0.02836311113505601,
+    "win_rate": 0.39603960396039606,
+    "median_hold_h": 840.0,
+    "long_share": 0.21287128712871287,
+    "total_r": -5.729348449281314
+   },
+   "holdout": {
+    "n": 81,
+    "mean_r": 0.1024454889891236,
+    "win_rate": 0.5432098765432098,
+    "median_hold_h": 1252.6666666666667,
+    "long_share": 0.4444444444444444,
+    "total_r": 8.298084608119012
+   },
+   "holdout_stress": {
+    "n": 81,
+    "mean_r": 0.09357890887704803,
+    "win_rate": 0.5432098765432098,
+    "median_hold_h": 1252.6666666666667,
+    "long_share": 0.4444444444444444,
+    "total_r": 7.5798916190408905
+   },
+   "holdout_nofund": {
+    "n": 81,
+    "mean_r": 0.1002810080875442,
+    "win_rate": 0.5432098765432098,
+    "median_hold_h": 1252.6666666666667,
+    "long_share": 0.4444444444444444,
+    "total_r": 8.12276165509108
+   },
+   "funding_share_of_costs": 0.7710941006288653,
+   "liq_before_stop_share": {
+    "10x": 0.9753086419753086,
+    "15x": 1.0
+   },
+   "stop_distance_median_pct": 25.020266510313093,
+   "mean_r_by_year": {
+    "2022": {
+     "n": 30,
+     "mean_r": 0.14807141770130633
+    },
+    "2023": {
+     "n": 76,
+     "mean_r": -0.28259490690784367
+    },
+    "2024": {
+     "n": 96,
+     "mean_r": 0.1177679369237044
+    },
+    "2025": {
+     "n": 44,
+     "mean_r": -0.054745043702040495
+    },
+    "2026": {
+     "n": 37,
+     "mean_r": 0.2893747711083458
+    }
+   },
+   "exit_kinds": {
+    "stop": 34,
+    "rule": 40,
+    "end": 7
+   },
+   "portfolio_holdout": {
+    "start": 300.0,
+    "end": 305.0443472671493,
+    "taken": 29,
+    "skipped": 52,
+    "max_drawdown": 0.027246702970063374,
+    "mean_month_usd": 0.3362898178099464,
+    "worst_month_usd": -2.7195752581147135,
+    "months": 15
+   },
+   "delayed": {
+    "n": 81,
+    "mean_r": 0.0872958262348423,
+    "win_rate": 0.5432098765432098,
+    "median_hold_h": 1248.6666666666667,
+    "long_share": 0.4444444444444444,
+    "total_r": 7.070961925022226
+   },
+   "delayed_ms": 14400000
+  }
+ },
+ "seconds": 102.48452711105347
+}

@@ -3,7 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().with_name(".env"))
 
-VERSION="v0.7.102.0"
+VERSION="v0.7.103.0"
 EXECUTION_MODE=os.getenv("EXECUTION_MODE","paper").strip().lower()
 if EXECUTION_MODE!="paper":raise RuntimeError("Main strategy live adapter is not validated; EXECUTION_MODE must remain paper.")
 DB=os.getenv("DATABASE_PATH","data/clean_0762.db")
@@ -384,7 +384,13 @@ AMM_BRANCH_ENABLED=os.getenv("AMM_BRANCH_ENABLED","0")=="1"
 
 # v0.7.102.0: AMM observer (amm_observer.py), observation only: no entries, orders or PAPER balance.
 # off | counts (pool/action counters only) | observe (also migrations, AMM trades, pool reads, Jupiter quotes).
-AMM_OBSERVER_MODE=os.getenv("AMM_OBSERVER_MODE","observe").strip().lower()
+# v0.7.103.0: default counts; the observe run of 05.11 answered its question and records ~35 MB/hour.
+AMM_OBSERVER_MODE=os.getenv("AMM_OBSERVER_MODE","counts").strip().lower()
 # Observer share inside the common RPC admission (requests per second, 0 < x <= 1); not a trading limit.
 AMM_OBSERVER_RPC_RATE=float(os.getenv("AMM_OBSERVER_RPC_RATE","0.2"))
 AMM_OBSERVER_JUPITER=os.getenv("AMM_OBSERVER_JUPITER","1")=="1"
+
+# v0.7.103.0: LP recorder for the virtual maker test (lp_observer.py), observation only: off | record.
+LP_OBSERVER_MODE=os.getenv("LP_OBSERVER_MODE","record").strip().lower()
+# Recorder share inside the common RPC admission (requests per second, 0 < x <= 1); not a trading limit.
+LP_OBSERVER_RPC_RATE=float(os.getenv("LP_OBSERVER_RPC_RATE","0.3"))

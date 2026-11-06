@@ -1,0 +1,5 @@
+eligible 163 of 576
+S_k0.5_ov0.1_m0.25_tp0.01_sl0.0_f0 median +31.1% mean +22.0% worst -47.4%
+S_k0.5_ov0.1_m0.0_tp0.01_sl0.0_f0 median +31.0% mean +22.7% worst -44.9%
+R_k0.5_ov0.25_m0.0_tp0.02_sl0.0_f0 median +30.7% mean +24.2% worst -17.4%
+exit=0

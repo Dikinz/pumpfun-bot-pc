@@ -19,7 +19,7 @@ def test_real_bootstrap_passes_only_network_arguments(tmp_path,monkeypatch,durat
         def wait(self,timeout):return 2
     monkeypatch.setattr(check.subprocess,'Popen',Child)
     assert bootstrap.main()==2
-    result=json.loads(out.read_text());assert result['version']=='v0.7.102.0' and result['diagnostic_revision']=='NETWORK_CHECK_FIX_2'
+    result=json.loads(out.read_text());assert result['version']=='v0.7.103.0' and result['diagnostic_revision']=='NETWORK_CHECK_FIX_2'
 
 
 @pytest.mark.parametrize('genesis,expected',[

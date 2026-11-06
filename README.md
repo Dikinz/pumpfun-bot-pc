@@ -1,8 +1,8 @@
-# PUMPFUN BOT v0.7.102.0 (PAPER)
+# PUMPFUN BOT v0.7.103.0 (PAPER)
 
 Самостоятельная PAPER-сборка: реальные сделки не отправляются, ключи подписи не нужны.
 Актуальные инструкции: README_RU.txt (русский) и README.txt (English).
-Изменения версии: RELEASE_NOTES_v1020.md (наблюдатель AMM без торговли), RELEASE_NOTES_v10111.md, RELEASE_NOTES_v10110.md, RELEASE_NOTES_v1019.md, RELEASE_NOTES_v1018.md, RELEASE_NOTES_v1017.md, RELEASE_NOTES_v1016.md, RELEASE_NOTES_v1015.md, RELEASE_NOTES_v1012.md, RELEASE_NOTES_v1011.md и RELEASE_NOTES_v101.md. Панель только для чтения: http://127.0.0.1:8188/terminal. Дорожная карта: ROADMAP.md.
+Изменения версии: RELEASE_NOTES_v1030.md (запись пулов для теста мейкера), RELEASE_NOTES_v1020.md (наблюдатель AMM без торговли), RELEASE_NOTES_v10111.md, RELEASE_NOTES_v10110.md, RELEASE_NOTES_v1019.md, RELEASE_NOTES_v1018.md, RELEASE_NOTES_v1017.md, RELEASE_NOTES_v1016.md, RELEASE_NOTES_v1015.md, RELEASE_NOTES_v1012.md, RELEASE_NOTES_v1011.md и RELEASE_NOTES_v101.md. Панель только для чтения: http://127.0.0.1:8188/terminal. Дорожная карта: ROADMAP.md.
 
 ## Порядок
 1. Новая папка, 01_INSTALL.bat, затем 02_SETTINGS.bat (API/RPC заново; private key не вводить).

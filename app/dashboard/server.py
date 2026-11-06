@@ -50,6 +50,8 @@ def _snap():
         result['route_paper']=__import__('route_branch').report(config.DB)
         try:result['amm_observer']=__import__('amm_observer').summary(config.DB)
         except Exception:result['amm_observer']=dict(state='REPORT_ERROR')
+        try:result['lp_observer']=__import__('lp_observer').summary(config.DB)
+        except Exception:result['lp_observer']=dict(state='REPORT_ERROR')
         result['overview']=__import__('campaign_view').overview(config.DB)
         return result
 

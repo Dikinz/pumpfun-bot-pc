@@ -1,0 +1,96 @@
+{
+  "endpoint": "https://data-api.binance.vision/api/v3/klines",
+  "fetched_utc": "2026-11-05T19:41:58Z",
+  "files": {
+    "BTCUSDT": {
+      "rows": 2649,
+      "first": 1564617600000,
+      "last": 1793404800000,
+      "sha256": "5f87f563efda59f7be14b3ec139d5bd4896b2966113377a333334dc1eb5d1fe5"
+    },
+    "ETHUSDT": {
+      "rows": 2649,
+      "first": 1564617600000,
+      "last": 1793404800000,
+      "sha256": "7161d571f80996498ded970874859253e186ea34ba54c7ff260f993d1ff2e756"
+    },
+    "XRPUSDT": {
+      "rows": 2649,
+      "first": 1564617600000,
+      "last": 1793404800000,
+      "sha256": "bdd554d9256fe6a828500aa365b62c69a5e324560de7d27036a4d9fb701f22af"
+    },
+    "BCHUSDT": {
+      "rows": 2530,
+      "first": 1574899200000,
+      "last": 1793404800000,
+      "sha256": "d93ab67f610d6f7cd48b6825166e1a2eb3ca96af7a95f5f35ff5445156493dfe"
+    },
+    "LTCUSDT": {
+      "rows": 2649,
+      "first": 1564617600000,
+      "last": 1793404800000,
+      "sha256": "558ae55a3c61bfd2a6242d2f467732c68e79c671cf1508a6e19dd79edb8c7967"
+    },
+    "EOSUSDT": {
+      "rows": 2126,
+      "first": 1564617600000,
+      "last": 1748217600000,
+      "sha256": "ed05212a572ef8ee4e2f5c095bc4cd00d02b839258069ffc2e817f01c02e5c5b"
+    },
+    "BNBUSDT": {
+      "rows": 2649,
+      "first": 1564617600000,
+      "last": 1793404800000,
+      "sha256": "2d903175a32b5177eda3a0d490d34203c2c4109fa36084b84a9c3559c870eb33"
+    },
+    "XTZUSDT": {
+      "rows": 2595,
+      "first": 1569283200000,
+      "last": 1793404800000,
+      "sha256": "e0b029e100c7ef25546df08f1292d1bd548d663a0435628549799cefe68ab804"
+    },
+    "XLMUSDT": {
+      "rows": 2649,
+      "first": 1564617600000,
+      "last": 1793404800000,
+      "sha256": "67750deee381764931b065d03b9b6d718a7fe807c0246fa7425ee2f3c9597e7b"
+    },
+    "ADAUSDT": {
+      "rows": 2649,
+      "first": 1564617600000,
+      "last": 1793404800000,
+      "sha256": "82d42a51161d9fb7c7b46d5111eabbf72e0b5e1b602a65487747a7f494340edc"
+    },
+    "TRXUSDT": {
+      "rows": 2649,
+      "first": 1564617600000,
+      "last": 1793404800000,
+      "sha256": "369a7501bffeb91c833095cc867c56f37c215216e53ef417cbc80b5beda36f43"
+    },
+    "LINKUSDT": {
+      "rows": 2649,
+      "first": 1564617600000,
+      "last": 1793404800000,
+      "sha256": "7fa5e5564f866319735fd4feff9070108881aae208408d0a83ab404b4cae2934"
+    },
+    "ETCUSDT": {
+      "rows": 2649,
+      "first": 1564617600000,
+      "last": 1793404800000,
+      "sha256": "5eef28c5d2103e2b3f63bd869bc55b16605e7ad6b53bc130c99368191be36caf"
+    },
+    "NEOUSDT": {
+      "rows": 2649,
+      "first": 1564617600000,
+      "last": 1793404800000,
+      "sha256": "3ed3f13b8ce6e89dad32c18496758075ef580c53ea0080c39333df6874d3b519"
+    },
+    "ATOMUSDT": {
+      "rows": 2649,
+      "first": 1564617600000,
+      "last": 1793404800000,
+      "sha256": "87f47b324485d6d2fcacc28798024e392f49cfa297c1d0e2114cd2b3de56f01a"
+    }
+  }
+}

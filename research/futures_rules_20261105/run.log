@@ -1,0 +1,9 @@
+T_1h {"holdout": {"n": 9066, "mean_r": -0.042042550275365353, "win_rate": 0.29913964262078097, "median_hold_h": 16.0, "long_share": 0.4955879108757997, "total_r": -381.1577607964623}, "bootstrap_p": 0.8244, "passed": false} 26s
+T_4h {"holdout": {"n": 2336, "mean_r": -0.04708694992645898, "win_rate": 0.3069349315068493, "median_hold_h": 57.91666666666667, "long_share": 0.4931506849315068, "total_r": -109.99511502820818}, "bootstrap_p": 0.7184, "passed": false} 33s
+T_1D {"holdout": {"n": 368, "mean_r": -0.03649101263993519, "win_rate": 0.3342391304347826, "median_hold_h": 384.0, "long_share": 0.47554347826086957, "total_r": -13.428692651496151}, "bootstrap_p": 0.6242, "passed": false} 34s
+M_1h {"holdout": {"n": 19651, "mean_r": -0.18248075588311818, "win_rate": 0.4377385374790087, "median_hold_h": 5.25, "long_share": 0.5075568673349957, "total_r": -3585.9293338591556}, "bootstrap_p": 1.0, "passed": false} 86s
+M_4h {"holdout": {"n": 4955, "mean_r": -0.08299305429909098, "win_rate": 0.4468213925327952, "median_hold_h": 20.0, "long_share": 0.49767911200807263, "total_r": -411.23058405199583}, "bootstrap_p": 0.991, "passed": false} 99s
+M_1D {"holdout": {"n": 799, "mean_r": -0.00038004426705467434, "win_rate": 0.4818523153942428, "median_hold_h": 128.58333333333334, "long_share": 0.46808510638297873, "total_r": -0.3036553693766848}, "bootstrap_p": 0.4844, "passed": false} 102s
+T_1W {"holdout": {"n": 52, "mean_r": -0.3730513192141474, "win_rate": 0.28846153846153844, "median_hold_h": 1965.0833333333335, "long_share": 0.46153846153846156, "total_r": -19.398668599135664}, "bootstrap_p": null, "passed": null} 102s
+M_1W {"holdout": {"n": 81, "mean_r": 0.1024454889891236, "win_rate": 0.5432098765432098, "median_hold_h": 1252.6666666666667, "long_share": 0.4444444444444444, "total_r": 8.298084608119012}, "bootstrap_p": null, "passed": null} 102s
+exit=0

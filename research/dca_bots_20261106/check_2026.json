@@ -1,0 +1,234 @@
+{
+ "prereg_sha256": "3871cdb516d52424cb36361e6df10033f9384f8e75419b6711f34d23c95afb97",
+ "verdict": {
+  "S_k0.5_ov0.1_m0.25_tp0.01_sl0.0_f0": {
+   "cfg": {
+    "mode": "S",
+    "k": 0.5,
+    "ov": 0.1,
+    "mart": 0.25,
+    "tp": 0.01,
+    "sl": 0.0,
+    "filt": false
+   },
+   "in_sample_2025": {
+    "median": 0.3112390827767969,
+    "mean": 0.21968904403545408,
+    "worst": -0.4744170693193084
+   },
+   "check_2026": {
+    "median": 0.06586252299906614,
+    "mean": -0.0538571251766829,
+    "worst": -1.0,
+    "best": 0.18618736226535626,
+    "liq": 2,
+    "profit_share": 0.7222222222222222,
+    "portfolio_return": -0.042582993916925105,
+    "annualized": -0.05107029176759437,
+    "bootstrap_p": 0.5176,
+    "max_dd": 0.23639674745425798,
+    "per_coin": {
+     "1000SHIBUSDT": 0.1301,
+     "ADAUSDT": 0.1426,
+     "ALGOUSDT": 0.1195,
+     "ATOMUSDT": 0.0195,
+     "AVAXUSDT": 0.0669,
+     "BCHUSDT": 0.1335,
+     "BNBUSDT": 0.1162,
+     "BTCUSDT": 0.0216,
+     "DOGEUSDT": 0.1862,
+     "DOTUSDT": 0.1434,
+     "ETHUSDT": 0.0996,
+     "LINKUSDT": -0.1348,
+     "LTCUSDT": 0.0583,
+     "NEARUSDT": -1.0,
+     "SOLUSDT": -0.0734,
+     "TRXUSDT": -0.0636,
+     "UNIUSDT": -1.0,
+     "XRPUSDT": 0.0648
+    }
+   },
+   "stress": {
+    "2022": {
+     "median": 0.47022746558279627,
+     "mean": 0.5048377455593123,
+     "liq": 0,
+     "worst": 0.07304496301909924
+    },
+    "2023": {
+     "median": -0.5032440599348864,
+     "mean": -0.48498412128474006,
+     "liq": 5,
+     "worst": -1.0
+    },
+    "2024": {
+     "median": -0.5336494670961442,
+     "mean": -0.5611364676111588,
+     "liq": 8,
+     "worst": -1.0
+    }
+   },
+   "checks": {
+    "1_median_gt_0": true,
+    "2_mean_gt_0": false,
+    "3_no_liq_worst_gt_-50": false,
+    "4_portfolio_p_lt_0.0167": false,
+    "5_annualized_gt_5pct": false
+   },
+   "passed": false
+  },
+  "S_k0.5_ov0.1_m0.0_tp0.01_sl0.0_f0": {
+   "cfg": {
+    "mode": "S",
+    "k": 0.5,
+    "ov": 0.1,
+    "mart": 0.0,
+    "tp": 0.01,
+    "sl": 0.0,
+    "filt": false
+   },
+   "in_sample_2025": {
+    "median": 0.30983943096792244,
+    "mean": 0.22660258210990195,
+    "worst": -0.44927635016964274
+   },
+   "check_2026": {
+    "median": 0.07491628081646629,
+    "mean": -0.051815413538933895,
+    "worst": -1.0,
+    "best": 0.20195174483525902,
+    "liq": 2,
+    "profit_share": 0.6666666666666666,
+    "portfolio_return": -0.037452735358700195,
+    "annualized": -0.044941708612286635,
+    "bootstrap_p": 0.5002,
+    "max_dd": 0.2493060881250141,
+    "per_coin": {
+     "1000SHIBUSDT": 0.1492,
+     "ADAUSDT": 0.0953,
+     "ALGOUSDT": 0.1433,
+     "ATOMUSDT": 0.0545,
+     "AVAXUSDT": -0.0291,
+     "BCHUSDT": 0.1041,
+     "BNBUSDT": 0.0976,
+     "BTCUSDT": 0.039,
+     "DOGEUSDT": 0.202,
+     "DOTUSDT": 0.1998,
+     "ETHUSDT": 0.0986,
+     "LINKUSDT": -0.1034,
+     "LTCUSDT": 0.005,
+     "NEARUSDT": -1.0,
+     "SOLUSDT": -0.0357,
+     "TRXUSDT": -0.0666,
+     "UNIUSDT": -1.0,
+     "XRPUSDT": 0.1138
+    }
+   },
+   "stress": {
+    "2022": {
+     "median": 0.5194021705471299,
+     "mean": 0.49064503516866076,
+     "liq": 0,
+     "worst": -0.04932781508594075
+    },
+    "2023": {
+     "median": -0.5057816764046597,
+     "mean": -0.507001690547609,
+     "liq": 5,
+     "worst": -1.0
+    },
+    "2024": {
+     "median": -0.7879922576736094,
+     "mean": -0.6224875748818652,
+     "liq": 9,
+     "worst": -1.0
+    }
+   },
+   "checks": {
+    "1_median_gt_0": true,
+    "2_mean_gt_0": false,
+    "3_no_liq_worst_gt_-50": false,
+    "4_portfolio_p_lt_0.0167": false,
+    "5_annualized_gt_5pct": false
+   },
+   "passed": false
+  },
+  "R_k0.5_ov0.25_m0.0_tp0.02_sl0.0_f0": {
+   "cfg": {
+    "mode": "R",
+    "k": 0.5,
+    "ov": 0.25,
+    "mart": 0.0,
+    "tp": 0.02,
+    "sl": 0.0,
+    "filt": false
+   },
+   "in_sample_2025": {
+    "median": 0.3068890767212473,
+    "mean": 0.24151130022212153,
+    "worst": -0.17403698804468148
+   },
+   "check_2026": {
+    "median": 0.07008352315079391,
+    "mean": 0.013150044164240537,
+    "worst": -1.0,
+    "best": 0.25644443132563466,
+    "liq": 1,
+    "profit_share": 0.6666666666666666,
+    "portfolio_return": 0.019905676375388648,
+    "annualized": 0.0240273637259536,
+    "bootstrap_p": 0.3766,
+    "max_dd": 0.04373275223100981,
+    "per_coin": {
+     "1000SHIBUSDT": 0.1151,
+     "ADAUSDT": 0.1619,
+     "ALGOUSDT": 0.2564,
+     "ATOMUSDT": 0.0927,
+     "AVAXUSDT": -0.0064,
+     "BCHUSDT": 0.1285,
+     "BNBUSDT": -0.0013,
+     "BTCUSDT": 0.1076,
+     "DOGEUSDT": 0.2506,
+     "DOTUSDT": -0.2059,
+     "ETHUSDT": 0.1603,
+     "LINKUSDT": 0.0295,
+     "LTCUSDT": -0.0008,
+     "NEARUSDT": -1.0,
+     "SOLUSDT": -0.0245,
+     "TRXUSDT": 0.0598,
+     "UNIUSDT": 0.0329,
+     "XRPUSDT": 0.0804
+    }
+   },
+   "stress": {
+    "2022": {
+     "median": 0.3296035184489361,
+     "mean": 0.25222632518088606,
+     "liq": 0,
+     "worst": -0.4367582975121923
+    },
+    "2023": {
+     "median": -0.222285690833258,
+     "mean": -0.29223881376340133,
+     "liq": 4,
+     "worst": -1.0
+    },
+    "2024": {
+     "median": 0.1656350725231861,
+     "mean": -0.17185713990204232,
+     "liq": 5,
+     "worst": -1.0
+    }
+   },
+   "checks": {
+    "1_median_gt_0": true,
+    "2_mean_gt_0": true,
+    "3_no_liq_worst_gt_-50": false,
+    "4_portfolio_p_lt_0.0167": false,
+    "5_annualized_gt_5pct": false
+   },
+   "passed": false
+  }
+ },
+ "seconds": 12.351840257644653
+}
